@@ -1,0 +1,12 @@
+/.git/
+/.bundle
+!/.env.example
+/log/*
+!/log/.keep
+tmp
+__pycache__/  
+*.pyc  
+*.pyo  
+*.pyd  
+venv/  
+.env  
