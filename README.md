@@ -6,13 +6,16 @@ This is an experimental project that aims to explore the building and management
 
 To be completed
 
-### Before running the app (if applicable)
+### Before running the app (if applicable
 
-To be completed
+
+### Build
+
+
 
 ### Running the test suite
 
-To be completed
+pytest
 
 ### Further documentation
 
