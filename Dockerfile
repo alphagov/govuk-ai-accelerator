@@ -12,4 +12,4 @@ RUN echo "Installing python requirements" && \
 COPY . .
 EXPOSE 8080 
 
-CMD ["waitress-serve", "--call", "govuk_ai_accelerator_app:create_app"]  
+CMD ["waitress-serve", "--port", "3000", "--call", "govuk_ai_accelerator_app:create_app"]  
