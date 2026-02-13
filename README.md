@@ -18,10 +18,12 @@ Local set up
 ### Build
 
 With Docker
+
     docker build -t govuk-ai-accelerator .
-    docker run -d -p 5000:5000 govuk-ai-accelerator
+    docker run -d -p 3000:3000 govuk-ai-accelerator
 
 Directly
+
     waitress-serve --port 3000 --call 'govuk_ai_accelerator_app:create_app'
 
 ### Running the test suite

@@ -3,6 +3,14 @@ FROM python:3.13-slim-bookworm AS base
 
 ENV GOVUK_APP_NAME=GOVUK-AI-ACCELERATOR
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    libcurl4 \
+    curl \
+    postgresql-client \
+    && apt-get -y clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/*
+
 WORKDIR /app  
 COPY requirements.txt .
 
