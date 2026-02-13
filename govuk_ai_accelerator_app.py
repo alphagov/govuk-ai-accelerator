@@ -1,13 +1,23 @@
 from flask import Flask
 from flask import Blueprint
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import String
+from sqlalchemy.orm import Mapped, mapped_column
+import os
 
-
-test = Blueprint('test', __name__, url_prefix='/test')
+root = Blueprint('test', __name__, url_prefix='/')
 healthcheck = Blueprint('healthcheck', __name__, url_prefix='/healthcheck')
 
-@test.route("/")
-def hello_world():
-    return "<p>Hello, World!</p>"
+db = SQLAlchemy()
+
+class Test(db.Model):
+    info: Mapped[str] = mapped_column(primary_key=True)
+
+
+@root.route("/")
+def db_test():
+    test = db.first_or_404(db.select(Test))
+    return "<p>Hello, World! " + test.info + "</p>" 
 
 @healthcheck.route("/ready")
 def ready():
@@ -15,8 +25,13 @@ def ready():
 
 def create_app():
     app = Flask(__name__)
-    app.register_blueprint(test)
+    app.register_blueprint(root)
     app.register_blueprint(healthcheck)
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URI")
+    app.config["DATABASE_PASSWORD"] = os.getenv("DATABASE_PASSWORD")
+    app.config["DATABASE_USER"] = os.getenv("DATABASE_USER")
+    db.init_app(app)
 
     return app
 
