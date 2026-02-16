@@ -8,7 +8,6 @@ test = Blueprint('test', __name__, url_prefix='/test')
 healthcheck = Blueprint('healthcheck', __name__, url_prefix='/healthcheck')
 
 
-
 @test.route("/")
 def hello_world():
     return "<p>Hello, World!</p>"
@@ -22,10 +21,9 @@ def space_greetings():
         "funfact": response
     })
 
-
 @healthcheck.route("/ready")
 def ready():
-    return "<p>Application OK"
+    return "<p>Roger, Roger! Application OK."
 
 def create_app():
     app = Flask(__name__)
