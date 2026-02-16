@@ -28,9 +28,7 @@ def create_app():
     app.register_blueprint(root)
     app.register_blueprint(healthcheck)
 
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URI")
-    app.config["DATABASE_PASSWORD"] = os.getenv("DATABASE_PASSWORD")
-    app.config["DATABASE_USER"] = os.getenv("DATABASE_USER")
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
     db.init_app(app)
 
     return app
