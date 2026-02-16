@@ -18,11 +18,12 @@ Once the app is in active developement this should be removed and replaced.
 
 Connect to local postgres instance and run:
 
-    CREATE database "govuk-ai-accelerator";
-    CREATE USER "govuk-ai-accelerator-user" WITH PASSWORD '__set a password__';
-    GRANT ALL PRIVILEGES ON DATABASE "govuk-ai-accelerator" to "govuk-ai-accelerator-user";
-    \c govuk-ai-accelerator
-    GRANT ALL ON SCHEMA public TO "govuk-ai-accelerator-user";
+    CREATE database "govuk_ai_accelerator";
+    CREATE USER "govuk_ai_accelerator_user" WITH PASSWORD '__set a password__';
+    GRANT ALL PRIVILEGES ON DATABASE "govuk_ai_accelerator" to "govuk_ai_accelerator_user";
+    GRANT ALL ON SCHEMA public TO "govuk_ai_accelerator_user";
+    # quit as admin user
+    psql -h localhost -U govuk_ai_accelerator_user govuk_ai_accelerator
     create table TEST (info varchar(255));
     insert into TEST values ('123');
 
