@@ -4,12 +4,16 @@ import boto3
 import json
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
-def funfact(greetings):
-    try:
+def llm_fact():
+    try:   
+        region = os.environ.get("AWS_REGION")
 
-        bedrock_runtime = boto3.client(service_name='bedrock-runtime')
+        bedrock_runtime = boto3.client(service_name='bedrock-runtime', region_name= region)
         model_id = 'eu.anthropic.claude-3-7-sonnet-20250219-v1:0'
         prompt = "Hello! Please give me a short, one-sentence interesting fact about space."
         body = json.dumps({
@@ -28,11 +32,8 @@ def funfact(greetings):
         response = bedrock_runtime.invoke_model( body=body, modelId=model_id, accept='application/json', contentType='application/json')
         response_body = json.loads(response.get('body').read())
         space_facts = response_body.get('content')[0].get('text')
-        sentence = f'''
-        Greetings {greetings}
-        Heres the fact for today :)
-        {space_facts}
-        '''
+        sentence = f'''{space_facts}'''
+        return sentence
             
     except Exception as e:
         print(f"Error invoking model: {e}")

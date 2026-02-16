@@ -1,11 +1,11 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask import Blueprint
-from space_generator import funfact
+from space_generator import llm_fact
+
 
 
 test = Blueprint('test', __name__, url_prefix='/test')
 healthcheck = Blueprint('healthcheck', __name__, url_prefix='/healthcheck')
-funfact = Blueprint('funfact', __name__, url_prefix='/funfact')
 
 
 
@@ -14,10 +14,11 @@ def hello_world():
     return "<p>Hello, World!</p>"
 
 
-@funfact.route('/funfact')
-def funfact():
+@test.route('/funfact')
+def space_greetings():
     query = request.args.get('greetings') 
-    response = funfact(query)
+    response = llm_fact()
+
     return jsonify({
         "funfact": response
     })
@@ -31,7 +32,6 @@ def create_app():
     app = Flask(__name__)
     app.register_blueprint(test)
     app.register_blueprint(healthcheck)
-    app.register_blueprint(funfact)
 
     return app
 
