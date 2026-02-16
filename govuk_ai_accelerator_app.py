@@ -16,7 +16,6 @@ def hello_world():
 
 @test.route('/funfact')
 def space_greetings():
-    query = request.args.get('greetings') 
     response = llm_fact()
 
     return jsonify({
