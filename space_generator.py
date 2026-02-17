@@ -11,9 +11,9 @@ load_dotenv()
 
 def llm_fact():
     try:   
-        region = os.environ.get("AWS_REGION")
+    
 
-        bedrock_runtime = boto3.client(service_name='bedrock-runtime', region_name= region)
+        bedrock_runtime = boto3.client(service_name='bedrock-runtime', region_name= 'eu-west-1')
         model_id = 'eu.anthropic.claude-3-7-sonnet-20250219-v1:0'
         prompt = "Hello! Please give me a short, one-sentence interesting fact about space."
         body = json.dumps({
