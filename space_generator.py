@@ -36,5 +36,5 @@ def llm_fact():
         return sentence
             
     except Exception as e:
-        print(f"Error invoking model: {e}")
+        return f"Error invoking model: {e}"
 
