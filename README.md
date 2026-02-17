@@ -11,7 +11,7 @@ To be completed
 #### Database
 
 this is a very simple local database to test code setup, connectivity etc. Not to be used in prod.
-The /test url will expect there to be a test table, with at least one row. the url will then be able to be used
+The root url (http://localhost:3000/) will expect there to be a test table, with at least one row. this url will then be able to be used
 to validate the environment.
 
 Once the app is in active developement this should be removed and replaced.
@@ -29,8 +29,8 @@ Connect to local postgres instance and run:
 
 
 #### Local set up
+
     source environment.sh
-    export DATABASE_PASSWORD=__add a pasword__
     python3 -m venv .venv
     . .venv/bin/activate
     pip install -r requirements.txt
@@ -40,18 +40,18 @@ Connect to local postgres instance and run:
 
 With server
 
-    waitress-serve --port 3000 --call 'govuk_ai_accelerator_app:create_app'
+    waitress-serve --port 5000 --call 'govuk_ai_accelerator_app:create_app'
 
 Debug mode
 
-     flask --app govuk_ai_accelerator_app.py run
+     flask --app govuk_ai_accelerator_app run
 
 ### Build
 
 With Docker
 
     docker build -t govuk-ai-accelerator .
-    docker run -d -p 3000:3000 govuk-ai-accelerator
+    docker run -d -p 5000:5000 govuk-ai-accelerator
 
 ### Running the test suite
 
