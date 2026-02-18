@@ -31,18 +31,32 @@ The ingestion process is made up of steps which can be run separately:
 
 #### 🪏 Download
 
-The Download step will go through each link in the links file and save the response as a html file. The default output directory is html_content.
+The "download" step will go through each link in the links file and save the response as a html file. The default output directory is html_content.
 
 ```bash
 python ingestion.py download 
 ```
 #### ⚙️ Process
 
-The Process step will transform the raw html files into a set of files containing the relevant text content. The default output directory is output.
+The "process" step will transform the raw html files into a set of files containing the relevant text content. The default output directory is output.
 
 ```bash
 python ingestion.py process 
 ```
+
+#### 🛀 Clean
+
+The "clean" step will clean the data by doing the following:
+
+- Reduce multiple new lines in a row to just one new line
+- Remove any reference to printing the page (The print page is often used so that all sections for a page are included in a single link)
+
+The files will remain the output directory 
+
+```bash
+python ingestion.py clean 
+```
+
 #### All 
 
 All will run each step in order
