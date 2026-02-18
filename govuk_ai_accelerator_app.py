@@ -21,7 +21,7 @@ def db_test():
 
 @healthcheck.route("/ready")
 def ready():
-    return "<p>Roger, Roger! Application OK."
+    return "<p>Roger, Roger! Application is ready."
 
 def create_app():
     app = Flask(__name__)
