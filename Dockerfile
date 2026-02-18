@@ -12,12 +12,20 @@ RUN apt-get update \
     rm -rf /var/lib/apt/lists/* /tmp/*
 
 WORKDIR /app  
-COPY requirements.txt .
 
-RUN echo "Installing python requirements" && \
-    pip --no-cache-dir install -r requirements.txt
+RUN pip install --no-cache-dir uv
+RUN uv init
+
+COPY requirements.txt .
+RUN uv pip install --system -r requirements.txt
 
 COPY . .
+
+COPY ./environment.sh /environment.sh
+RUN chmod +x /environment.sh
+
 EXPOSE 8080 
 
-CMD ["waitress-serve", "--port", "3000", "--call", "govuk_ai_accelerator_app:create_app"]  
+ENTRYPOINT ["/bin/bash", "-c", "source /environment.sh && \"$@\"", "--"]
+
+CMD ["uv", "run", "waitress-serve", "--host=0.0.0.0", "--port=8080", "--call", "govuk_ai_accelerator_app:create_app"]
