@@ -6,19 +6,20 @@ services:
       - "6379:6379"
 
   web:
-    build: .
+    build:
+      context: .
+      args:
+        - GITHUB_TOKEN=${GITHUB_TOKEN}  # This pulls from your terminal/env file
     ports:
       - "8080:8080"
     depends_on:
       - redis
-    environment:
-      - GOVUK_APP_NAME=GOVUK-AI-ACCELERATOR
 
-  # The Dramatiq Background Worker
   worker:
-    build: .
-    command: ["uv", "run", "dramatiq", "govuk_ai_accelerator_app"]
+    build:
+      context: .
+      args:
+        - GITHUB_TOKEN=${GITHUB_TOKEN}
+    command: ["dramatiq", "govuk_ai_accelerator_app"]
     depends_on:
       - redis
-    environment:
-      - GOVUK_APP_NAME=GOVUK-AI-ACCELERATOR

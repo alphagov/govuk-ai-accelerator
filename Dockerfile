@@ -2,12 +2,16 @@
 FROM python:3.13-slim-bookworm AS base
 
 ENV GOVUK_APP_NAME=GOVUK-AI-ACCELERATOR
+ARG GITHUB_TOKEN
+
+
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     libcurl4 \
     curl \
     postgresql-client \
+    git \
     && apt-get -y clean && \
     rm -rf /var/lib/apt/lists/* /tmp/*
 
@@ -18,9 +22,10 @@ RUN uv init
 
 COPY requirements.txt .
 RUN uv pip install --system -r requirements.txt
+RUN uv pip install --system "git+https://${GITHUB_TOKEN}@github.com/alphagov/govuk-ai-accelerator-tw-accelerator"
+
 
 COPY . .
-
 COPY ./environment.sh /environment.sh
 RUN chmod +x /environment.sh
 
