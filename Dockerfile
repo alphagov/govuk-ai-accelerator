@@ -22,7 +22,7 @@ RUN uv init
 
 COPY requirements.txt .
 RUN uv pip install --system -r requirements.txt
-RUN uv pip install --system "git+https://${GITHUB_TOKEN}@github.com/alphagov/govuk-ai-accelerator-tw-accelerator"
+# RUN uv pip install --system "git+https://${GITHUB_TOKEN}@github.com/alphagov/govuk-ai-accelerator-tw-accelerator"
 
 
 COPY . .

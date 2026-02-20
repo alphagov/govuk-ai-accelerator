@@ -1,4 +1,4 @@
-from taxonomy_ontology_accelerator.commons.utils.logger import get_logger
+# from taxonomy_ontology_accelerator.commons.utils.logger import get_logger
 from typing import cast
 import boto3
 import json
@@ -8,7 +8,7 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-logger = cast('Richlogger', get_logger())
+# logger = cast('Richlogger', get_logger())
 
 def llm_fact():
     try:   
@@ -46,7 +46,8 @@ def run_counter(count_value: int)-> bool:
     if isinstance(count_value, int): 
 
         for i in range(count_value): 
-            logger.info(f'current count {i}')
+            # logger.info(f'current count {i}')
+            print(f'current count {i}')
             pass
         return True
     else:
