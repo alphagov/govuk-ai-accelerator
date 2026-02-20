@@ -6,6 +6,7 @@ Reset = "\033[0m"
 
 def clean_content(output_dir):
     print("🛀 Cleaning content...")
+    print("")
 
     files_cleaned = 0
 

@@ -9,7 +9,7 @@ file_extension = ".html"
 
 output_dir = "output"
 input_dir = "html_content"
-output_format = "TEXT"
+output_format = "markdown"
 
 parser = argparse.ArgumentParser(prog='ingestion', description='Scrapes a list of links and processes them to generate content files')
 parser.add_argument('stage', type=str, help='The stage of the ingestion to run. This can be "scrape", "process", or "all"')
