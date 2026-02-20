@@ -36,10 +36,8 @@ jobs:
       gitRef: ${{ inputs.gitRef || github.event.release.tag_name }}
       buildArgs: GOVUK_CI_GITHUB_API_TOKEN=$GOVUK_CI_GITHUB_API_TOKEN
     secrets:
-      GOVUK_CI_GITHUB_API_TOKEN: ${{ secrets.GOVUK_CI_GITHUB_API_TOKEN }}
-    # secrets:
-    #   BUILD_SECRETS: |
-    #       "GITHUB_TOKEN=${{ secrets.GOVUK_CI_GITHUB_API_TOKEN }}"
+      BUILD_SECRETS: |
+        "GOVUK_CI_GITHUB_API_TOKEN=${{ secrets.GOVUK_CI_GITHUB_API_TOKEN }}"
 
   trigger-deploy:
     name: Trigger deploy to ${{ inputs.environment || 'integration' }}
