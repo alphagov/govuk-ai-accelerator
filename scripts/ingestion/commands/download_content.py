@@ -6,7 +6,7 @@ Blue = "\033[34m"
 Bold = "\033[1m"
 Reset = "\033[0m"
 
-def download_content(html_output_dir, file_extension):
+def download_content(html_output_dir):
     if os.path.exists("links.txt"):
         with open("links.txt", 'r') as file:
             links = [line.rstrip('\n') for line in file]
@@ -23,13 +23,13 @@ def download_content(html_output_dir, file_extension):
         for link in links:
             url_path = urlparse(link).path
 
-            if os.path.exists(html_output_dir + url_path + file_extension):
+            if os.path.exists(html_output_dir + url_path + ".html"):
                 print("❌ "+ Blue + Bold + link + Reset + " (already exists)")
                 link_skipped_count += 1
             else:
                 response = requests.get(link)
 
-                output_file_path = html_output_dir + url_path + file_extension
+                output_file_path = html_output_dir + url_path + ".html"
 
                 os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
 

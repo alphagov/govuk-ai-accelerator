@@ -14,6 +14,11 @@ The ingestion steps are a set of scripts that can be run locally to gather gov.u
 
 Create a list of links that you would like to ingest. This file should be called links.txt. See links.example.txt for an example.
 
+The configuration can be changed in the config.ini:
+- **output_dir** - The output directory for the final output content
+- **output_format** - The final output format (html/text/markdown)
+- **html_dir** - The output directory for the downloaded html files
+
 ### Running the Ingestion Process
 
 The steps are ran from the command line.
