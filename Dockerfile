@@ -2,7 +2,7 @@
 FROM python:3.13-slim-bookworm AS base
 
 ENV GOVUK_APP_NAME=GOVUK-AI-ACCELERATOR
-# ARG GOVUK_CI_GITHUB_API_TOKEN
+ARG GOVUK_CI_GITHUB_API_TOKEN
 
 
 
@@ -22,7 +22,7 @@ RUN uv init
 
 COPY requirements.txt .
 RUN uv pip install --system -r requirements.txt
-# RUN uv pip install --system "git+https://${GOVUK_CI_GITHUB_API_TOKEN}@github.com/alphagov/govuk-ai-accelerator-tw-accelerator"
+RUN uv pip install --system "git+https://${GOVUK_CI_GITHUB_API_TOKEN}@github.com/alphagov/govuk-ai-accelerator-tw-accelerator"
 
 
 COPY . .
