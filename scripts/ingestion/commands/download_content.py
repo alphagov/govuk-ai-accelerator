@@ -2,6 +2,7 @@ import os
 import requests
 from urllib.parse import urlparse
 
+Cyan = '\033[96m'
 Blue = "\033[34m"
 Bold = "\033[1m"
 Reset = "\033[0m"
@@ -19,13 +20,27 @@ def download_content(html_output_dir):
     link_skipped_count = 0
 
     if links:
-        print("🤖 Downloading content...")
+        print(Bold + Cyan + "🤖 Downloading content..." + Reset)
         print("")
+        count = 0
         for link in links:
+            count += 1
+            progress = " (" + str(count) + "/" + str(len(links)) + ") "
+
+            if urlparse(link).scheme != "https":
+                print("❌" + progress + Blue + Bold + link + Reset + " (Invalid URl - ensure that the URL uses https)")
+                link_skipped_count += 1
+                continue
+
+            if urlparse(link).netloc != "www.gov.uk":
+                print("❌" + progress + Blue + Bold + link + Reset + " (Invalid URl - ensure that the URL has the www.gov.uk host)")
+                link_skipped_count += 1
+                continue
+
             url_path = urlparse(link).path
 
             if os.path.exists(html_output_dir + url_path + ".html"):
-                print("❌ "+ Blue + Bold + link + Reset + " (already exists)")
+                print("❌" + progress + Blue + Bold + link + Reset + " (already exists)")
                 link_skipped_count += 1
             else:
                 response = requests.get(link)
@@ -39,7 +54,7 @@ def download_content(html_output_dir):
 
                 output_file_count += 1
 
-                print("✅ " + Blue + Bold + link + Reset)
+                print("✅" + progress + Blue + Bold + link + Reset)
     else:
         print("⚠️ The links.txt does not contain any links. Please see links.example.txt for an example")
 
