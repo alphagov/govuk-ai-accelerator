@@ -1,10 +1,8 @@
-#FROM --platform=linux/arm64/v8 python:3.13-slim-bookworm AS base
+# FROM --platform=linux/arm64/v8 python:3.13-slim-bookworm AS base
 FROM python:3.13-slim-bookworm AS base
 
 ENV GOVUK_APP_NAME=GOVUK-AI-ACCELERATOR
-ARG GOVUK_CI_GITHUB_API_TOKEN
-
-
+# Remove ARG GOVUK_CI_GITHUB_API_TOKEN to prevent leaking in history
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -18,12 +16,13 @@ RUN apt-get update \
 WORKDIR /app  
 
 RUN pip install --no-cache-dir uv
-RUN uv init
 
 COPY requirements.txt .
-RUN uv pip install --system -r requirements.txt
-RUN uv pip install --system "git+https://${GOVUK_CI_GITHUB_API_TOKEN}@github.com/alphagov/govuk-ai-accelerator-tw-accelerator"
 
+RUN --mount=type=secret,id=GITHUB_TOKEN,env=GITHUB_TOKEN \
+    git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/" && \
+    uv pip install --system -r requirements.txt && \
+    uv pip install --system "git+https://github.com/alphagov/govuk-ai-accelerator-tw-accelerator"
 
 COPY . .
 COPY ./environment.sh /environment.sh
