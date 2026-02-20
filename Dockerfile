@@ -2,7 +2,7 @@
 FROM python:3.13-slim-bookworm AS base
 
 ENV GOVUK_APP_NAME=GOVUK-AI-ACCELERATOR
-# Remove ARG GOVUK_CI_GITHUB_API_TOKEN to prevent leaking in history
+ARG GOVUK_CI_GITHUB_API_TOKEN
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -19,10 +19,10 @@ RUN pip install --no-cache-dir uv
 
 COPY requirements.txt .
 
-RUN --mount=type=secret,id=GITHUB_TOKEN,env=GITHUB_TOKEN \
-    git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/" && \
-    uv pip install --system -r requirements.txt && \
-    uv pip install --system "git+https://github.com/alphagov/govuk-ai-accelerator-tw-accelerator"
+COPY requirements.txt .
+RUN uv pip install --system -r requirements.txt
+RUN uv pip install --system "git+https://${GOVUK_CI_GITHUB_API_TOKEN}@github.com/alphagov/govuk-ai-accelerator-tw-accelerator"
+
 
 COPY . .
 COPY ./environment.sh /environment.sh
