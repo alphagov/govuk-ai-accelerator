@@ -12,7 +12,7 @@ The ingestion steps are a set of scripts that can be run locally to gather gov.u
 
 ### Setting Up
 
-Create a list of links that you would like to ingest. This file should be called links.txt. See links.example.txt for an example.
+Create a list of links that you would like to ingest. Both CSV and text files are supported. See links.example.csv or links.example.txt for an example. Text files will be prioritised over CSV
 
 The configuration can be changed in the config.ini:
 - **output_dir** - The output directory for the final output content

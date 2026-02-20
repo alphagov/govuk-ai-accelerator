@@ -1,3 +1,4 @@
+import csv
 import os
 import requests
 from urllib.parse import urlparse
@@ -11,9 +12,12 @@ def download_content(html_output_dir):
     if os.path.exists("links.txt"):
         with open("links.txt", 'r') as file:
             links = [line.rstrip('\n') for line in file]
-
+    elif os.path.exists("links.csv"):
+        with open("links.csv", 'r') as file:
+            csv_file = csv.reader(file)
+            links = [line[0] for line in csv_file]
     else:
-        print("⚠️ links.txt not found. Please see links.example.txt for an example")
+        print("⚠️ A links input file has not been found. See README.md for more details")
         return
 
     output_file_count = 0
@@ -33,7 +37,7 @@ def download_content(html_output_dir):
                 continue
 
             if urlparse(link).netloc != "www.gov.uk":
-                print("❌" + progress + Blue + Bold + link + Reset + " (Invalid URl - ensure that the URL has the www.gov.uk host)")
+                print("❌" + progress + Blue + Bold + link + Reset + " (Invalid URl - ensure that the URL has the 'www.gov.uk' host)")
                 link_skipped_count += 1
                 continue
 
