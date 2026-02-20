@@ -10,7 +10,7 @@ def clean_content(output_dir):
 
     files_cleaned = 0
 
-    output_files = os.listdir("output")
+    output_files = os.listdir(output_dir)
 
     if output_files:
         for file in output_files:
