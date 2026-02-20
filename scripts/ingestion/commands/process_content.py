@@ -1,7 +1,10 @@
 import os
+from cgitb import reset
+
 from bs4 import BeautifulSoup
 import pypandoc
 
+Cyan = '\033[96m'
 Blue = "\033[34m"
 Bold = "\033[1m"
 Reset = "\033[0m"
@@ -29,7 +32,7 @@ def recursive_scan(path, file_list):
 
 
 def process_content(output_dir, input_dir, output_format):
-    print("🤖 Processing content...")
+    print(Bold + Cyan + "🤖 Processing content..." + Reset)
     print("")
     skipped_input_files_count = 0
     output_files_count = 0
@@ -40,7 +43,11 @@ def process_content(output_dir, input_dir, output_format):
     input_file_list = []
     input_file_list = recursive_scan(input_dir, input_file_list)
 
+    count = 0
     for input_file in input_file_list:
+        count += 1
+        progress = " (" + str(count) + "/" + str(len(input_file_list)) + ") "
+
         output_extension = ""
 
         if output_format == "text":
@@ -53,7 +60,7 @@ def process_content(output_dir, input_dir, output_format):
         output_file_path = input_file.path[len(input_dir)+1:].replace("/", "_").split(".")[0] + output_extension
 
         if os.path.exists(output_dir + "/" + output_file_path):
-            print("❌  " + Blue + Bold + output_file_path + Reset +" (already exists)")
+            print("❌" + progress + Blue + Bold + output_file_path + Reset +" (already exists)")
             skipped_input_files_count += 1
         else:
             with open(input_file.path, encoding="utf-8") as file:
@@ -68,7 +75,7 @@ def process_content(output_dir, input_dir, output_format):
                 with open(output_dir + "/" + output_file_path, "w", encoding="utf-8") as output_file:
                     output_file.write(output_file_content)
                     output_file.close()
-                print("✅ " + Blue + Bold + input_file.path[len(input_dir)+1:] + Reset)
+                print("✅" + progress + Blue + Bold + input_file.path[len(input_dir)+1:] + Reset)
                 output_files_count += 1
 
     print("")
