@@ -20,6 +20,7 @@ def download_content(html_output_dir):
 
     if links:
         print("🤖 Downloading content...")
+        print("")
         for link in links:
             url_path = urlparse(link).path
 
