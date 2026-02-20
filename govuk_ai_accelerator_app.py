@@ -1,12 +1,14 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask import Blueprint
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 import os
-from scripts.pipeline.worker import run_counter
-import dramatiq
+from scripts.pipeline.worker import run_counter, llm_fact, list_s3_directories
+from concurrent.futures import ThreadPoolExecutor
+ # Usage
 
+executor = ThreadPoolExecutor(max_workers=4)
 
 root = Blueprint('test', __name__, url_prefix='/')
 healthcheck = Blueprint('healthcheck', __name__, url_prefix='/healthcheck')
@@ -30,15 +32,46 @@ def counter():
 
     if raw_val is not None and raw_val.isdigit():
         number = int(raw_val)
-        message = run_counter.send(number)
+        executor.submit(run_counter, number)
     
-        try:
-            result = message.get_result(block=True, timeout=10000) 
-            return {"status": "finished", "result": result}
-            
-        except dramatiq.results.errors.ResultTimeout:
-            return {"status": "pending", "message": "Task is taking too long"}, 202
+        return {"status": "background work kicked off"}
+    
+from flask import request, jsonify
+
+
+
+@worker.route("/list")
+def s3_check():
+    bucket = request.args.get('bucket')
+    prefix = request.args.get('prefix', '')
+
+    if not bucket:
+        return jsonify({"error": "Bucket name is required"}), 400
+
+    try:
+        response  = list_s3_directories(bucket, prefix)
+        directories = [
+            item['Prefix'] for item in response.get('CommonPrefixes', [])
+        ]
+
+        return jsonify({
+            "status": "success",
+            "bucket": bucket,
+            "directories": directories
+        })
         
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+
+@worker.route("/llm")        
+def space_greetings():
+    response = llm_fact()
+
+    return jsonify({
+        "funfact": response
+    })
 
 
 
