@@ -42,8 +42,14 @@ def download_content(html_output_dir):
             if os.path.exists(html_output_dir + url_path + ".html"):
                 print("❌" + progress + Blue + Bold + link + Reset + " (already exists)")
                 link_skipped_count += 1
+                continue
             else:
                 response = requests.get(link)
+
+                if not response.ok:
+                    print("❌" + progress + Blue + Bold + link + Reset + " (Error - status code: " + str(response.status_code) + ")")
+                    link_skipped_count += 1
+                    continue
 
                 output_file_path = html_output_dir + url_path + ".html"
 
