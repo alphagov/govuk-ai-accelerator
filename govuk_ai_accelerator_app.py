@@ -6,7 +6,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 import os
 from scripts.pipeline.worker import run_counter, llm_fact, list_s3_directories
 from concurrent.futures import ThreadPoolExecutor
- # Usage
 
 executor = ThreadPoolExecutor(max_workers=4)
 
