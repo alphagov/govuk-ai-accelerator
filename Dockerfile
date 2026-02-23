@@ -32,6 +32,5 @@ COPY . .
 
 EXPOSE 8080 
 
-ENTRYPOINT ["/bin/bash", "-c", "source /environment.sh && \"$@\"", "--"]
 
 CMD ["uv", "run", "waitress-serve", "--host=0.0.0.0", "--port=8080", "--call", "govuk_ai_accelerator_app:create_app"]
