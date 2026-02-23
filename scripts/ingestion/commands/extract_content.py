@@ -1,5 +1,4 @@
 import os
-from cgitb import reset
 
 from bs4 import BeautifulSoup
 import pypandoc
@@ -31,8 +30,8 @@ def recursive_scan(path, file_list):
     return file_list
 
 
-def process_content(output_dir, input_dir, output_format):
-    print(Bold + Cyan + "🤖 Processing content..." + Reset)
+def extract_content(output_dir, input_dir, output_format):
+    print(Bold + Cyan + "🤖 Extracting content..." + Reset)
     print("")
     skipped_input_files_count = 0
     output_files_count = 0
