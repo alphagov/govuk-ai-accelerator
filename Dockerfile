@@ -2,6 +2,7 @@
 FROM python:3.13-slim-bookworm AS base
 
 ENV GOVUK_APP_NAME=GOVUK-AI-ACCELERATOR
+ENV UV_CACHE_DIR=/tmp/.uv_cache
 # ARG GOVUK_CI_GITHUB_API_TOKEN
 
 RUN apt-get update \
