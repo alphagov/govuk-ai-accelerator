@@ -2,7 +2,7 @@
 FROM python:3.13-slim-bookworm AS base
 
 ENV GOVUK_APP_NAME=GOVUK-AI-ACCELERATOR
-ARG GOVUK_CI_GITHUB_API_TOKEN
+# ARG GOVUK_CI_GITHUB_API_TOKEN
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
