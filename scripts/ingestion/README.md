@@ -10,13 +10,13 @@ flowchart TB
     b2-->a1
     c1["📁 input file containing gov.uk links"]-->c2
     a2-->d1["🎉 output directory containing content files ready to be processed by the Ontology Generator"]
-    subgraph "🧼clean"
+    subgraph "🧼Clean"
     a1["whitespace removed"]-->a2["references to printing removed"]
     end
-    subgraph "⚙️ process"
+    subgraph "⚙️ Extract"
     b1["relevant content extracted"]-->b2["converted to preferred output format (e.g. markdown or plain text)"]
     end
-    subgraph "🪏 download"
+    subgraph "🪏 Download"
     c2["html file for each link stored locally"]
     end
 ```
@@ -58,12 +58,12 @@ The "download" step will go through each link in the links file and save the res
 ```bash
 python ingestion.py download 
 ```
-#### ⚙️ Process
+#### ⚙️ Extract
 
-The "process" step will transform the raw html files into a set of files containing the relevant text content. The default output directory is output.
+The "extract" step will extract the relevant text content from the html files. The default output directory is output.
 
 ```bash
-python ingestion.py process 
+python ingestion.py extract 
 ```
 
 #### 🛀 Clean
