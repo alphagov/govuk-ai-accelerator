@@ -29,8 +29,6 @@ RUN --mount=type=secret,id=GITHUB_TOKEN,env=GITHUB_TOKEN \
     uv pip install --system "git+https://github.com/alphagov/govuk-ai-accelerator-tw-accelerator"
 
 COPY . .
-COPY ./environment.sh /environment.sh
-RUN chmod +x /environment.sh
 
 EXPOSE 8080 
 
