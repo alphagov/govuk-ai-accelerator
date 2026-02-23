@@ -1,10 +1,8 @@
-#FROM --platform=linux/arm64/v8 python:3.13-slim-bookworm AS base
+# FROM --platform=linux/arm64/v8 python:3.13-slim-bookworm AS base
 FROM python:3.13-slim-bookworm AS base
 
 ENV GOVUK_APP_NAME=GOVUK-AI-ACCELERATOR
 ARG GOVUK_CI_GITHUB_API_TOKEN
-
-
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -18,7 +16,8 @@ RUN apt-get update \
 WORKDIR /app  
 
 RUN pip install --no-cache-dir uv
-RUN uv init
+
+COPY requirements.txt .
 
 COPY requirements.txt .
 RUN uv pip install --system -r requirements.txt
