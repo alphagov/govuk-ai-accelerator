@@ -2,6 +2,7 @@
 FROM python:3.13-slim-bookworm AS base
 
 ENV GOVUK_APP_NAME=GOVUK-AI-ACCELERATOR
+ENV UV_CACHE_DIR=/tmp/.uv_cache
 # ARG GOVUK_CI_GITHUB_API_TOKEN
 
 RUN apt-get update \
@@ -28,8 +29,6 @@ RUN --mount=type=secret,id=GITHUB_TOKEN,env=GITHUB_TOKEN \
     uv pip install --system "git+https://github.com/alphagov/govuk-ai-accelerator-tw-accelerator"
 
 COPY . .
-COPY ./environment.sh /environment.sh
-RUN chmod +x /environment.sh
 
 EXPOSE 8080 
 
