@@ -23,6 +23,9 @@ COPY requirements.txt .
 RUN uv pip install --system -r requirements.txt
 # RUN uv pip install --system "git+https://${GOVUK_CI_GITHUB_API_TOKEN}@github.com/alphagov/govuk-ai-accelerator-tw-accelerator"
 
+RUN --mount=type=secret,id=GITHUB_TOKEN,env=GITHUB_TOKEN \
+    git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/" && \
+    uv pip install --system "git+https://github.com/alphagov/govuk-ai-accelerator-tw-accelerator"
 
 COPY . .
 COPY ./environment.sh /environment.sh
