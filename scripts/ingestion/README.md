@@ -8,15 +8,16 @@ The ingestion steps are a set of scripts that can be run locally to gather gov.u
 flowchart TB
     c2-->b1
     b2-->a1
-    a2-->d1["🎉 directory containing content files ready to be processed by the Ontology Generator"]
+    c1["📁 input file containing gov.uk links"]-->c2
+    a2-->d1["🎉 output directory containing content files ready to be processed by the Ontology Generator"]
     subgraph "🧼clean"
-    a1["whitespace removed"]-->a2["🖨️ references to printing removed"]
+    a1["whitespace removed"]-->a2["references to printing removed"]
     end
     subgraph "⚙️ process"
     b1["relevant content extracted"]-->b2["converted to preferred output format (e.g. markdown or plain text)"]
     end
     subgraph "🪏 download"
-    c1["📁 input file containing gov.uk links"]-->c2["html file for each link stored locally"]
+    c2["html file for each link stored locally"]
     end
 ```
 
