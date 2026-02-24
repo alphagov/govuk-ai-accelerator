@@ -31,8 +31,6 @@ Connect to local postgres instance and run:
 #### Local set up
     pre-req: 
     - ensure you have uv installed 
-    - AWS credentials are available in the environment
-
     ````
     #using brew
     brew install uv
@@ -40,6 +38,8 @@ Connect to local postgres instance and run:
     #using pip
     pip install uv
     ````
+    - AWS credentials are available in the environment
+
 
     source environment.sh
     uv init --python 3.13
