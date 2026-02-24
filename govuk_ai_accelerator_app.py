@@ -4,7 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 import os
-from scripts.pipeline.worker import run_counter, llm_fact, list_s3_directories
+from scripts.pipeline.worker import run_counter, llm_fact, list_s3_directories, counter_call_back
 from concurrent.futures import ThreadPoolExecutor
 
 executor = ThreadPoolExecutor(max_workers=4)
@@ -31,11 +31,13 @@ def counter():
 
     if raw_val is not None and raw_val.isdigit():
         number = int(raw_val)
-        executor.submit(run_counter, number)
+        future_task = executor.submit(run_counter, number)
+        result = counter_call_back(future_task)
+
+
+        return jsonify({"status": result})
     
-        return {"status": "background work kicked off"}
-    
-from flask import request, jsonify
+
 
 
 
