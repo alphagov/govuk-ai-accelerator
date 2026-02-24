@@ -57,7 +57,7 @@ def run_counter(count_value: int)-> bool:
         raise Exception(f'Value {count_value} must be an int')
 
     
-def counter_call_back(future):
+def future_call_back(future):
 
     try:
         results = future.result()

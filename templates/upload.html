@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload YAML Configuration</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; padding: 0 1rem; }
+        h1 { color: #0b0c0c; }
+        form { background: #f3f2f1; padding: 2rem; border-radius: 4px; }
+        label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
+        input[type="text"] { width: 100%; padding: 0.5rem; margin-bottom: 1rem; border: 2px solid #0b0c0c; }
+        input[type="file"] { margin-bottom: 1rem; }
+        button { padding: 0.5rem 1rem; background: #00703c; color: white; border: none; cursor: pointer; font-size: 1rem; font-weight: bold; box-shadow: 0 2px 0 #002d18; }
+        button:hover { background: #005a30; }
+    </style>
+</head>
+<body>
+    <h1>Upload a YAML Configuration</h1>
+    <form method="post" enctype="multipart/form-data" action="{{ url_for('ontology.upload_file') }}">
+        <label for="domain">Domain (optional):</label>
+        <input type="text" id="domain" name="domain" placeholder="e.g. travel">
+        
+        <label for="file">Configuration File (.yaml, .yml):</label>
+        <input type="file" id="file" name="file" accept=".yaml,.yml" required>
+
+        <label for="text_file">Domain prompt (.txt):</label>
+        <input type="file" id="text_file" name="text_file" accept=".txt">
+
+        <br><br>
+        <button type="submit">Upload & Run Pipeline</button>
+    </form>
+</body>
+</html>

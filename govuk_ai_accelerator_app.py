@@ -1,17 +1,23 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask import Blueprint
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
+import yaml
 import os
-from scripts.pipeline.worker import run_counter, llm_fact, list_s3_directories, counter_call_back
-from concurrent.futures import ThreadPoolExecutor
+from scripts.pipeline.worker import run_counter, llm_fact, list_s3_directories, future_call_back
+from scripts.pipeline.ontology_generator import run_ontology_background_task
+from scripts.pipeline.utils import _error_response, _is_yaml_file, executor
 
-executor = ThreadPoolExecutor(max_workers=4)
 
-root = Blueprint('test', __name__, url_prefix='/')
+
+
+
+root = Blueprint('test', __name__, url_prefix='/') #TODO: Remove when test is done
 healthcheck = Blueprint('healthcheck', __name__, url_prefix='/healthcheck')
-worker = Blueprint('worker', __name__, url_prefix='/worker')
+worker = Blueprint('worker', __name__, url_prefix='/worker') #TODO: Remove when test is done
+ontology_bp = Blueprint('ontology', __name__, url_prefix='/ontology')
+
 
 db = SQLAlchemy()
 
@@ -32,13 +38,47 @@ def counter():
     if raw_val is not None and raw_val.isdigit():
         number = int(raw_val)
         future_task = executor.submit(run_counter, number)
-        result = counter_call_back(future_task)
+        result = future_call_back(future_task)
 
 
         return jsonify({"status": result})
     
 
+@ontology_bp.route("/")
+def index():
+    return render_template('upload.html')
 
+
+@ontology_bp.route('/submit', methods=['POST'])
+def upload_file():
+    ''' handling file upload from the form '''
+    if 'file' not in request.files:
+        return _error_response("Configuration file is missing")
+        
+    yaml_file = request.files['file']
+    text_file = request.files.get('text_file') # Optional text file
+
+    if yaml_file.filename == '' or not _is_yaml_file(yaml_file.filename):
+        return _error_response("Invalid YAML file.")
+
+    try:
+        config_data = yaml.safe_load(yaml_file)
+        domain = request.form.get('domain')
+        
+        text_content = ""
+        if text_file and text_file.filename != '':
+            text_content = text_file.read().decode('utf-8')
+
+
+        executor.submit(run_ontology_background_task, config_data)
+            
+        return jsonify({
+            "message": "Background pipeline started",
+            "status": "processing",
+        })
+
+    except Exception as e:
+        return _error_response(f"Upload failed: {str(e)}", 500)
 
 
 @worker.route("/list")
@@ -85,6 +125,7 @@ def create_app():
     app.register_blueprint(root)
     app.register_blueprint(healthcheck)
     app.register_blueprint(worker)
+    app.register_blueprint(ontology_bp)
 
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
     db.init_app(app)
