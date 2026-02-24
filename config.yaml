@@ -1,0 +1,369 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/DATA-AI-Service-Line/Taxonomy-Ontology-Accelerator/main/schemas/ontology-config.schema.json
+# Domain configuration for travel
+# Engines: ontology
+#
+# This is a FULL configuration with all available settings.
+# Customize as needed for your domain.
+#
+# Source: Pydantic defaults in config.py (ontology engine)
+#
+# To switch back to basic config, run:
+#   toa init --domain travel --basic --force
+
+# Complete ontology generator configuration.
+
+# This is the root configuration object that contains all settings for the ontology engine.
+# All fields have sensible defaults, so you can use OntologyConfig() without any arguments.
+
+# Configuration Priority (highest to lowest):
+# 1. Domain YAML config ({domain}/config.yaml) - Highest priority
+# 2. Pydantic defaults (Field(default=...)) - Lowest priority
+
+# Note: API keys (GOOGLE_API_KEY, ANTHROPIC_API_KEY, etc.) are read from
+#       environment variables by the LLM providers, not by this config system.
+
+# Usage:
+# - Basic: config = OntologyConfig()  # Uses all Pydantic defaults
+# - With domain: config = OntologyConfigLoader.load_for_domain("travel")
+  # Merges travel/config.yaml with Pydantic defaults
+
+version:
+  number: 0.0.1
+  notes: |
+    testing this notes functionality
+
+path:
+
+
+  # input_path: domains/travel/input/
+  # prompt_path: domains/travel/prompts/prompt.txt
+  # output_dir: output/
+filesystem:
+  protocol: s3
+
+
+
+batching:
+
+  # Batching configuration for LLM processing.
+
+  # Batching multiple chunks in a single LLM call improves throughput and reduces API costs.
+  # Batch sizes are dynamically adjusted based on:
+  # - Model token limits (max_tokens)
+  # - Input token ratio (how much of max_tokens is available for input)
+  # - Actual chunk sizes
+  # - Model-specific recommendations (Anthropic needs smaller batches due to timeout)
+
+  # Trade-offs:
+  # - Larger batches = fewer API calls, lower cost, higher throughput
+  # - Smaller batches = more granular error handling, less memory usage
+  chunk_separator: "\n\n---\n\n"  # Separator between chunks in a batch. Helps LLM distinguish chunk boundaries
+  chunks_per_batch: 50  # Initial chunks per batch hint (only used when max_tokens not set). Dynamically adjusted based on token limits. Recommended: 8-12 for Anthropic (timeout risk), 12-20 for Gemini (high throughput)
+  input_token_ratio: 0.6 # Ratio of max_tokens allocated for input (0.6 = 60% input, 40% response). Higher ratio = more input text, less response space. Recommended: 0.6-0.7 for most models.
+  max_batch_size_anthropic: 12 # Maximum batch size for Anthropic models (safety limit to avoid timeout). Anthropic has 10-minute timeout. Recommended: 12 or lower.
+  max_batch_text_length: # Maximum batch text length in characters (safety limit). Prevents extremely long batches that may cause API timeouts.
+  min_batch_size: 1 # Minimum batch size (safety limit to ensure progress)
+  min_batch_tokens: 100 # Minimum tokens reserved for batch text (safety limit). Ensures at least one chunk can be processed even with large prompts.
+checkpointing:
+  # Checkpointing configuration for resumable extraction.
+  auto_resume: true  # Automatically resume from checkpoint if available. Set to False to always start fresh extraction (useful for debugging).
+  checkpoint_filename: processing_checkpoint.json # Name of checkpoint file stored in output_dir/checkpoints/
+  enabled: true  # Enable/disable file-level checkpointing for resumable processing.
+  flush_interval_batches: 50 # Flush to disk every N batches (0=disabled, flush only at end).
+  flush_timeout_seconds: 600 # Force flush after N seconds of accumulation (0=disabled).
+  max_state_checkpoints: 3 # Maximum number of state checkpoints to keep per stage (oldest removed first).
+  persist_state: false # Enable full ExtractionState persistence at key pipeline stages (opt-in feature).
+  state_checkpoint_stages: # Pipeline stages to checkpoint state at. Valid stages: 'chunking', 'extraction', 'deduplication', 'relationships', 'schema'. Only used if persist_state=True.
+  - extraction
+  - deduplication
+  - schema
+conflict_resolution:
+  # Conflict resolution configuration.
+  enabled: true  # Enable conflict resolution
+  strategy: higher_confidence  # Resolution strategy
+deduplication:
+
+  # Deduplication configuration.
+
+  # Two-stage deduplication:
+  # 1. Exact: Hash-based deduplication (fast, deterministic)
+  # 2. Semantic: Embedding-based similarity (slower, handles variations)
+  conflict_resolution_strategy: confidence  # Conflict resolution strategy: 'confidence' (pick higher confidence - recommended), 'latest' (always pick new value)
+  enable_label_similarity_check: true # Enable label similarity check during semantic deduplication. When True, entities must have similar labels (token overlap) OR very high semantic similarity to merge. When False, only semantic similarity is checked (may merge entities with very different labels if embeddings are similar).
+  exact_threshold: 1.0  # Exact deduplication threshold (1.0 = perfect match only)
+  faiss: # FAISS index configuration for large-scale semantic search (1000+ entities)
+    batch_size: 100  # Batch size for FAISS batch search queries
+    index_type: auto  # FAISS index type
+    rebuild_threshold: 10000 # Rebuild index after N new entities
+    threshold: 1000  # Use FAISS when entity count exceeds this
+    top_k: 50 # Number of neighbors to search in FAISS
+  high_semantic_similarity: 0.98 # High semantic similarity threshold - bypasses label check when exceeded (0.98 = 98% similar). Very strict to prevent merging semantically similar but factually different entities.
+  min_label_similarity: 0.7 # Minimum label token overlap (Jaccard) required for merging entities (0.7 = 70% token overlap). Prevents merging entities with different qualifiers (e.g., 'visa for algeria' vs 'visa for angola').
+  semantic_threshold: 0.85 # Semantic similarity threshold (0.85 = 85% similar). Lower = more aggressive merging. Increased from 0.80 to prevent over-merging of similar but distinct entities.
+domain:  # Domain-specific configuration (input/prompt path overrides)
+domain_name: travel  # Domain identifier (set automatically by load_for_domain)
+embeddings:
+
+  # Embeddings configuration using PydanticAI unified interface.
+
+  # Supports multiple providers via PydanticAI (uses KnownEmbeddingModelName):
+  # - OpenAI: openai:* (requires OPENAI_API_KEY)
+  # - Google: google-gla:*, google-vertex:* (requires GOOGLE_API_KEY)
+  # - Cohere: cohere:* (requires CO_API_KEY)
+  # - Bedrock: bedrock:* (requires AWS credentials)
+  # - VoyageAI: voyageai:* (requires VOYAGE_API_KEY)
+  # - Custom models: Any string in 'provider:model' format
+
+  # API keys are read automatically from environment variables.
+  # See docs/ontology/embedding_api_keys.md for details.
+  batch_size: 100  # Batch size for embedding generation (Google limit: 100 texts/request)
+  cache: # Embedding cache configuration to avoid re-computing embeddings
+    directory: domains/.cache  # Cache directory path
+    enabled: true # Enable caching
+    file: embeddings.json # Cache file name
+  concurrency: 10 # Max concurrent API calls (async mode only)
+  dimension: 1024  # Embedding vector dimension (gemini-embedding-001: 3072, text-embedding-3-large: 1536, text-embedding-3-small: 1536)
+  max_batch_size: 100 # Maximum batch size (safety limit to prevent OOM errors)
+  model: "bedrock:amazon.titan-embed-text-v2:0" # Embedding model (PydanticAI KnownEmbeddingModelName or custom string)
+  task_type: RETRIEVAL_DOCUMENT # Task type for embeddings (used by some providers for optimization)
+error_handling:
+  # Error handling configuration.
+  collect_severities:  # Error severity levels to collect
+  - error
+  - warning
+  - info
+  continue_on_error: true  # Continue processing on non-critical errors
+  max_errors: # Maximum errors to collect
+features:
+  # Feature flags configuration.
+  conflict_resolution: true  # Enable conflict resolution
+  cross_session_deduplication: true  # Enable cross-session deduplication
+  embedding_cache: true # Enable embedding caching
+  faiss_enabled: true # Enable FAISS for large datasets
+  incremental_updates: true  # Enable incremental updates
+  schema_evolution: true # Enable schema evolution
+
+  
+# filesystem:
+#   # Configuration for filesystem operations.
+
+#   # Supports multiple storage backends via fsspec:
+#   # - local: Local filesystem (default)
+#   # - s3: Amazon S3
+#   # - gcs: Google Cloud Storage
+#   # - az: Azure Blob Storage
+#   # - hdfs: Hadoop Distributed File System
+
+#   # Examples:
+#       # Local filesystem (default)
+#   #     filesystem:
+#   #       protocol: local
+
+#       # S3 with credentials
+#   #     filesystem:
+#   protocol: local
+#   # options:
+#   #   key: your-access-key
+#   #   secret: your-secret-key
+
+
+
+input_validation:
+  # Input validation configuration.
+  max_file_size_mb: 2.0  # Maximum input file size in megabytes (MB). Files exceeding this size will be skipped. Useful for preventing memory issues with very large files. Example: 10.0 for 10MB, 100.0 for 100MB, 0.5 for 500KB.
+  max_shard_length: # Maximum text length per shard
+  max_shards: # Maximum number of input shards
+  max_text_length:  # Maximum input text length
+  min_shard_length: 1 # Minimum text length per shard
+limits:
+  # Limits and thresholds configuration.
+  max_entities:  # Maximum number of entities
+  max_entity_types: # Maximum number of entity types
+  max_relationship_types: # Maximum number of relationship types
+  max_relationships: # Maximum number of relationships
+llm:
+
+  # LLM configuration for ontology extraction.
+
+  # Supports all PydanticAI-compatible model providers:
+  # - Anthropic: "anthropic:claude-sonnet-4-20250514", "anthropic:claude-3-5-sonnet-20241022"
+  # - OpenAI: "openai:gpt-4o", "openai:gpt-4-turbo", "openai:gpt-3.5-turbo"
+  # - Gemini: "gemini-2.5-pro", "gemini:gemini-2.0-flash-exp"
+  # - Groq: "groq:llama-3-70b", "groq:mixtral-8x7b"
+  # - xAI: "xai:grok-2"
+  # - Cohere: "cohere:command-r-plus"
+  # - Mistral: "mistral:mistral-large"
+  # - Cerebras: "cerebras:llama3.1-8b"
+  # - OpenRouter: "openrouter:anthropic/claude-3.5-sonnet"
+  # - And other OpenAI-compatible providers (Ollama, DeepSeek, Together AI, etc.)
+
+  # Note: Anthropic models have a 10-minute timeout when max_tokens > 20000.
+
+  # AWS Bedrock Integration:
+  # - Set aws_bedrock_enabled=true to use AWS Bedrock instead of direct API
+  # - Requires boto3 (install with: uv sync --extra bedrock)
+  # - Uses AWS SDK default credential chain (env vars, ~/.aws/credentials, IAM roles)
+  aws_bedrock_enabled: true  # Enable AWS Bedrock integration. When true, uses AWS Bedrock for LLM calls instead of direct API. Requires boto3 (install with: uv sync --extra bedrock). AWS credentials: environment variables, ~/.aws/credentials, or IAM roles.
+  extraction_prompt_file: # Optional path to custom extraction prompt file. This is the main system prompt that defines extraction behavior. If not specified, uses built-in default. Can be relative (to CWD) or absolute path.
+  max_tokens: 100000 # Maximum tokens for response. Warning: Anthropic models timeout after 10 minutes if max_tokens > 20000. Recommended: 16000 for Anthropic, 50000+ for Gemini.
+  # model: "bedrock:eu.anthropic.claude-sonnet-4-20250514-v1:0" # Model identifier in PydanticAI format. Format: '<provider>:<model-name>' (e.g., 'openai:gpt-4o', 'anthropic:claude-3-5-sonnet'). Gemini can omit prefix (e.g., 'gemini-2.5-pro' or 'gemini:gemini-2.5-pro'). Supports: OpenAI, Anthropic, Gemini, Groq, xAI, Cohere, Mistral, Cerebras, OpenRouter, and OpenAI-compatible providers (Ollama, DeepSeek, Together AI, Perplexity, etc.)
+  model: "eu.anthropic.claude-3-7-sonnet-20250219-v1:0" # Model identifier in PydanticAI format. Format: '<provider>:<model-name>' (e.g., 'openai:gpt-4o', 'anthropic:claude-3-5-sonnet'). Gemini can omit prefix (e.g., 'gemini-2.5-pro' or 'gemini:gemini-2.5-pro'). Supports: OpenAI, Anthropic, Gemini, Groq, xAI, Cohere, Mistral, Cerebras, OpenRouter, and OpenAI-compatible providers (Ollama, DeepSeek, Together AI, Perplexity, etc.)
+  retries: 2 # Number of retry attempts
+  temperature: 0.0 # Temperature for generation
+logging:
+  # Logging configuration.
+  format: rich  # Log format
+  level: INFO  # Log level
+  log_deduplication: false # Log deduplication details
+  log_llm_calls: false # Log LLM calls
+  log_schema_evolution: true # Log schema evolution
+  show_progress: true # Show progress bars
+memory:
+  # Memory management configuration.
+  check_available: true  # Check available memory before loading large files. Disable to skip checks.
+  max_usage_mb:  # Maximum memory usage in MB. If None, uses 80% of available RAM. Raises MemoryError if estimated usage exceeds this limit.
+  safety_margin_mb: 2048 # Safety margin in MB to reserve (default: 2GB). Added to estimated usage.
+  warn_threshold_mb: # Warning threshold in MB. If None, uses 70% of available RAM. Warns if estimated usage exceeds this threshold.
+naming_conventions:  # Naming convention configuration for casing styles
+  enabled: true  # Enable naming convention enforcement
+  entity_label_casing: preserve # Casing style for entity instance labels (e.g., 'Heart Disease' vs 'HeartDisease')
+  entity_label_spelling_variant: UK # Spelling variant for entity labels only (US: 'color', UK: 'colour', preserve: no conversion). Overrides spelling_variant for entity labels if set to non-preserve value.
+  entity_type_casing: UpperCamelCase # Casing style for entity types (e.g., 'MedicalConcept' vs 'medical_concept')
+  property_casing: lowerCamelCase # Casing style for property keys (e.g., 'startDate' vs 'start_date')
+  relationship_type_casing: lowerCamelCase # Casing style for relationship types (e.g., 'isPartOf' vs 'is_part_of')
+  spelling_variant: US # Spelling variant for text (US: 'color', UK: 'colour', preserve: no conversion)
+output:
+  # Output configuration.
+  append_domain_name: true  # Append domain name and output to base directory (e.g., domains/{domain}/output/)
+  base_directory: domains  # Base output directory
+  compress_output: false # Compress large JSON files with gzip
+  deduplication_log_filename: deduplication.jsonl # Deduplication log filename (JSONL format)
+  deduplication_summary_filename: deduplication_summary.json # Deduplication summary filename (JSON format)
+  embeddings_directory: embeddings # Embeddings directory name
+  embeddings_filename: embeddings.json # Embeddings file name
+  emit_deduplication_logs: true # Emit deduplication logs and summary
+  emit_pipeline_stage_lists: true # Emit entity/relationship JSONL files at each pipeline stage (raw, processed, final)
+  entity_id_format: '{prefix}{counter:06d}' # Entity ID format string with {prefix} and {counter} placeholders
+  entity_id_prefix: entity_ # Entity ID prefix
+  export: # OWL/RDF export configuration
+    base_uri: http://example.org/ontology  # Base URI for ontology namespace (e.g., 'http://example.org/ontology')
+    enabled: true  # Enable OWL/RDF export after extraction
+    entity_uri_suffix: /entity# # URI suffix for entity namespace (appended to base_uri/{domain})
+    filename: ontology # Output file name (without extension)
+    format: turtle # Export format: 'turtle' or 'rdfxml'
+    relationship_uri_suffix: /relationship# # URI suffix for relationship namespace (appended to base_uri/{domain})
+  faiss_index_filename: embeddings_index.faiss # FAISS index file name
+  graph_filename: graph.json # Graph file name
+  include_metadata: true # Include metadata in output
+  pretty_print: true # Pretty-print JSON output
+  relationship_id_format: '{prefix}{counter:06d}' # Relationship ID format string with {prefix} and {counter} placeholders
+  relationship_id_prefix: rel_ # Relationship ID prefix
+  schema_filename: schema.json # Schema file name
+  timestamp_format: '%Y-%m-%dT%H:%M:%SZ' # Timestamp format string for strftime
+  type_aware_canonical_keys: false # Prefix canonical keys with entity type to prevent cross-type collisions. When True, keys become '{type}__{key}' (e.g., 'Disease__diabetes'). Default False preserves backward compatibility.
+performance:
+  # Performance configuration.
+  embedding_cache_enabled: true  # Enable embedding caching
+  llm_cache_enabled: false  # Enable LLM response caching
+  max_cache_size_mb: # Maximum cache size in MB
+  normalization_cache_enabled: true # Enable normalization caching
+research: # Web research configuration for domain exploration.
+  allowed_domains: []  # Restrict searches to these domains (e.g., ['.edu', '.gov'])
+  blocked_domains: [] # Block these domains from results (e.g., ['pinterest.com', 'facebook.com'])
+  http_timeout: 30.0 # HTTP request timeout in seconds
+  max_fetches: 50 # Maximum total web pages to fetch
+  num_queries: 5  # Number of search queries to generate
+  rate_limit_delay: 1.0 # Delay between search queries in seconds
+  results_per_query: 10 # Web results to fetch per query
+  system_prompt_file: # Path to custom system prompt file for LLM query generation. If not set or file is empty, uses default prompt. Convention: {domain}/prompts/research_system_prompt.txt
+  user_prompt_file: # Path to custom user prompt template file for LLM query generation. Use {domain} and {num_queries} placeholders in the file. If not set or file is empty, uses default template. Convention: {domain}/prompts/research_user_prompt.txt
+schema_evolution:
+  # Schema evolution configuration.
+  core_entity_type:  # Core entity type definition
+    fields:  # Field names for this entity type
+    - id
+    - label
+    - aliases
+    name: entity  # Entity type name
+    required_fields: # Required field names
+    - id
+    - label
+  core_relationship_types: # Core relationship type definitions
+    # Core relationship type configuration.
+  - from_type: entity  # Source entity type
+    is_core: true # True if core relationship type
+    name: is_a  # Relationship type name
+    to_type: entity # Target entity type
+    # Core relationship type configuration.
+  - from_type: entity  # Source entity type
+    is_core: true # True if core relationship type
+    name: part_of  # Relationship type name
+    to_type: entity # Target entity type
+    # Core relationship type configuration.
+  - from_type: entity  # Source entity type
+    is_core: false # True if core relationship type
+    name: requires  # Relationship type name
+    to_type: entity # Target entity type
+    # Core relationship type configuration.
+  - from_type: entity  # Source entity type
+    is_core: true # True if core relationship type
+    name: depends_on  # Relationship type name
+    to_type: entity # Target entity type
+    # Core relationship type configuration.
+  - from_type: entity  # Source entity type
+    is_core: true # True if core relationship type
+    name: related_to  # Relationship type name
+    to_type: entity # Target entity type
+  default_entity_type: entity  # Default entity type when missing
+  default_new_type_fields: # Default fields for new entity types
+  - id
+  - label
+  - aliases
+  - description
+  default_new_type_required_fields: # Default required fields for new entity types
+  - id
+  - label
+  initial_version: '1.0' # Initial schema version
+  type_similarity_threshold: 0.75  # Type similarity threshold
+  version_increment: patch # Version increment strategy
+source_grounding: # Source grounding configuration for tracking entity/relationship sources.
+  enabled: true  # Enable source grounding to track which source file each entity/relationship came from.
+  fallback_source_prefix: text_input # Prefix for synthetic source IDs when processing text input (no file).
+  max_source_length: 1000 # Maximum length for a single source identifier (prevents extremely long paths).
+  merge_sources_on_deduplication: true # When merging duplicate entities, combine their source lists (comma-separated).
+  source_property_name: sourceUrls # Property name to store source identifiers in entity/relationship properties.
+  validate_source_format: true # Validate source identifiers are non-empty strings before storing.
+text_processing:
+  # Text processing configuration.
+  chunking:
+
+    # Text chunking configuration.
+
+    # Chunks are created to fit within LLM context windows while maintaining semantic coherence.
+    # Default values are optimized for most LLMs (5000 tokens ≈ 20KB text).
+    chars_per_token_estimate: 4  # Character-to-token estimation multiplier. ~4 chars/token for English
+    chunk_overlap: 500 # Overlap between chunks in tokens. Prevents losing context at boundaries
+    chunk_size: 5000  # Maximum chunk size in tokens. Larger = more context per LLM call, fewer calls
+    custom_chunking_function_file: # Optional path to Python file containing custom chunking function. If specified, loads custom chunking logic instead of default recursive splitting. Function must have signature: custom_chunk_text(text: str, chunk_size: int, chunk_overlap: int, separators: list[str], chars_per_token: float) -> list[str]. Returns list of text chunks. Falls back to default on error. Example: 'domains/travel/chunking/example_custom_splitter.py'. See domains/travel/chunking/README.md for detailed documentation.
+    custom_chunking_function_name: custom_chunk_text # Name of the custom chunking function to load from custom_chunking_function_file. Defaults to 'custom_chunk_text'.
+    max_chunks: # Maximum number of chunks to create (null = unlimited)
+    min_chunk_size: 100 # Minimum chunk size in tokens. Filters out tiny fragments
+    separators: # Separators for text splitting (priority order). Preserves semantic boundaries
+    - "\n\n"
+    - "\n"
+    - '. '
+    - ' '
+  normalization:
+    # Text normalization configuration.
+    abbreviation_mappings: {}  # Abbreviation to full-form mappings (e.g., {'NY': 'New York', 'USA': 'United States of America'}). Matching is case-insensitive and matches whole words only. Use abbreviations without punctuation in mappings (e.g., 'USA' not 'U.S.A.'). Expansions happen after possessive removal but before casing and punctuation normalization.
+    casing: lowercase  # Text casing: 'lowercase', 'uppercase', 'preserve'
+    preserve_identifier_patterns: # Regex patterns for formal ontology identifiers that should skip normalization. Default patterns match: OBO underscore format (VO_0010343, DOID_4325, NCBITaxon_186538), HPO/MONDO colon format (HP:0001234, MONDO:0000001), ICD colon format (ICD10CM:E11.9). Add custom patterns to support other ontology identifier conventions.
+    - ^[A-Z][A-Za-z0-9]*_\d+$
+    - ^[A-Z][A-Za-z0-9]*:\d+$
+    - ^[A-Z][A-Za-z0-9]*:[A-Z0-9.]+$
+    punctuation_handling: remove # Punctuation handling: 'remove', 'preserve', 'normalize'
+    remove_common_words: [] # Common words to remove
+relationship_processing:
+  auto_create_missing_entities: true
+  auto_created_entity_confidence: 0.5
+  auto_created_entity_default_type: "entity"
