@@ -3,6 +3,8 @@ from typing import cast
 import boto3
 import json
 import os
+import time
+
 
 
 from dotenv import load_dotenv
@@ -43,15 +45,26 @@ def llm_fact():
 
 
 def run_counter(count_value: int)-> bool:
+    time_start = time.perf_counter()
     if isinstance(count_value, int): 
 
         for i in range(count_value): 
-            logger.info(f'current count {i}')            
-        return True
+            logger.info(f'current count {i}')    
+        time_end = time.perf_counter()
+
+        return f"Task completed in {time_end - time_start :.4f}s"
     else:
         raise Exception(f'Value {count_value} must be an int')
 
     
+def counter_call_back(future):
+
+    try:
+        results = future.result()
+        logger.info('Task done')
+        return results
+    except:
+        return 'Error occurred when processing'
 
 
 def list_s3_directories(bucket_name, prefix=''):
