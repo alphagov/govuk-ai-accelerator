@@ -1,4 +1,4 @@
-from taxonomy_ontology_accelerator.ontology_engine.config.config import LLMConfig, OntologyConfig, OntologyConfigLoader
+from taxonomy_ontology_accelerator.ontology_engine.config.config import ModelConfig, OntologyConfig, OntologyConfigLoader
 from pathlib import Path
 import yaml
 from typing import cast, Optional
@@ -13,6 +13,7 @@ executor = ThreadPoolExecutor(max_workers=4)
 
 logger = cast('RichLogger', get_logger())
 
+
 def config_builder(path: Optional[Path]= None, config: Optional[dict[str, str]]=None)-> OntologyConfig:
 
     if path is not None:
@@ -25,10 +26,6 @@ def config_builder(path: Optional[Path]= None, config: Optional[dict[str, str]]=
         return config
 
 
-
-
-class LLMConfigAWS(LLMConfig):
-    model: str #temp fix for model validation in Pydantic
 
 
 
@@ -59,6 +56,7 @@ class PipelineConfig:
                 base_dir = self.output_dir.rstrip('/')
                 run_folder = f"run_{date_str}_v{self.version_number}"
                 self.output_dir = f"{base_dir}/{run_folder}"
+
 
 def load_config_for_domain(config: dict | Path):
 
