@@ -9,11 +9,15 @@ from concurrent.futures import ThreadPoolExecutor
 
 executor = ThreadPoolExecutor(max_workers=4)
 
+from src.web_browser import routing
+
 root = Blueprint('test', __name__, url_prefix='/')
 healthcheck = Blueprint('healthcheck', __name__, url_prefix='/healthcheck')
+viewer = Blueprint('viewer', __name__, url_prefix='/viewer')
 worker = Blueprint('worker', __name__, url_prefix='/worker')
 
 db = SQLAlchemy()
+global_config = {}
 
 class Test(db.Model):
     info: Mapped[str] = mapped_column(primary_key=True)
@@ -36,7 +40,7 @@ def counter():
 
 
         return jsonify({"status": result})
-    
+
 
 
 
@@ -60,13 +64,13 @@ def s3_check():
             "bucket": bucket,
             "directories": directories
         })
-        
+
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
 
-@worker.route("/llm")        
+@worker.route("/llm")
 def space_greetings():
     response = llm_fact()
 
@@ -80,10 +84,15 @@ def space_greetings():
 def ready():
     return "<p>Roger, Roger! Application is ready."
 
+@viewer.route("/bucket")
+def viewer_load():
+    return routing.index(global_config)
+
 def create_app():
     app = Flask(__name__)
     app.register_blueprint(root)
     app.register_blueprint(healthcheck)
+    app.register_blueprint(viewer)
     app.register_blueprint(worker)
 
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
