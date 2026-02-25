@@ -28,16 +28,20 @@
   # Merges travel/config.yaml with Pydantic defaults
 
 version:
-  number: 0.0.1
+  number: 0.0.3
   notes: |
     testing this notes functionality
 
 path:
-
-
   # input_path: domains/travel/input/
   # prompt_path: domains/travel/prompts/prompt.txt
   # output_dir: output/
+  input_path: s3://govuk-ai-accelerator-data-integration/TestFolder/domains/travel/input/foreign-travel-advice/
+  prompt_path: s3://govuk-ai-accelerator-data-integration/TestFolder/domains/travel/prompts/prompt.txt
+  output_dir: s3://govuk-ai-accelerator-data-integration/TestFolder/domains/travel/output/
+
+
+
 filesystem:
   protocol: s3
 
@@ -205,9 +209,9 @@ llm:
   # - Uses AWS SDK default credential chain (env vars, ~/.aws/credentials, IAM roles)
   aws_bedrock_enabled: true  # Enable AWS Bedrock integration. When true, uses AWS Bedrock for LLM calls instead of direct API. Requires boto3 (install with: uv sync --extra bedrock). AWS credentials: environment variables, ~/.aws/credentials, or IAM roles.
   extraction_prompt_file: # Optional path to custom extraction prompt file. This is the main system prompt that defines extraction behavior. If not specified, uses built-in default. Can be relative (to CWD) or absolute path.
-  max_tokens: 100000 # Maximum tokens for response. Warning: Anthropic models timeout after 10 minutes if max_tokens > 20000. Recommended: 16000 for Anthropic, 50000+ for Gemini.
+  max_tokens: 16000 # Maximum tokens for response. Warning: Anthropic models timeout after 10 minutes if max_tokens > 20000. Recommended: 16000 for Anthropic, 50000+ for Gemini.
   # model: "bedrock:eu.anthropic.claude-sonnet-4-20250514-v1:0" # Model identifier in PydanticAI format. Format: '<provider>:<model-name>' (e.g., 'openai:gpt-4o', 'anthropic:claude-3-5-sonnet'). Gemini can omit prefix (e.g., 'gemini-2.5-pro' or 'gemini:gemini-2.5-pro'). Supports: OpenAI, Anthropic, Gemini, Groq, xAI, Cohere, Mistral, Cerebras, OpenRouter, and OpenAI-compatible providers (Ollama, DeepSeek, Together AI, Perplexity, etc.)
-  model: "eu.anthropic.claude-3-7-sonnet-20250219-v1:0" # Model identifier in PydanticAI format. Format: '<provider>:<model-name>' (e.g., 'openai:gpt-4o', 'anthropic:claude-3-5-sonnet'). Gemini can omit prefix (e.g., 'gemini-2.5-pro' or 'gemini:gemini-2.5-pro'). Supports: OpenAI, Anthropic, Gemini, Groq, xAI, Cohere, Mistral, Cerebras, OpenRouter, and OpenAI-compatible providers (Ollama, DeepSeek, Together AI, Perplexity, etc.)
+  model: 'bedrock:eu.anthropic.claude-sonnet-4-20250514-v1:0' # Model identifier in PydanticAI format. Format: '<provider>:<model-name>' (e.g., 'openai:gpt-4o', 'anthropic:claude-3-5-sonnet'). Gemini can omit prefix (e.g., 'gemini-2.5-pro' or 'gemini:gemini-2.5-pro'). Supports: OpenAI, Anthropic, Gemini, Groq, xAI, Cohere, Mistral, Cerebras, OpenRouter, and OpenAI-compatible providers (Ollama, DeepSeek, Together AI, Perplexity, etc.)
   retries: 2 # Number of retry attempts
   temperature: 0.0 # Temperature for generation
 logging:

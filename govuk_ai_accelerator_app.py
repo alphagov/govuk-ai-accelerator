@@ -31,18 +31,7 @@ def db_test():
     return "<p>Hello, World! " + test.info + "</p>" 
 
 
-@worker.route("/test")
-def counter():
-    raw_val = request.args.get('no')
 
-    if raw_val is not None and raw_val.isdigit():
-        number = int(raw_val)
-        future_task = executor.submit(run_counter, number)
-        result = future_call_back(future_task)
-
-
-        return jsonify({"status": result})
-    
 
 @ontology_bp.route("/")
 def index():
@@ -56,63 +45,26 @@ def upload_file():
         return _error_response("Configuration file is missing")
         
     yaml_file = request.files['file']
-    text_file = request.files.get('text_file') # Optional text file
 
     if yaml_file.filename == '' or not _is_yaml_file(yaml_file.filename):
         return _error_response("Invalid YAML file.")
 
     try:
         config_data = yaml.safe_load(yaml_file)
-        domain = request.form.get('domain')
         
-        text_content = ""
-        if text_file and text_file.filename != '':
-            text_content = text_file.read().decode('utf-8')
-
-
         executor.submit(run_ontology_background_task, config_data)
+        
             
         return jsonify({
             "message": "Background pipeline started",
-            "status": "processing",
+            "status": 'pending'
         })
 
     except Exception as e:
         return _error_response(f"Upload failed: {str(e)}", 500)
 
 
-@worker.route("/list")
-def s3_check():
-    bucket = request.args.get('bucket')
-    prefix = request.args.get('prefix', '')
 
-    if not bucket:
-        return jsonify({"error": "Bucket name is required"}), 400
-
-    try:
-        response  = list_s3_directories(bucket, prefix)
-        directories = [
-            item['Prefix'] for item in response.get('CommonPrefixes', [])
-        ]
-
-        return jsonify({
-            "status": "success",
-            "bucket": bucket,
-            "directories": directories
-        })
-        
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-
-
-@worker.route("/llm")        
-def space_greetings():
-    response = llm_fact()
-
-    return jsonify({
-        "funfact": response
-    })
 
 
 

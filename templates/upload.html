@@ -18,14 +18,13 @@
 <body>
     <h1>Upload a YAML Configuration</h1>
     <form method="post" enctype="multipart/form-data" action="{{ url_for('ontology.upload_file') }}">
-        <label for="domain">Domain (optional):</label>
-        <input type="text" id="domain" name="domain" placeholder="e.g. travel">
+       
         
         <label for="file">Configuration File (.yaml, .yml):</label>
         <input type="file" id="file" name="file" accept=".yaml,.yml" required>
 
-        <label for="text_file">Domain prompt (.txt):</label>
-        <input type="file" id="text_file" name="text_file" accept=".txt">
+        <!-- <label for="text_file">Domain prompt (.txt):</label>
+        <input type="file" id="text_file" name="text_file" accept=".txt"> -->
 
         <br><br>
         <button type="submit">Upload & Run Pipeline</button>
