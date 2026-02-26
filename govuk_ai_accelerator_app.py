@@ -48,11 +48,14 @@ def upload_file():
 
     if yaml_file.filename == '' or not _is_yaml_file(yaml_file.filename):
         return _error_response("Invalid YAML file.")
+    
+    yaml_file = request.files['file']
+    domain_prompt = request.files.get('text_file') 
 
     try:
         config_data = yaml.safe_load(yaml_file)
         
-        executor.submit(run_ontology_background_task, config_data)
+        executor.submit(run_ontology_background_task, config_data, domain_prompt)
         
             
         return jsonify({
