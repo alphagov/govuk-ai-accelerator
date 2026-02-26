@@ -20,12 +20,12 @@ load_dotenv()
 
 
 
-async def run_ontology_pipeline(config_data: dict | None = None, incremental: bool = False) -> bool:
+async def run_ontology_pipeline(config_data: dict | None = None, domain_prompt: str=None, incremental: bool = False) -> bool:
     """Execute the complete ontology generation pipeline"""
 
     
     ontology_config, pipeline_config = load_config_for_domain(config=config_data)
-
+    domain_prompt = domain_prompt
     logger.info(f"Starting ontology pipeline for domain: {pipeline_config.domain_name}")
     # ontology_configuration = build_ontology_config(pipeline_config)
     fs = fsspec.filesystem(ontology_config.filesystem.protocol)
@@ -35,7 +35,8 @@ async def run_ontology_pipeline(config_data: dict | None = None, incremental: bo
         config= ontology_config, 
         incremental=incremental,
         input_path = pipeline_config.input_path,
-        fs= fs
+        fs= fs,
+        domain_prompt = domain_prompt
     )
     
 
@@ -130,10 +131,10 @@ async def _save_version_info(config: PipelineConfig, fs:AbstractFileSystem) -> N
         logger.warning(f"Failed to save version info: {e}")
 
 
-def run_ontology_background_task(config:dict):
+def run_ontology_background_task(config:dict, domain_prompt: str):
 
     try:
-        asyncio.run(run_ontology_pipeline(config_data=config))
+        asyncio.run(run_ontology_pipeline(config_data=config, domain_prompt=domain_prompt))
         logger.info(f"Pipeline Task Completed for domain")
         return True
     except Exception as e:
