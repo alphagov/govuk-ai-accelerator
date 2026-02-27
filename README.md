@@ -115,7 +115,7 @@ docker run -p 3000:3000 \
   ontology-app
 ```
 
-> **Note:** Inside Docker, use `host.docker.internal` (not `localhost`) in `DATABASE_URL` to reach a Postgres instance running on your Mac.
+> **Note for Mac users:**  Inside Docker, use `host.docker.internal` (not `localhost`) in `DATABASE_URL` to reach a Postgres instance running on your Mac.
 
 ---
 
