@@ -62,10 +62,7 @@ def create_blueprints():
 
             job_id = str(uuid4())
 
-            # try to create a tracking record; if the database is unreachable we
-            # log a warning and proceed without persistence.  In that case we do
-            # not pass the job_id to the background task so it won't attempt
-            # further updates.
+          
             tracking = True
             try:
                 job = ProcessingJob(id=job_id, status="pending", domain=config_data.get('domain_name'))
