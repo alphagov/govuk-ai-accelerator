@@ -5,3 +5,4 @@ pytest==8.3.4
 waitress==3.0.2
 boto3==1.42.42
 python-dotenv
+s3fs==2026.2.0
