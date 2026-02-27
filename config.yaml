@@ -28,7 +28,7 @@
   # Merges travel/config.yaml with Pydantic defaults
 
 version:
-  number: 0.0.3
+  number: 0.1.1
   notes: |
     testing this notes functionality
 
@@ -37,7 +37,7 @@ path:
   # prompt_path: domains/travel/prompts/prompt.txt
   # output_dir: output/
   input_path: s3://govuk-ai-accelerator-data-integration/TestFolder/domains/travel/input/foreign-travel-advice/
-  prompt_path: s3://govuk-ai-accelerator-data-integration/TestFolder/domains/travel/prompts/prompt.txt
+  # prompt_path: s3://govuk-ai-accelerator-data-integration/TestFolder/domains/travel/prompts/prompt.txt
   output_dir: s3://govuk-ai-accelerator-data-integration/TestFolder/domains/travel/output/
 
 

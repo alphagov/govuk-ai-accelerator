@@ -76,33 +76,52 @@ With Docker
 
 ## API Testing & Verification
 
-Use the following endpoints to verify the worker's core functionality. Ensure your local environment is running at `http://localhost`.
+The application provides REST endpoints for ontology processing with asynchronous job tracking. Ensure your local environment is running at `http://localhost:5000`.
 
 ---
 
-### 1. LLM Integration (Amazon Bedrock)
-**Endpoint:** `GET /worker/llm`  
-**Description:** Validates the connection to Amazon Bedrock and the LLM's generative capabilities.
+### 1. Health Check
+**Endpoint:** `GET /healthcheck/ready`  
+**Description:** Validates that the application is running and healthy.
 
-> **Expected Behavior:** Returns a JSON response containing a randomly generated fact about space.
-
----
-
-### 2. Asynchronous Background Tasks
-**Endpoint:** `GET /worker/test?no=<int>`  
-**Example:** `http://localhost/worker/test?no=10000`  
-**Description:** Verifies that the worker can handle long-running background processes without triggering a request timeout.
-
-> **Expected Behavior:** Initiates a timer/counter based on the provided digit.
+> **Expected Behavior:** Returns status 200 with JSON response: `{"status": "healthy", "message": "Application is ready"}`
 
 ---
 
-### 3. AWS S3 Connectivity
-**Endpoint:** `GET /worker/list?bucket=<bucket_name>`  
-**Example:** `http://localhost/worker/list?bucket=abc_folder`  
-**Description:** Tests the worker’s IAM permissions and connectivity to specific S3 buckets.
+### 2. Ontology UI
+**Endpoint:** `GET /ontology/`  
+**Description:** Loads the web interface for submitting ontology processing jobs.
 
-> **Expected Behavior:** Returns a list of objects folders residing in the specified S3 bucket.
+> **Expected Behavior:** Returns HTML form for uploading configuration YAML and domain prompt text files.
+
+---
+
+### 3. Submit Ontology Job
+**Endpoint:** `POST /ontology/submit`  
+**Description:** Submits a configuration file and optional domain prompt for asynchronous ontology processing. Returns immediately with a job ID for status polling.
+
+**Request:**
+- Form data with:
+  - `file`: Configuration YAML file (required)
+  - `text_file`: Domain prompt text file (optional)
+
+**Example:**
+```bash
+curl -X POST http://localhost:5000/ontology/submit \
+  -F "file=@config.yaml" \
+  -F "text_file=@domain_prompt.txt"
+```
+
+> **Expected Behavior:** Returns status 202 (Accepted) with JSON: `{"job_id": "<uuid>", "status": "pending"}`
+
+---
+
+### 4. Check Job Status
+**Endpoint:** `GET /ontology/status/<job_id>`  
+**Example:** `http://localhost:5000/ontology/status/550e8400-e29b-41d4-a716-446655440000`  
+**Description:** Polls the status of a previously submitted ontology processing job.
+
+> **Expected Behavior:** Returns status 200 with JSON: `{"job_id": "<uuid>", "status": "<pending|completed|failed>"}`
 
 
 
