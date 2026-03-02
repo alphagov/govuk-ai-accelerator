@@ -36,9 +36,9 @@ path:
   # input_path: domains/travel/input/
   # prompt_path: domains/travel/prompts/prompt.txt
   # output_dir: output/
-  input_path: s3://govuk-ai-accelerator-data-integration/TestFolder/domains/travel/input/foreign-travel-advice/
-  # prompt_path: s3://govuk-ai-accelerator-data-integration/TestFolder/domains/travel/prompts/prompt.txt
-  output_dir: s3://govuk-ai-accelerator-data-integration/TestFolder/domains/travel/output/
+  input_path: <path-to-input> 
+  # prompt_path: <path-to-prompt> 
+  output_dir: <path-to-output> 
 
 
 
