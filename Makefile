@@ -1,3 +1,4 @@
+# Variables
 GITHUB_TOKEN   ?= $(error GITHUB_TOKEN is not set. Run: make up GITHUB_TOKEN=<your token>)
 IMAGE_NAME      = ontology-app
 CONTAINER_NAME  = ontology-app
@@ -5,9 +6,9 @@ DB_NAME         = govuk-postgres
 APP_PORT        = 3000
 DB_URL          = postgresql://govuk_ai_accelerator_user@host.docker.internal:5432/govuk_ai_accelerator
 
-.PHONY: up down run docker-build docker-run docker-stop db-start db-stop
+.PHONY: up down run docker-build docker-run docker-stop db-start db-stop clean
 
-## Start everything: db + build + run (pass GITHUB_TOKEN=<token>)
+
 up: docker-stop db-start docker-build docker-run
 
 ## Stop everything: app + db
@@ -17,7 +18,7 @@ down: docker-stop db-stop
 run:
 	uv run govuk_ai_accelerator_app.py
 
-## Start a local Postgres container (passwordless, dev only)
+## Start a local Postgres container
 db-start:
 	@docker inspect $(DB_NAME) > /dev/null 2>&1 \
 	  && echo "$(DB_NAME) already running" \
@@ -33,9 +34,13 @@ db-start:
 db-stop:
 	@docker rm -f $(DB_NAME) 2>/dev/null || true
 
-## Build the Docker image
+## Build the Docker image (Force no-cache to ensure fresh code/dependencies)
 docker-build:
+	@echo "Removing old image to ensure a fresh start..."
+	@docker rmi -f $(IMAGE_NAME) 2>/dev/null || true
 	docker build \
+	  --no-cache \
+	  --pull \
 	  --build-arg GITHUB_TOKEN=$(GITHUB_TOKEN) \
 	  -t $(IMAGE_NAME) .
 
@@ -55,3 +60,7 @@ docker-run:
 ## Stop and remove the app container
 docker-stop:
 	@docker rm -f $(CONTAINER_NAME) 2>/dev/null || true
+
+## Optional: Clean up all unused docker data
+clean: docker-stop db-stop
+	docker system prune -f
