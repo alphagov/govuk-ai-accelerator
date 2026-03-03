@@ -2,6 +2,7 @@
 
 import os
 import yaml
+import boto3
 from uuid import uuid4
 from datetime import datetime, timezone
 from flask import Flask, request, jsonify, render_template, Blueprint
@@ -98,6 +99,16 @@ def create_blueprints():
         if job is None:
             return error_response("Job not found", 404)
         return jsonify({"job_id": job.id, "status": job.status})
+
+    @ontology_bp.route('/opensearch/<domain_name>/status', methods=['GET'])
+    def open_search_status(domain_name):
+        """Return the status of a previously submitted job."""
+        client = boto3.client('opensearch', region_name='eu-west-1')
+
+        response = client.describe_domain(DomainName=domain_name)
+        status = response['DomainStatus']['Processing']
+        return jsonify({"status": f"Processing Status: {'Still Building' if status else 'Active'}",
+                        'domain_name': response['DomainStatus']['DomainName']})
 
     return healthcheck_bp, ontology_bp
 
