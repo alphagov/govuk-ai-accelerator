@@ -6,10 +6,10 @@ A Python Flask application for asynchronous ontology generation using the `taxon
 
 ### Prerequisites
 
-- **Python 3.13** — managed via `uv`
+- **Python 3.13** - managed via `uv`
 - **uv** — Python package manager
-- **PostgreSQL** — local instance or Docker
-- **AWS credentials** — available in the environment (for S3/Bedrock access)
+- **PostgreSQL** - local instance or Docker
+- **AWS credentials** - available in the environment (for S3/Bedrock access)
 - **GitHub token** — with read access to `alphagov/govuk-ai-accelerator-tw-accelerator` (private package)
 
 Install `uv` if not already installed:
@@ -31,6 +31,7 @@ uv add -r requirements.txt
 uv add "git+https://x-access-token:<GITHUB_TOKEN>@github.com/alphagov/govuk-ai-accelerator-tw-accelerator.git"
 ```
 
+#NB: if repository has uv.lock, you can just run uv sync for quicker setup
 ---
 
 ### 2. Set up PostgreSQL
@@ -117,6 +118,24 @@ docker run -p 3000:3000 \
 
 > **Note for Mac users:**  Inside Docker, use `host.docker.internal` (not `localhost`) in `DATABASE_URL` to reach a Postgres instance running on your Mac.
 
+---
+## Using Makefile setup
+ For quick local development setup to run application in docker, you can run the 
+```
+```bash
+make up GITHUB_TOKEN=<your-github-token>
+```
+```
+
+```
+```
+```
+```
+``` 
+
+```
+```
+```
 ---
 
 ## API Reference
