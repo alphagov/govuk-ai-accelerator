@@ -73,6 +73,8 @@ export AWS_REGION=eu-west-2
 export AWS_ACCESS_KEY_ID=<your key>
 export AWS_SECRET_ACCESS_KEY=<your secret>
 export AWS_SESSION_TOKEN=<your token>  # if using temporary credentials
+
+
 ```
 
 ---
