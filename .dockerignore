@@ -8,5 +8,7 @@ __pycache__/
 *.pyc  
 *.pyo  
 *.pyd  
-*venv/  
-.env  
+*venv/
+.env
+config.yaml
+domains/
