@@ -31,7 +31,6 @@ uv add -r requirements.txt
 uv add "git+https://x-access-token:<GITHUB_TOKEN>@github.com/alphagov/govuk-ai-accelerator-tw-accelerator.git"
 ```
 
-#NB: if repository has uv.lock, you can just run uv sync for quicker setup
 ---
 
 ### 2. Set up PostgreSQL
