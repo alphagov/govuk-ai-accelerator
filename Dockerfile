@@ -28,11 +28,12 @@ RUN uv pip install --system -r requirements.txt
 RUN \
     --mount=type=secret,id=GITHUB_TOKEN,env=GITHUB_TOKEN \
     git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/" && \
-    uv pip install --system "git+https://github.com/alphagov/govuk-ai-accelerator-tw-accelerator"
+    uv pip install --system "git+https://github.com/alphagov/govuk-ai-accelerator-tw-accelerator" && \
+    rm -rf /root/.cache/uv
 
 COPY . .
 
 EXPOSE 8080 
 
 
-CMD ["uv", "run", "waitress-serve", "--host=0.0.0.0", "--port=3000", "--call", "govuk_ai_accelerator_app:create_app"]
+CMD ["waitress-serve", "--host=0.0.0.0", "--port=3000", "--call", "govuk_ai_accelerator_app:create_app"]
