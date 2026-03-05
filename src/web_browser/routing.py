@@ -1,12 +1,67 @@
 import boto3
-from flask import Flask, render_template
+import botocore
+from flask import Flask, render_template, request
+
+from src.web_browser.s3 import parse_responses, list_objects
 
 
-def index(app) -> str:
-    app = Flask(__name__)
-    if "AWS_KWARGS" in app.config:
-        s3 = boto3.resource("s3")
-        all_buckets = s3.buckets.all()
-        return render_template("index.html", buckets=all_buckets)
-    else:
+def index() -> str:
+    s3 = boto3.resource("s3")
+    all_buckets = s3.buckets.all()
+    return render_template("index.html", buckets=all_buckets.all())
+
+def view_bucket(bucket_name: str, path: str,page:int):
+    items_per_page = 500
+
+    s3_client = boto3.client("s3")
+
+    paginator = s3_client.get_paginator("list_objects_v2")
+    total_objects = 0
+    for page_iterator in paginator.paginate(Bucket=bucket_name, Prefix=path, Delimiter="/"):
+        if "CommonPrefixes" in page_iterator:
+            total_objects += len(page_iterator["CommonPrefixes"])
+        if "Contents" in page_iterator:
+            total_objects += sum(1 for obj in page_iterator["Contents"] if not obj["Key"].endswith("/"))
+
+    total_pages = (total_objects + items_per_page - 1) // items_per_page
+
+    try:
+        continuation_token = None
+        if page > 1:
+            temp_response = None
+            for _ in range(page - 1):
+                temp_response = list_objects(
+                    s3_client, bucket_name, path, 100, "/", continuation_token
+                )
+                if not temp_response.get("IsTruncated"):
+                    break
+                continuation_token = temp_response.get("NextContinuationToken")
+
+        response = list_objects(s3_client, bucket_name, path, 100, "/", continuation_token)
+        contents = parse_responses([response], request.args.get("search", ""))
+
+        return render_template(
+            "bucket_contents.html",
+            contents=contents,
+            bucket_name=bucket_name,
+            path=path,
+            search_param=request.args.get("search", ""),
+            current_page=page,
+            total_pages=total_pages,
+        )
+    except botocore.exceptions.ClientError as e:
+        __handle_exception(e)
+
+
+def __handle_exception(e):
+    error = e.response["Error"]["Message"]
+
+    if error == "AccessDenied":
+        return render_template(
+            "error.html",
+            error="You do not have permission to access this bucket.",
+        )
+    elif error == "NoSuchBucket":
         return render_template("error.html", error="The specified bucket does not exist.")
+    else:
+        return render_template("error.html", error=f"An unknown error occurred: {e}")
