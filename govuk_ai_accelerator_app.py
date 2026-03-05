@@ -5,7 +5,7 @@ import yaml
 import boto3
 from uuid import uuid4
 from datetime import datetime, timezone
-from flask import Flask, request, jsonify, render_template, Blueprint
+from flask import Flask, request, jsonify, render_template, Blueprint, Response, redirect
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -14,6 +14,7 @@ from sqlalchemy.exc import OperationalError
 from scripts.pipeline.ontology_generator import run_ontology_background_task
 from scripts.pipeline.utils import error_response, is_yaml_file, executor
 from scripts.pipeline.constants import APP_HOST, APP_PORT, BLUEPRINTS
+from src.web_browser import routing
 
 # Initialize database extension without app binding
 db = SQLAlchemy()
@@ -33,6 +34,7 @@ def create_blueprints():
     """Create and register blueprints."""
     healthcheck_bp = Blueprint('healthcheck', __name__, url_prefix=BLUEPRINTS['healthcheck']['prefix'])
     ontology_bp = Blueprint('ontology', __name__, url_prefix=BLUEPRINTS['ontology']['prefix'])
+    viewer_bp = Blueprint('viewer', __name__, url_prefix='/viewer')
 
     @healthcheck_bp.route("/ready")
     def health_check():
@@ -110,7 +112,27 @@ def create_blueprints():
         return jsonify({"status": f"Processing Status: {'Still Building' if status else 'Active'}",
                         'domain_name': response['DomainStatus']['DomainName']})
 
-    return healthcheck_bp, ontology_bp
+
+    @viewer_bp.route("/bucket")
+    def viewer_load():
+        return routing.index()
+
+    @viewer_bp.route("/bucket/<bucket_name>", defaults={"path": ""})
+    @viewer_bp.route("/bucket/<bucket_name>/<path:path>")
+    def view_bucket(bucket_name: str, path: str) -> str:
+        return routing.view_bucket(bucket_name, path, 1)
+
+    @viewer_bp.route(".bucket/download/buckets/<bucket_name>/<path:path>")
+    def download_file(bucket_name: str, path: str) -> Response:
+        s3_client = boto3.client("s3")
+        url = s3_client.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": bucket_name, "Key": path},
+            ExpiresIn=3600,
+        )  # URL expires in 1 hour
+        return redirect(url)
+
+    return healthcheck_bp, ontology_bp, viewer_bp
 
 
 def create_app():
@@ -120,9 +142,10 @@ def create_app():
 
     db.init_app(app)
 
-    healthcheck_bp, ontology_bp = create_blueprints()
+    healthcheck_bp, ontology_bp, viewer_bp = create_blueprints()
     app.register_blueprint(healthcheck_bp)
     app.register_blueprint(ontology_bp)
+    app.register_blueprint(viewer_bp)
 
     with app.app_context():
         try:
