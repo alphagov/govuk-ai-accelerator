@@ -98,7 +98,7 @@ def create_blueprints():
         job = db.session.get(ProcessingJob, job_id)
         if job is None:
             return error_response("Job not found", 404)
-        return jsonify({"job_id": job.id, "status": job.status})
+        return jsonify({"job_id": job.id, "Domain": job.domain, "status": job.status, "error": job.error_message})
 
     @ontology_bp.route('/opensearch/<domain_name>/status', methods=['GET'])
     def open_search_status(domain_name):
