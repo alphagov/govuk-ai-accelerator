@@ -35,6 +35,11 @@ def create_blueprints():
     healthcheck_bp = Blueprint('healthcheck', __name__, url_prefix=BLUEPRINTS['healthcheck']['prefix'])
     ontology_bp = Blueprint('ontology', __name__, url_prefix=BLUEPRINTS['ontology']['prefix'])
     viewer_bp = Blueprint('viewer', __name__, url_prefix='/viewer')
+    home_bp = Blueprint('home', __name__, url_prefix='/')
+
+    @home_bp.route("/")
+    def home():
+        return render_template('home.html')
 
     @healthcheck_bp.route("/ready")
     def health_check():
@@ -132,7 +137,7 @@ def create_blueprints():
         )  # URL expires in 1 hour
         return redirect(url)
 
-    return healthcheck_bp, ontology_bp, viewer_bp
+    return healthcheck_bp, ontology_bp, viewer_bp, home_bp
 
 
 def create_app():
@@ -142,10 +147,11 @@ def create_app():
 
     db.init_app(app)
 
-    healthcheck_bp, ontology_bp, viewer_bp = create_blueprints()
+    healthcheck_bp, ontology_bp, viewer_bp, home_bp = create_blueprints()
     app.register_blueprint(healthcheck_bp)
     app.register_blueprint(ontology_bp)
     app.register_blueprint(viewer_bp)
+    app.register_blueprint(home_bp)
 
     with app.app_context():
         try:
