@@ -1,6 +1,7 @@
 """Ontology generation pipeline module."""
 
 import asyncio
+from pathlib import Path
 from typing import cast
 from fsspec import AbstractFileSystem
 import fsspec
@@ -92,16 +93,36 @@ async def _save_pipeline_output(
     """Save pipeline output and version information."""
     logger.info("Saving pipeline output")
     await pipeline.finalize()
-    await _save_version_info(config, fs)
+    await _save_version_info(config, pipeline.state.output_dir, fs)
 
 
-async def _save_version_info(config: PipelineConfig, fs: AbstractFileSystem) -> None:
+def _resolve_run_root(output_dir: str | Path | None, fallback_output_dir: str | None) -> str | Path:
+    """Resolve the run root directory from a finalized output path."""
+    if output_dir is not None:
+        if isinstance(output_dir, Path):
+            return output_dir.parent if output_dir.name == "output" else output_dir
+
+        normalized_output = output_dir.rstrip("/")
+        if normalized_output.split("/")[-1] == "output":
+            return normalized_output.rsplit("/", 1)[0]
+        return normalized_output
+
+    assert fallback_output_dir is not None, "fallback_output_dir must be available"
+    return fallback_output_dir
+
+
+async def _save_version_info(
+    config: PipelineConfig,
+    output_dir: str | Path | None,
+    fs: AbstractFileSystem,
+) -> None:
     """Save version metadata to the output directory."""
     version_info = {
         "version": config.version_number,
         "notes": config.version_notes,
     }
-    version_file_path = f"{config.output_dir}/version.json"
+    run_root = _resolve_run_root(output_dir, config.output_dir)
+    version_file_path = f"{str(run_root).rstrip('/')}/version.json"
     try:
         safe_write_json_fsspec(version_file_path, version_info, pretty=True, fs=fs)
         logger.info(f"Version info saved to {version_file_path}")
