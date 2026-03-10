@@ -26,6 +26,7 @@ class ProcessingJob(db.Model):
     id: Mapped[str] = mapped_column(String, primary_key=True)
     status: Mapped[str] = mapped_column(String)
     domain: Mapped[str] = mapped_column(String, nullable=True)
+    job_runs: Mapped[str] = mapped_column(String, nullable=True)
     error_message: Mapped[str] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
 
@@ -105,7 +106,7 @@ def create_blueprints():
         job = db.session.get(ProcessingJob, job_id)
         if job is None:
             return error_response("Job not found", 404)
-        return jsonify({"job_id": job.id, "Domain": job.domain, "status": job.status, "error": job.error_message})
+        return jsonify({"job_id": job.id, "Domain": job.domain, "status": job.status, "job_runs": job.job_runs, "error": job.error_message})
 
     @ontology_bp.route('/opensearch/<domain_name>/status', methods=['GET'])
     def open_search_status(domain_name):

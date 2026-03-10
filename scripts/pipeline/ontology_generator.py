@@ -21,7 +21,7 @@ async def run_ontology_pipeline(
     config_data: dict | None = None,
     domain_prompt: str | None = None,
     incremental: bool = False,
-) -> bool:
+) -> str:
     """Run the ontology generation pipeline asynchronously."""
     from taxonomy_ontology_accelerator.ontology_engine.pipeline_builder import (
         OntologyPipelineBuilder,
@@ -49,7 +49,7 @@ async def run_ontology_pipeline(
     await _save_pipeline_output(pipeline, pipeline_config, fs)
 
     logger.info(f"Ontology pipeline completed successfully for domain: {pipeline_config.domain_name}")
-    return True
+    return str(pipeline.state.output_dir)
 
 
 def _setup_pipeline(
@@ -141,7 +141,7 @@ async def _save_version_info(
         logger.warning(f"Failed to save version info: {e}")
 
 
-def _update_job_status(job_id: str, status: str, error_message: str | None = None) -> None:
+def _update_job_status(job_id: str, status: str, error_message: str | None = None, job_runs: str | None = None) -> None:
     """Update the processing job status in the database."""
     try:
         from govuk_ai_accelerator_app import create_app, db, ProcessingJob
@@ -152,6 +152,8 @@ def _update_job_status(job_id: str, status: str, error_message: str | None = Non
                 job.status = status
                 if error_message is not None:
                     job.error_message = error_message
+                if job_runs is not None:
+                    job.job_runs = job_runs
                 db.session.commit()
     except OperationalError as exc:
         logger.warning("Unable to update job status (%s): %s", status, exc)
@@ -162,10 +164,18 @@ def _update_job_status(job_id: str, status: str, error_message: str | None = Non
 def run_ontology_background_task(config: dict, domain_prompt: str, job_id: str | None = None) -> bool:
     """Run the ontology pipeline as a background task, updating job status if provided."""
     try:
-        asyncio.run(run_ontology_pipeline(config_data=config, domain_prompt=domain_prompt))
+        output_dir = asyncio.run(run_ontology_pipeline(config_data=config, domain_prompt=domain_prompt))
         logger.info("Pipeline task completed successfully")
+        
+        job_runs = None
+        if output_dir:
+            import re
+            match = re.search(r'(run_\d{8}_v[\d\.]+)', output_dir)
+            if match:
+                job_runs = match.group(1)
+
         if job_id:
-            _update_job_status(job_id, "completed")
+            _update_job_status(job_id, "completed", job_runs=job_runs)
         return True
     except Exception as e:
         logger.error(f"Pipeline task failed: {str(e)}")
