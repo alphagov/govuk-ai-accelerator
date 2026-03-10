@@ -1,7 +1,8 @@
-from taxonomy_ontology_accelerator.ontology_engine.config.config import OntologyConfig, OntologyConfigLoader
+from __future__ import annotations
+
 from pathlib import Path
 import yaml
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 from flask import jsonify
 from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor
@@ -9,11 +10,19 @@ from concurrent.futures import ThreadPoolExecutor
 from scripts.pipeline.logging_config import logger
 from scripts.pipeline.constants import EXECUTOR_MAX_WORKERS
 
+if TYPE_CHECKING:
+    from taxonomy_ontology_accelerator.ontology_engine.config.config import OntologyConfig
+
 executor = ThreadPoolExecutor(max_workers=EXECUTOR_MAX_WORKERS)
 
 
 def config_builder(path: Optional[Path] = None, config: Optional[dict] = None) -> OntologyConfig:
     """Build OntologyConfig from either a file path or a configuration dictionary."""
+    from taxonomy_ontology_accelerator.ontology_engine.config.config import (
+        OntologyConfig,
+        OntologyConfigLoader,
+    )
+
     if path is not None:
         base = OntologyConfig()
         config = OntologyConfigLoader()._load_and_merge_domain_config('travel', path, base)
@@ -99,6 +108,5 @@ def is_yaml_file(filename: str) -> bool:
     if not filename:
         return False
     return filename.lower().endswith(('.yaml', '.yml'))
-
 
 

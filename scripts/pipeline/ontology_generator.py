@@ -1,18 +1,20 @@
+from __future__ import annotations
+
 """Ontology generation pipeline module."""
 
 import asyncio
+import json
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 from fsspec import AbstractFileSystem
 import fsspec
 from sqlalchemy.exc import OperationalError
 
-from taxonomy_ontology_accelerator.ontology_engine.pipeline_builder import OntologyPipelineBuilder
-from taxonomy_ontology_accelerator.ontology_engine.config.config import OntologyConfig
-from taxonomy_ontology_accelerator.commons.io.fsspec_utils import safe_write_json_fsspec
-
 from scripts.pipeline.logging_config import logger
 from scripts.pipeline.utils import load_config_for_domain, PipelineConfig
+
+if TYPE_CHECKING:
+    from taxonomy_ontology_accelerator.ontology_engine.pipeline_builder import OntologyPipelineBuilder
 
 
 async def run_ontology_pipeline(
@@ -21,6 +23,10 @@ async def run_ontology_pipeline(
     incremental: bool = False,
 ) -> bool:
     """Run the ontology generation pipeline asynchronously."""
+    from taxonomy_ontology_accelerator.ontology_engine.pipeline_builder import (
+        OntologyPipelineBuilder,
+    )
+
     ontology_config, pipeline_config = load_config_for_domain(config=config_data)
 
     logger.info(f"Starting ontology pipeline for domain: {pipeline_config.domain_name}")
@@ -124,7 +130,12 @@ async def _save_version_info(
     run_root = _resolve_run_root(output_dir, config.output_dir)
     version_file_path = f"{str(run_root).rstrip('/')}/version.json"
     try:
-        safe_write_json_fsspec(version_file_path, version_info, pretty=True, fs=fs)
+        parent_dir = version_file_path.rsplit("/", 1)[0]
+        if parent_dir:
+            fs.makedirs(parent_dir, exist_ok=True)
+        with fs.open(version_file_path, "w", encoding="utf-8") as handle:
+            json.dump(version_info, handle, indent=2)
+            handle.write("\n")
         logger.info(f"Version info saved to {version_file_path}")
     except Exception as e:
         logger.warning(f"Failed to save version info: {e}")
