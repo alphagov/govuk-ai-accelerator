@@ -6,8 +6,7 @@ DB_NAME         = govuk-postgres
 APP_PORT        = 3000
 DB_URL          = postgresql://govuk_ai_accelerator_user@host.docker.internal:5432/govuk_ai_accelerator
 
-.PHONY: up down run docker-build docker-run docker-stop db-start db-stop clean
-
+.PHONY: up down run docker-build docker-run docker-stop db-start db-stop clean docker-shell shell
 
 up: docker-stop db-start docker-build docker-run
 
@@ -57,6 +56,13 @@ docker-run:
 	  -e AWS_SESSION_TOKEN \
 	  $(IMAGE_NAME)
 
+## Enter the running container to explore folders
+docker-shell:
+	docker exec -it $(CONTAINER_NAME) /bin/bash || docker exec -it $(CONTAINER_NAME) /bin/sh
+
+## Shorthand for docker-shell
+shell: docker-shell
+
 ## Stop and remove the app container
 docker-stop:
 	@docker rm -f $(CONTAINER_NAME) 2>/dev/null || true
@@ -64,3 +70,6 @@ docker-stop:
 ## Optional: Clean up all unused docker data
 clean: docker-stop db-stop
 	docker system prune -f
+
+clean-local:
+	rm -rf .venv uv.lock .python-version pyproject.toml s3: domains .ontology_runs
