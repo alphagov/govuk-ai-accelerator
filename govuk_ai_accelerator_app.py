@@ -7,6 +7,7 @@ from uuid import uuid4
 from datetime import datetime, timezone
 from flask import Flask, request, jsonify, render_template, Blueprint, Response, redirect
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.exc import OperationalError
@@ -18,6 +19,7 @@ from src.web_browser import routing
 
 # Initialize database extension without app binding
 db = SQLAlchemy()
+migrate = Migrate()
 
 
 class ProcessingJob(db.Model):
@@ -147,6 +149,7 @@ def create_app():
     app.config["SQLALCHEMY_DATABASE_URI"] = database_uri
 
     db.init_app(app)
+    migrate.init_app(app, db)
 
     healthcheck_bp, ontology_bp, viewer_bp, home_bp = create_blueprints()
     app.register_blueprint(healthcheck_bp)
