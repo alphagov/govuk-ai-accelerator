@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+  <div class="col s12 m5">
+    <div class="card">
+      <div class="card-content">
+        <span class="card-title" style="font-weight: bold; color: var(--gov-green);">Run Pipeline</span>
+        <p class="grey-text text-darken-1" style="margin-bottom: 20px;">Upload your source configuration and domain prompt.</p>
+        
+        <form id="upload-form" enctype="multipart/form-data">
+          <div id="drop-zone" class="drop-zone" style="border: 2px dashed var(--gov-border); border-radius: 8px; padding: 2rem; text-align: center; margin-bottom: 1.5rem; transition: background-color 0.2s; cursor: pointer;">
+            <i class="material-icons" style="font-size: 3rem; color: var(--gov-green);">cloud_upload</i>
+            <h6 style="margin: 10px 0; font-weight: bold;">Drag & Drop files here</h6>
+            <p class="grey-text text-darken-2" style="margin-bottom: 5px;">Required: <br/> <strong>.yaml / .yml</strong> (Configuration)</p>
+            <p class="grey-text text-darken-2" style="margin-top: 5px;">Optional: <br/> <strong>.txt</strong> (Domain Prompt)</p>
+            <p class="grey-text" style="font-size: 0.9em; margin-top: 15px;">or click to browse</p>
+            
+            <input type="file" id="file" name="file" accept=".yaml,.yml" style="display: none;" required>
+            <input type="file" id="text_file" name="text_file" accept=".txt" style="display: none;">
+          </div>
+          
+          <ul class="collection" id="file-list" style="border: none; margin-bottom: 1.5rem; display: none;">
+            <li class="collection-item avatar" id="yaml-file-item" style="display: none; min-height: auto; padding-left: 50px;">
+              <i class="material-icons circle green" style="width: 30px; height: 30px; line-height: 30px; left: 10px;">insert_drive_file</i>
+              <span class="title" id="yaml-file-name" style="font-weight: 500;"></span>
+              <p class="grey-text" style="font-size: 0.8rem;">Config File</p>
+            </li>
+            <li class="collection-item avatar" id="txt-file-item" style="display: none; min-height: auto; padding-left: 50px;">
+              <i class="material-icons circle blue" style="width: 30px; height: 30px; line-height: 30px; left: 10px;">description</i>
+              <span class="title" id="txt-file-name" style="font-weight: 500;"></span>
+              <p class="grey-text" style="font-size: 0.8rem;">Domain Prompt</p>
+            </li>
+          </ul>
+
+          <div id="upload-status" style="display: none; margin-bottom: 1rem; padding: 10px; border-radius: 4px;"></div>
+
+          <button class="btn waves-effect waves-light" type="submit" id="submit-btn" style="width: 100%; background-color: var(--gov-green);">
+            Upload & Start <i class="material-icons right">send</i>
+          </button>
+          
+          <div class="progress" id="upload-progress" style="display: none;">
+              <div class="indeterminate"></div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col s12 m7">
+    <div class="card">
+      <div class="card-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <span class="card-title" style="font-weight: bold; margin: 0;">Recent Jobs</span>
+          <button id="refresh-jobs-btn" class="btn-flat waves-effect waves-teal" style="padding: 0 10px;">
+            <i class="material-icons">refresh</i>
+          </button>
+        </div>
+        
+        <table class="striped highlight responsive-table" id="jobs-table">
+          <thead>
+            <tr>
+              <th>Job ID</th>
+              <th>Status</th>
+              <th>Domain</th>
+              <th>TTL File</th>
+              <th>Output</th>
+            </tr>
+          </thead>
+          <tbody id="jobs-tbody">
+            <!-- Jobs populated via JS -->
+            <tr><td colspan="5" class="center-align grey-text">Loading jobs...</td></tr>
+          </tbody>
+        </table>
+        
+        <div style="margin-top: 15px;">
+          <button id="rerender-btn" class="btn-small grey lighten-2 grey-text text-darken-3 waves-effect">Rerender</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file');
+    const txtFileInput = document.getElementById('text_file');
+    const fileList = document.getElementById('file-list');
+    
+    dropZone.addEventListener('click', () => {
+      const tempInput = document.createElement('input');
+      tempInput.type = 'file';
+      tempInput.multiple = true;
+      tempInput.accept = '.yaml,.yml,.txt';
+      tempInput.onchange = e => handleFiles(e.target.files);
+      tempInput.click();
+    });
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropZone.addEventListener(eventName, () => {
+        dropZone.style.backgroundColor = 'rgba(0, 112, 60, 0.05)';
+        dropZone.style.borderColor = 'var(--gov-green)';
+      }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, () => {
+        dropZone.style.backgroundColor = '';
+        dropZone.style.borderColor = 'var(--gov-border)';
+      }, false);
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      handleFiles(e.dataTransfer.files);
+    });
+
+    function handleFiles(files) {
+      // Reset
+      const dtYaml = new DataTransfer();
+      const dtTxt = new DataTransfer();
+      let hasYaml = false;
+      let hasTxt = false;
+
+      Array.from(files).forEach(file => {
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (ext === 'yaml' || ext === 'yml') {
+          dtYaml.items.add(file);
+          document.getElementById('yaml-file-name').textContent = file.name;
+          document.getElementById('yaml-file-item').style.display = 'block';
+          hasYaml = true;
+        } else if (ext === 'txt') {
+          dtTxt.items.add(file);
+          document.getElementById('txt-file-name').textContent = file.name;
+          document.getElementById('txt-file-item').style.display = 'block';
+          hasTxt = true;
+        }
+      });
+
+      if (hasYaml) fileInput.files = dtYaml.files;
+      if (hasTxt) txtFileInput.files = dtTxt.files;
+
+      if (hasYaml || hasTxt) {
+        fileList.style.display = 'block';
+      }
+    }
+
+    // ---- Form Submission ----
+    const uploadForm = document.getElementById('upload-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const progressBar = document.getElementById('upload-progress');
+    const uploadStatus = document.getElementById('upload-status');
+
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      if (submitBtn.disabled) return;
+      
+      if (!fileInput.files.length) {
+        showStatus('Please select a YAML configuration file.', 'red');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.style.display = 'none';
+      progressBar.style.display = 'block';
+      uploadStatus.style.display = 'none';
+
+      try {
+        const formData = new FormData(uploadForm);
+        const response = await fetch("{{ url_for('ontology.upload_file') }}", {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          showStatus(`Pipeline started! Job ID: ${data.job_id.substring(0,8)}...`, 'green');
+          uploadForm.reset(); // Clear hidden files
+          fileInput.value = '';
+          txtFileInput.value = '';
+          fileList.style.display = 'none';
+          document.getElementById('yaml-file-item').style.display = 'none';
+          document.getElementById('txt-file-item').style.display = 'none';
+          
+          fetchJobs(); // Instant refresh
+        } else {
+          showStatus(`Error: ${data.error}`, 'red');
+        }
+      } catch (err) {
+        showStatus(`Connection error: ${err.message}`, 'red');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.style.display = 'block';
+        progressBar.style.display = 'none';
+      }
+    });
+
+    function showStatus(msg, colorName) {
+      uploadStatus.textContent = msg;
+      uploadStatus.className = `${colorName} lighten-4 ${colorName}-text text-darken-3`;
+      uploadStatus.style.display = 'block';
+    }
+
+
+    const jobsTbody = document.getElementById('jobs-tbody');
+    const refreshBtn = document.getElementById('refresh-jobs-btn');
+    const rerenderBtn = document.getElementById('rerender-btn');
+
+    async function fetchJobs() {
+      refreshBtn.classList.add('disabled');
+      try {
+        const response = await fetch("{{ url_for('ontology.list_jobs') }}");
+        if (!response.ok) throw new Error("Failed to fetch jobs");
+        const jobs = await response.json();
+        renderJobsTable(jobs);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        refreshBtn.classList.remove('disabled');
+      }
+    }
+
+    function renderJobsTable(jobs) {
+      if (!jobs || jobs.length === 0) {
+        jobsTbody.innerHTML = '<tr><td colspan="5" class="center-align grey-text">No jobs found.</td></tr>';
+        return;
+      }
+
+      jobsTbody.innerHTML = '';
+      jobs.forEach(job => {
+        const tr = document.createElement('tr');
+        
+        const idShort = job.job_id.split('-')[0];
+        
+        let statusHtml = '';
+        if (job.status.toLowerCase() === 'completed') {
+          statusHtml = '<span class="new badge green" data-badge-caption="done"></span>';
+        } else if (job.status.toLowerCase() === 'failed') {
+          statusHtml = `<span class="new badge red" data-badge-caption="failed"></span> <i class="material-icons tiny grey-text tooltipped" data-position="bottom" data-tooltip="${job.error || 'Unknown error'}">info_outline</i>`;
+        } else {
+          statusHtml = '<span class="new badge orange" data-badge-caption="pending"></span>';
+        }
+
+        const domainStr = job.domain ? job.domain : '-';
+
+        let ttlLink = 'N/A';
+        let outputLink = '';
+        
+        if (job.status.toLowerCase() === 'completed' && job.job_runs) {
+            // Generate link to S3 explorer
+            outputLink = `<a href="/viewer/bucket/govuk-ai-accelerator-data-integration/${domainStr}/${job.job_runs}/" class="btn-small flat-btn blue-text"><i class="material-icons left">folder_open</i>Browse</a>`;
+            ttlLink = `<a href="/viewer/bucket/govuk-ai-accelerator-data-integration/${domainStr}/${job.job_runs}/ontology/ontology.ttl" class="blue-text" target="_blank">Download</a>`;
+        }
+
+        tr.innerHTML = `
+          <td style="font-family: monospace; font-size: 0.9em;">${job.job_id}</td>
+          <td>${statusHtml}</td>
+          <td>${domainStr}</td>
+          <td>${ttlLink}</td>
+          <td>${outputLink}</td>
+        `;
+        jobsTbody.appendChild(tr);
+      });
+      M.Tooltip.init(document.querySelectorAll('.tooltipped'));
+    }
+
+    refreshBtn.addEventListener('click', fetchJobs);
+    rerenderBtn.addEventListener('click', fetchJobs);
+
+    fetchJobs();
+
+    setInterval(fetchJobs, 10000);
+  });
+</script>
+{% endblock %}
