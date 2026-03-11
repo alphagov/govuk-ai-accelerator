@@ -71,6 +71,7 @@ def view_bucket(bucket_name: str, path: str,page:int):
             search_param=request.args.get("search", ""),
             current_page=page,
             total_pages=total_pages,
+            active_page="explorer"
         )
     except botocore.exceptions.ClientError as e:
         __handle_exception(e)

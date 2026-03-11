@@ -161,6 +161,21 @@ def create_blueprints():
         )  # URL expires in 1 hour
         return redirect(url)
 
+    @viewer_bp.route("/api/bucket/<bucket_name>/<path:path>", methods=['DELETE'])
+    def delete_bucket_object(bucket_name: str, path: str):
+        try:
+            s3 = boto3.resource("s3")
+            bucket = s3.Bucket(bucket_name)
+
+            if path.endswith('/'):
+                bucket.objects.filter(Prefix=path).delete()
+            else:
+                s3.Object(bucket_name, path).delete()
+                
+            return jsonify({"message": f"Successfully deleted {path} from {bucket_name}"}), 200
+        except Exception as e:
+            return jsonify({"error": f"Failed to delete object: {str(e)}"}), 500
+
     return healthcheck_bp, ontology_bp, viewer_bp, home_bp
 
 
