@@ -3,8 +3,10 @@ GITHUB_TOKEN   ?= $(error GITHUB_TOKEN is not set. Run: make up GITHUB_TOKEN=<yo
 IMAGE_NAME      = ontology-app
 CONTAINER_NAME  = ontology-app
 DB_NAME         = govuk-postgres
+NETWORK_NAME    = govuk-network
 APP_PORT        = 3000
-DB_URL          = postgresql://govuk_ai_accelerator_user@host.docker.internal:5432/govuk_ai_accelerator
+DB_URL          = postgresql://govuk_ai_accelerator_user@$(DB_NAME):5432/govuk_ai_accelerator
+LOCAL_DB_URL    = postgresql://govuk_ai_accelerator_user@localhost:5432/govuk_ai_accelerator
 
 .PHONY: up down run docker-build docker-run docker-stop db-start db-stop clean docker-shell shell
 
@@ -13,16 +15,18 @@ up: docker-stop db-start docker-build docker-run
 ## Stop everything: app + db
 down: docker-stop db-stop
 
-## Run the app locally (requires: source environment.sh)
+## Run the app locally (starts app with localhost DB connection)
 run:
-	uv run govuk_ai_accelerator_app.py
+	DATABASE_URL="$(LOCAL_DB_URL)" uv run govuk_ai_accelerator_app.py
 
 ## Start a local Postgres container
 db-start:
+	@docker network inspect $(NETWORK_NAME) > /dev/null 2>&1 || docker network create $(NETWORK_NAME)
 	@docker inspect $(DB_NAME) > /dev/null 2>&1 \
 	  && echo "$(DB_NAME) already running" \
 	  || docker run -d \
 	       --name $(DB_NAME) \
+	       --network $(NETWORK_NAME) \
 	       -e POSTGRES_USER=govuk_ai_accelerator_user \
 	       -e POSTGRES_DB=govuk_ai_accelerator \
 	       -e POSTGRES_HOST_AUTH_METHOD=trust \
@@ -46,8 +50,8 @@ docker-build:
 ## Run the Docker image (foreground)
 docker-run:
 	docker run --name $(CONTAINER_NAME) \
+	  --network $(NETWORK_NAME) \
 	  -p $(APP_PORT):$(APP_PORT) \
-	  --add-host=host.docker.internal:host-gateway \
 	  -e DATABASE_URL="$(DB_URL)" \
 	  -e AWS_REGION \
 	  -e AWS_DEFAULT_REGION \

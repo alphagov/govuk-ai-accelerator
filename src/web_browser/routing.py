@@ -10,6 +10,29 @@ def index() -> str:
     all_buckets = s3.buckets.all()
     return render_template("index.html", buckets=all_buckets.all())
 
+def get_bucket_tree_nodes(bucket_name: str, prefix: str) -> list[dict]:
+    """Fetch subdirectories (prefixes) for a given S3 path to populate a UI tree."""
+    s3_client = boto3.client("s3")
+    nodes = []
+    try:
+        response = s3_client.list_objects_v2(
+            Bucket=bucket_name,
+            Prefix=prefix,
+            Delimiter="/"
+        )
+        for common_prefix in response.get("CommonPrefixes", []):
+            full_path = common_prefix["Prefix"]
+            # Extract just the folder name
+            folder_name = full_path.rstrip('/').split('/')[-1]
+            nodes.append({
+                "name": folder_name,
+                "path": full_path,
+                "type": "folder"
+            })
+    except botocore.exceptions.ClientError as e:
+        print(f"Error fetching tree nodes: {e}")
+    return nodes
+
 def view_bucket(bucket_name: str, path: str,page:int):
     items_per_page = 500
 
