@@ -1,15 +1,25 @@
-{% extends "base.html" %} {% block content %}
-<h4>Available Buckets</h4>
-<ul class="collection">
-{% if not buckets %}
-<li class="collection-item">No buckets found</li>
-{% endif %}
-  {% for bucket in buckets %}
-  <li class="collection-item">
-    <a href="{{ url_for('viewer.view_bucket', bucket_name=bucket.name) }}"
-      >{{ bucket.name }}</a
-    >
-  </li>
-  {% endfor %}
-</ul>
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+  <div class="card-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <span class="card-title" style="font-weight: bold; margin: 0; color: var(--gov-green);">Available Buckets</span>
+    </div>
+
+    <div class="collection" style="border-radius: 4px; border-color: var(--gov-border);">
+      {% if not buckets %}
+      <a href="#!" class="collection-item grey-text center-align">No buckets found</a>
+      {% endif %}
+      
+      {% for bucket in buckets %}
+      <a href="{{ url_for('viewer.view_bucket', bucket_name=bucket.name) }}" class="collection-item" style="color: var(--gov-text); display: flex; align-items: center;">
+        <i class="material-icons left blue-text" style="margin-right: 15px;">cloud</i>
+        <span style="font-size: 1.1rem;">{{ bucket.name }}</span>
+        <i class="material-icons right grey-text" style="margin-left: auto;">chevron_right</i>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
 {% endblock %}

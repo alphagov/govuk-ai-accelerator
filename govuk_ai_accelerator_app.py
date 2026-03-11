@@ -42,7 +42,7 @@ def create_blueprints():
 
     @home_bp.route("/")
     def home():
-        return render_template('home.html')
+        return redirect('/ontology')
 
     @healthcheck_bp.route("/ready")
     def health_check():
@@ -50,7 +50,7 @@ def create_blueprints():
 
     @ontology_bp.route("/", methods=['GET'])
     def index():
-        return render_template('upload.html')
+        return render_template('dashboard.html', active_page='dashboard')
 
     @ontology_bp.route('/submit', methods=['POST'])
     def upload_file():
@@ -110,6 +110,22 @@ def create_blueprints():
             return error_response("Job not found", 404)
         return jsonify({"job_id": job.id, "Domain": job.domain, "status": job.status, "job_runs": job.job_runs, "error": job.error_message})
 
+    @ontology_bp.route('/jobs', methods=['GET'])
+    def list_jobs():
+        """Return a list of all jobs."""
+        jobs = db.session.query(ProcessingJob).order_by(ProcessingJob.created_at.desc()).all()
+        job_list = []
+        for job in jobs:
+            job_list.append({
+                "job_id": job.id,
+                "domain": job.domain,
+                "status": job.status,
+                "job_runs": job.job_runs,
+                "error": job.error_message,
+                "created_at": job.created_at.isoformat() if job.created_at else None
+            })
+        return jsonify(job_list)
+
     @ontology_bp.route('/opensearch/<domain_name>/status', methods=['GET'])
     def open_search_status(domain_name):
         """Return the status of a previously submitted job."""
@@ -123,14 +139,19 @@ def create_blueprints():
 
     @viewer_bp.route("/bucket")
     def viewer_load():
-        return routing.index()
+        return routing.index() # Active page logic needs to be handled in routing inside the library if possible or we accept it won't highlight
 
     @viewer_bp.route("/bucket/<bucket_name>", defaults={"path": ""})
     @viewer_bp.route("/bucket/<bucket_name>/<path:path>")
     def view_bucket(bucket_name: str, path: str) -> str:
         return routing.view_bucket(bucket_name, path, 1)
 
-    @viewer_bp.route(".bucket/download/buckets/<bucket_name>/<path:path>")
+    @viewer_bp.route("/api/bucket/<bucket_name>/tree")
+    def api_bucket_tree(bucket_name: str):
+        prefix = request.args.get('prefix', '')
+        return jsonify(routing.get_bucket_tree_nodes(bucket_name, prefix))
+
+    @viewer_bp.route("/bucket/download/buckets/<bucket_name>/<path:path>")
     def download_file(bucket_name: str, path: str) -> Response:
         s3_client = boto3.client("s3")
         url = s3_client.generate_presigned_url(
