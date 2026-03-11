@@ -1,6 +1,8 @@
 """GOV.UK AI Accelerator Flask Application."""
 
 import os
+
+import uvicorn
 import yaml
 import boto3
 from uuid import uuid4
@@ -11,11 +13,16 @@ from flask_migrate import Migrate, upgrade
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.exc import OperationalError
+from starlette.applications import Starlette
 
 from scripts.pipeline.ontology_generator import run_ontology_background_task
 from scripts.pipeline.utils import error_response, is_yaml_file, executor
 from scripts.pipeline.constants import APP_HOST, APP_PORT, BLUEPRINTS
 from src.web_browser import routing
+
+from taxonomy_ontology_accelerator.web import app as visualizer_app
+from starlette.routing import Mount
+from a2wsgi import WSGIMiddleware
 
 # Initialize database extension without app binding
 db = SQLAlchemy()
@@ -31,7 +38,6 @@ class ProcessingJob(db.Model):
     job_runs: Mapped[str] = mapped_column(String, nullable=True)
     error_message: Mapped[str] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
-
 
 def create_blueprints():
     """Create and register blueprints."""
@@ -163,9 +169,9 @@ def create_blueprints():
 
     return healthcheck_bp, ontology_bp, viewer_bp, home_bp
 
-
 def create_app():
     app = Flask(__name__)
+
     database_uri = os.getenv("DATABASE_URL", "sqlite:///:memory:")#fallback to in-memory SQLite if DATABASE_URL is not set TODO: fix this as might fallback in production if env var is missing
     app.config["SQLALCHEMY_DATABASE_URI"] = database_uri
 
@@ -177,6 +183,7 @@ def create_app():
     app.register_blueprint(ontology_bp)
     app.register_blueprint(viewer_bp)
     app.register_blueprint(home_bp)
+
 
     with app.app_context():
         try:
@@ -195,5 +202,10 @@ def create_app():
 
 
 if __name__ == '__main__':
-    app_instance = create_app()
-    app_instance.run(host=APP_HOST, port=APP_PORT, debug=False)
+    flask_app = create_app()
+    app = Starlette(routes=[
+        Mount("/visualizer", visualizer_app.app),
+        Mount("/", WSGIMiddleware(flask_app)),
+
+    ])
+    uvicorn.run(app, host="0.0.0.0", port=3000)
