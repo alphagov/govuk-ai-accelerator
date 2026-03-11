@@ -5,12 +5,12 @@
   <div class="col s12 m5">
     <div class="card">
       <div class="card-content">
-        <span class="card-title" style="font-weight: bold; color: var(--gov-green);">Run Pipeline</span>
+        <span class="card-title" style="font-weight: bold; color: #1d70b8;">Run Pipeline</span>
         <p class="grey-text text-darken-1" style="margin-bottom: 20px;">Upload your source configuration and domain prompt.</p>
         
         <form id="upload-form" enctype="multipart/form-data">
           <div id="drop-zone" class="drop-zone" style="border: 2px dashed var(--gov-border); border-radius: 8px; padding: 2rem; text-align: center; margin-bottom: 1.5rem; transition: background-color 0.2s; cursor: pointer;">
-            <i class="material-icons" style="font-size: 3rem; color: var(--gov-green);">cloud_upload</i>
+            <i class="material-icons" style="font-size: 3rem; color: #1d70b8;">cloud_upload</i>
             <h6 style="margin: 10px 0; font-weight: bold;">Drag & Drop files here</h6>
             <p class="grey-text text-darken-2" style="margin-bottom: 5px;">Required: <br/> <strong>.yaml / .yml</strong> (Configuration)</p>
             <p class="grey-text text-darken-2" style="margin-top: 5px;">Optional: <br/> <strong>.txt</strong> (Domain Prompt)</p>
@@ -35,7 +35,7 @@
 
           <div id="upload-status" style="display: none; margin-bottom: 1rem; padding: 10px; border-radius: 4px;"></div>
 
-          <button class="btn waves-effect waves-light" type="submit" id="submit-btn" style="width: 100%; background-color: var(--gov-green);">
+          <button class="btn waves-effect waves-light" type="submit" id="submit-btn" style="width: 100%; background-color: #1d70b8;">
             Upload & Start <i class="material-icons right">send</i>
           </button>
           
@@ -110,8 +110,8 @@
 
     ['dragenter', 'dragover'].forEach(eventName => {
       dropZone.addEventListener(eventName, () => {
-        dropZone.style.backgroundColor = 'rgba(0, 112, 60, 0.05)';
-        dropZone.style.borderColor = 'var(--gov-green)';
+        dropZone.style.backgroundColor = 'rgba(29, 112, 184, 0.05)';
+        dropZone.style.borderColor = '#1d70b8';
       }, false);
     });
 
