@@ -7,7 +7,7 @@ from uuid import uuid4
 from datetime import datetime, timezone
 from flask import Flask, request, jsonify, render_template, Blueprint, Response, redirect
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
+from flask_migrate import Migrate, upgrade
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.exc import OperationalError
@@ -180,11 +180,14 @@ def create_app():
 
     with app.app_context():
         try:
-            db.create_all()
-        except Exception as exc: 
-            from sqlalchemy.exc import OperationalError
+            migrations_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "migrations")
+            if os.path.exists(migrations_dir):
+                upgrade()
+            else:
+                db.create_all()
+        except Exception as exc:
             if isinstance(exc, OperationalError):
-                app.logger.warning("Could not initialize database: %s. Proceeding without database.",exc,)
+                app.logger.warning("Could not initialize database: %s. Proceeding without database.", exc)
             else:
                 raise
 
