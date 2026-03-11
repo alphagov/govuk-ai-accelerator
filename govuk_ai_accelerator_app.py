@@ -113,7 +113,7 @@ def create_blueprints():
     @ontology_bp.route('/jobs', methods=['GET'])
     def list_jobs():
         """Return a list of all jobs."""
-        jobs = db.session.query(ProcessingJob).order_by(ProcessingJob.created_at.desc()).all()
+        jobs = db.session.query(ProcessingJob).order_by(ProcessingJob.created_at.desc()).limit(5).all()
         job_list = []
         for job in jobs:
             job_list.append({

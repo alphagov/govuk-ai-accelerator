@@ -47,7 +47,7 @@
     </div>
   </div>
 
-  <div class="col s12 m7">
+  <div class="col s12 m7" id="recent-jobs-column" style="display: none;">
     <div class="card">
       <div class="card-content">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -73,9 +73,9 @@
           </tbody>
         </table>
         
-        <div style="margin-top: 15px;">
+        <!-- <div style="margin-top: 15px;">
           <button id="rerender-btn" class="btn-small grey lighten-2 grey-text text-darken-3 waves-effect">Rerender</button>
-        </div>
+        </div> -->
       </div>
     </div>
   </div>
@@ -195,6 +195,9 @@
           document.getElementById('yaml-file-item').style.display = 'none';
           document.getElementById('txt-file-item').style.display = 'none';
           
+          // Reveal the recent jobs column if hidden
+          document.getElementById('recent-jobs-column').style.display = 'block';
+
           fetchJobs(); // Instant refresh
         } else {
           showStatus(`Error: ${data.error}`, 'red');
@@ -217,7 +220,7 @@
 
     const jobsTbody = document.getElementById('jobs-tbody');
     const refreshBtn = document.getElementById('refresh-jobs-btn');
-    const rerenderBtn = document.getElementById('rerender-btn');
+    const recentJobsCol = document.getElementById('recent-jobs-column');
 
     async function fetchJobs() {
       refreshBtn.classList.add('disabled');
@@ -278,9 +281,17 @@
     }
 
     refreshBtn.addEventListener('click', fetchJobs);
-    rerenderBtn.addEventListener('click', fetchJobs);
 
-    fetchJobs();
+    // Initial fetch to check if we should reveal the column immediately on page load
+    async function initialLoad() {
+      await fetchJobs();
+      // If there are rows in the table (other than the "No jobs" message), show it
+      if (jobsTbody.querySelectorAll('tr').length > 0 && jobsTbody.textContent.indexOf('No jobs found') === -1) {
+          recentJobsCol.style.display = 'block';
+      }
+    }
+    
+    initialLoad();
 
     setInterval(fetchJobs, 10000);
   });
