@@ -2,43 +2,23 @@
 
 {% block content %}
 <div class="row">
-  <!-- Left Column: Tree Navigation -->
-  <div class="col s12 m3" style="padding-left: 0;">
-    <div class="card" style="height: calc(100vh - 120px); overflow-y: auto;">
-      <div class="card-content">
-        <span class="card-title" style="font-weight: bold; margin-bottom: 20px; font-size: 1.2rem; color: var(--gov-green);">Bucket Explorer</span>
-        <ul id="bucket-tree" class="bucket-tree" style="margin: 0; padding-left: 0; list-style-type: none;">
-          <!-- Initially load the root bucket name as the base node -->
-          <li>
-            <div class="tree-node tree-node-active" data-path="" style="display: flex; align-items: center; cursor: pointer; padding: 8px 0;">
-              <i class="material-icons blue-text" style="margin-right: 8px; font-size: 1.2rem;">cloud</i>
-              <span style="font-weight: 500;">{{ bucket_name }}</span>
-            </div>
-            <ul class="tree-children" style="padding-left: 20px; margin: 0; list-style-type: none;">
-               <!-- Root children populated via JS -->
-            </ul>
-          </li>
-        </ul>
-      </div>
-    </div>
-  </div>
 
   <!-- Right Column: Current Folder Contents -->
-  <div class="col s12 m9" style="padding-right: 0;">
+  <div class="col s12 m12">
     <div class="card" style="min-height: calc(100vh - 120px);">
       <div class="card-content">
         <!-- Breadcrumb Navigation -->
-        <nav class="clean-breadcrumb" style="background-color: transparent; border: none; box-shadow: none; margin-bottom: 20px;">
+        <nav class="clean-breadcrumb" style="box-shadow: none; margin-bottom: 20px;">
           <div class="nav-wrapper">
             <div class="col s12">
-              <a href="{{ url_for('viewer.view_bucket', bucket_name=bucket_name) }}" class="breadcrumb" style="color: var(--gov-text);">{{ bucket_name }}</a>
+              <a href="{{ url_for('viewer.view_bucket', bucket_name=bucket_name) }}" class="breadcrumb">{{ bucket_name }}</a>
               {% set path_parts = path.rstrip('/').split('/') %}
               {% set current_build = namespace(value='') %}
               
               {% for part in path_parts %}
                 {% if part %}
                   {% set current_build.value = current_build.value ~ part ~ '/' %}
-                  <a href="{{ url_for('viewer.view_bucket', bucket_name=bucket_name, path=current_build.value) }}" class="breadcrumb" style="color: var(--gov-text);">{{ part }}</a>
+                  <a href="{{ url_for('viewer.view_bucket', bucket_name=bucket_name, path=current_build.value) }}" class="breadcrumb">{{ part }}</a>
                 {% endif %}
               {% endfor %}
             </div>
@@ -46,7 +26,7 @@
         </nav>
         <style>
           .clean-breadcrumb .breadcrumb:before {
-            color: var(--gov-border);
+            color: white !important;
           }
           .tree-node:hover {
             background-color: #f5f5f5;
@@ -97,6 +77,9 @@
                     <i class="material-icons">cloud_download</i>
                   </a>
                 {% endif %}
+                <a href="#" class="btn-small flat-btn red lighten-4 red-text text-darken-4 tooltipped" data-position="right" data-tooltip="Delete {% if item.type == 'folder' %}Folder{% else %}File{% endif %}" onclick="deleteObject('{{ bucket_name }}', '{{ item.name }}', event)">
+                  <i class="material-icons">delete</i>
+                </a>
               </td>
             </tr>
             {% else %}
@@ -143,111 +126,50 @@
   document.addEventListener('DOMContentLoaded', () => {
     const bucketName = "{{ bucket_name }}";
     const currentPath = "{{ path }}";
-    const rootContainer = document.querySelector('.tree-children');
-    const rootNode = document.querySelector('.tree-node');
 
-    async function fetchAndRenderTree(prefix, containerUl) {
-      if (containerUl.dataset.loaded === "true") {
-        // Toggle visibility
-        containerUl.style.display = containerUl.style.display === "none" ? "block" : "none";
-        
-        // Toggle icon if there's an expand/collapse icon
-        const icon = containerUl.previousElementSibling.querySelector('.expand-icon');
-        if(icon) {
-          icon.textContent = containerUl.style.display === "none" ? "chevron_right" : "expand_more";
-        }
+    window.deleteObject = async function(bucket, path, event) {
+      event.preventDefault(); // Prevent jump to top of page
+      
+      const isFolder = path.endsWith('/');
+      const confirmMsg = isFolder ? 
+          `Are you sure you want to delete the folder '${path}' and ALL its contents? This action cannot be undone.` : 
+          `Are you sure you want to delete '${path}'?`;
+          
+      if (!confirm(confirmMsg)) {
         return;
       }
-
+      
       try {
-        const response = await fetch(`/api/bucket/${bucketName}/tree?prefix=${encodeURIComponent(prefix)}`);
-        if (!response.ok) throw new Error("Failed to fetch tree data");
-        const nodes = await response.json();
-
-        containerUl.innerHTML = ''; // Clear loading state or empty
-        
-        if (nodes.length === 0) {
-            containerUl.dataset.loaded = "true";
-            containerUl.innerHTML = '<li style="padding-left: 10px; color: #9e9e9e; font-size: 0.85em;">No subfolders</li>';
-            return;
-        }
-
-        nodes.forEach(node => {
-          const li = document.createElement('li');
-          li.style.marginTop = '4px';
-
-          const nodeDiv = document.createElement('div');
-          nodeDiv.className = 'tree-node';
-          nodeDiv.dataset.path = node.path;
-          nodeDiv.style.display = 'flex';
-          nodeDiv.style.alignItems = 'center';
-          nodeDiv.style.cursor = 'pointer';
-          nodeDiv.style.padding = '4px 0';
-          
-          // Check if this path is part of the current active path for auto-expanding
-          const isActivePath = currentPath && currentPath.startsWith(node.path);
-
-          nodeDiv.innerHTML = `
-            <i class="material-icons expand-icon grey-text" style="font-size: 1rem; margin-right: 4px;">${isActivePath ? 'expand_more' : 'chevron_right'}</i>
-            <i class="material-icons yellow-text text-darken-2" style="font-size: 1.1rem; margin-right: 8px;">folder</i>
-            <span style="font-size: 0.95rem; color: var(--gov-text); ${isActivePath ? 'font-weight: bold;' : ''}">${node.name}</span>
-          `;
-
-          const childrenUl = document.createElement('ul');
-          childrenUl.className = 'tree-children';
-          childrenUl.style.paddingLeft = '15px';
-          childrenUl.style.margin = '0';
-          childrenUl.style.listStyleType = 'none';
-          childrenUl.style.display = isActivePath ? 'block' : 'none';
-          childrenUl.dataset.loaded = "false";
-
-          // Left click (expand/collapse) VS clicking text (navigate)
-          const expandIcon = nodeDiv.querySelector('.expand-icon');
-          
-          // Clicking the arrow ONLY expands/collapses
-          expandIcon.addEventListener('click', (e) => {
-             e.stopPropagation();
-             fetchAndRenderTree(node.path, childrenUl);
-          });
-          
-          // Clicking the folder icon or text actually navigates the main page
-          const textSpan = nodeDiv.querySelector('span');
-          const folderIcon = nodeDiv.querySelectorAll('i')[1];
-          
-          [textSpan, folderIcon].forEach(el => {
-              el.addEventListener('click', (e) => {
-                e.stopPropagation();
-                window.location.href = `/viewer/bucket/${bucketName}/${node.path}`;
-              });
-          });
-
-          li.appendChild(nodeDiv);
-          li.appendChild(childrenUl);
-          containerUl.appendChild(li);
-
-          // If it's the active path, recursively fetch and expand
-          if (isActivePath) {
-             containerUl.dataset.loaded = "true"; 
-             fetchAndRenderTree(node.path, childrenUl);
-          }
+        const response = await fetch(`/api/bucket/${bucket}/${path}`, {
+          method: 'DELETE'
         });
-
-        containerUl.dataset.loaded = "true";
-
-      } catch (err) {
-        console.error("Tree fetching error", err);
-      }
-    }
-
-    // Root click behavior
-    rootNode.addEventListener('click', (e) => {
-        if(currentPath !== ""){
-             window.location.href = `/viewer/bucket/${bucketName}`;
+        if (response.ok) {
+          const successMsg = isFolder ? 'Folder and its contents deleted successfully' : 'File deleted successfully';
+          if (typeof M !== 'undefined' && M.toast) {
+            M.toast({html: successMsg, classes: 'green'});
+          } else {
+            alert(successMsg);
+          }
+          setTimeout(() => window.location.reload(), 1000);
+        } else {
+          const data = await response.json();
+          const errorMsg = isFolder ? 'Failed to delete folder' : 'Failed to delete file';
+          if (typeof M !== 'undefined' && M.toast) {
+            M.toast({html: `Error: ${data.error || errorMsg}`, classes: 'red'});
+          } else {
+            alert(`Error: ${data.error || errorMsg}`);
+          }
         }
-    });
-
-    // Auto-load root children
-    fetchAndRenderTree("", rootContainer);
+      } catch (err) {
+        console.error(err);
+        const errorMsg = isFolder ? 'Failed to delete folder' : 'Failed to delete file';
+        if (typeof M !== 'undefined' && M.toast) {
+          M.toast({html: errorMsg, classes: 'red'});
+        } else {
+          alert(errorMsg);
+        }
+      }
+    };
   });
 </script>
 {% endblock %}
