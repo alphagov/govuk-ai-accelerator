@@ -174,9 +174,19 @@ def create_blueprints():
             bucket = s3.Bucket(bucket_name)
 
             if path.endswith('/'):
-                bucket.objects.filter(Prefix=path).delete()
+                responses = bucket.objects.filter(Prefix=path).delete()
+                
+                errors = []
+                for response in responses:
+                    if 'Errors' in response:
+                        errors.extend(response['Errors'])
+                
+                if errors:
+                    error_messages = ", ".join([f"{e.get('Key')}: {e.get('Message')}" for e in errors])
+                    return jsonify({"error": f"Failed to delete some objects: {error_messages}"}), 500
             else:
                 s3.Object(bucket_name, path).delete()
+                print(path, bucket, bucket.objects.filter(Prefix=path))
                 
             return jsonify({"message": f"Successfully deleted {path} from {bucket_name}"}), 200
         except Exception as e:
