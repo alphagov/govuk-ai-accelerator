@@ -6,9 +6,12 @@ from werkzeug.test import Client
 from werkzeug.wrappers import Response
 
 
+def _app_module():
+    return importlib.import_module("govuk_ai_accelerator_app")
+
+
 def _client():
-    app_module = importlib.import_module("govuk_ai_accelerator_app")
-    return Client(app_module.create_app(), Response)
+    return Client(_app_module().create_app(), Response)
 
 
 def test_create_app_redirects_visualizer_without_trailing_slash():
@@ -19,10 +22,15 @@ def test_create_app_redirects_visualizer_without_trailing_slash():
 
 
 def test_create_app_serves_visualizer_root():
+    app_module = _app_module()
     response = _client().get("/visualizer/")
 
-    assert response.status_code == 200
+    expected_status = 200 if app_module.VISUALIZER_IMPORT_ERROR is None else 503
+
+    assert response.status_code == expected_status
     assert response.content_type.startswith("text/html")
+    if expected_status == 503:
+        assert "Visualizer is unavailable" in response.get_data(as_text=True)
 
 
 def test_create_app_still_serves_ontology_dashboard():
@@ -40,9 +48,11 @@ def test_create_app_imports_without_visualizer_dependency(monkeypatch):
         return original_import(name, globals, locals, fromlist, level)
 
     monkeypatch.delitem(sys.modules, "govuk_ai_accelerator_app", raising=False)
+    monkeypatch.delitem(sys.modules, "taxonomy_ontology_accelerator", raising=False)
+    monkeypatch.delitem(sys.modules, "taxonomy_ontology_accelerator.web", raising=False)
     monkeypatch.setattr(builtins, "__import__", patched_import)
 
-    app_module = importlib.import_module("govuk_ai_accelerator_app")
+    app_module = _app_module()
     client = Client(app_module.create_app(), Response)
 
     ontology_response = client.get("/ontology/")
