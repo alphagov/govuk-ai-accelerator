@@ -9,3 +9,4 @@ humanize==4.15.0
 python-dotenv
 s3fs==2026.2.0
 PyYAML
+a2wsgi>=1.10.10
