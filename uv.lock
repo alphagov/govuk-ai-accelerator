@@ -1063,6 +1063,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "s3fs" },
     { name = "taxonomy-ontology-accelerator" },
+    { name = "uvicorn" },
     { name = "waitress" },
 ]
 
@@ -1081,6 +1082,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "s3fs", specifier = "==2026.2.0" },
     { name = "taxonomy-ontology-accelerator", git = "https://github.com/alphagov/govuk-ai-accelerator-tw-accelerator.git?rev=development" },
+    { name = "uvicorn", specifier = ">=0.41.0" },
     { name = "waitress", specifier = "==3.0.2" },
 ]
 
