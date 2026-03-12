@@ -140,9 +140,19 @@
       }
       
       try {
-        const response = await fetch(`/api/bucket/${bucket}/${path}`, {
+        const response = await fetch(`/viewer/api/bucket/${bucket}/${path}`, {
           method: 'DELETE'
         });
+        
+        // Handle non-JSON responses (like 404 HTML pages) gracefully
+        let data = {};
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+          data = await response.json();
+        } else {
+          data = { error: `Server returned ${response.status} ${response.statusText}` };
+        }
+
         if (response.ok) {
           const successMsg = isFolder ? 'Folder and its contents deleted successfully' : 'File deleted successfully';
           if (typeof M !== 'undefined' && M.toast) {
@@ -152,7 +162,6 @@
           }
           setTimeout(() => window.location.reload(), 1000);
         } else {
-          const data = await response.json();
           const errorMsg = isFolder ? 'Failed to delete folder' : 'Failed to delete file';
           if (typeof M !== 'undefined' && M.toast) {
             M.toast({html: `Error: ${data.error || errorMsg}`, classes: 'red'});
