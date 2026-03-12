@@ -14,15 +14,23 @@ from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.exc import OperationalError
 from starlette.applications import Starlette
+from starlette.requests import Request
+from starlette.responses import HTMLResponse, RedirectResponse
 
 from scripts.pipeline.ontology_generator import run_ontology_background_task
 from scripts.pipeline.utils import error_response, is_yaml_file, executor
 from scripts.pipeline.constants import APP_HOST, APP_PORT, BLUEPRINTS
 from src.web_browser import routing
 
-from taxonomy_ontology_accelerator.web import app as visualizer_app
-from starlette.routing import Mount
-from a2wsgi import WSGIMiddleware
+from starlette.routing import Mount, Route
+from a2wsgi import ASGIMiddleware, WSGIMiddleware
+
+try:
+    from taxonomy_ontology_accelerator.web import app as visualizer_app
+    VISUALIZER_IMPORT_ERROR = None
+except ModuleNotFoundError as exc:
+    visualizer_app = None
+    VISUALIZER_IMPORT_ERROR = exc
 
 # Initialize database extension without app binding
 db = SQLAlchemy()
@@ -194,7 +202,7 @@ def create_blueprints():
 
     return healthcheck_bp, ontology_bp, viewer_bp, home_bp
 
-def create_app():
+def create_flask_app():
     app = Flask(__name__)
 
     database_uri = os.getenv("DATABASE_URL", "sqlite:///:memory:")#fallback to in-memory SQLite if DATABASE_URL is not set TODO: fix this as might fallback in production if env var is missing
@@ -226,11 +234,49 @@ def create_app():
     return app
 
 
-if __name__ == '__main__':
-    flask_app = create_app()
-    app = Starlette(routes=[
-        Mount("/visualizer", visualizer_app.app),
-        Mount("/", WSGIMiddleware(flask_app)),
+async def redirect_visualizer_root(request: Request) -> RedirectResponse:
+    target = f"{request.url.path}/"
+    if request.url.query:
+        target = f"{target}?{request.url.query}"
+    return RedirectResponse(url=target)
 
+
+async def visualizer_unavailable(request: Request) -> HTMLResponse:
+    _ = request
+    detail = "Install taxonomy_ontology_accelerator to enable the visualizer."
+    if VISUALIZER_IMPORT_ERROR is not None:
+        detail = f"{detail} Missing dependency: {VISUALIZER_IMPORT_ERROR}."
+    return HTMLResponse(
+        (
+            "<!DOCTYPE html><html><head><title>Visualizer unavailable</title></head>"
+            "<body><h1>Visualizer is unavailable</h1>"
+            f"<p>{detail}</p></body></html>"
+        ),
+        status_code=503,
+    )
+
+
+def create_visualizer_asgi_app():
+    if visualizer_app is not None:
+        return visualizer_app.app
+    return Starlette(routes=[
+        Route("/", visualizer_unavailable),
+        Route("/{path:path}", visualizer_unavailable),
     ])
-    uvicorn.run(app, host="0.0.0.0", port=3000)
+
+
+def create_asgi_app():
+    flask_app = create_flask_app()
+    return Starlette(routes=[
+        Route("/visualizer", redirect_visualizer_root),
+        Mount("/visualizer", create_visualizer_asgi_app()),
+        Mount("/", WSGIMiddleware(flask_app)),
+    ])
+
+
+def create_app():
+    return ASGIMiddleware(create_asgi_app())
+
+
+if __name__ == '__main__':
+    uvicorn.run(create_asgi_app(), host=APP_HOST, port=APP_PORT)
