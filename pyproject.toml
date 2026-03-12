@@ -7,6 +7,7 @@ requires-python = ">=3.13"
 dependencies = [
     "a2wsgi>=1.10.10",
     "boto3==1.42.42",
+    "faiss-cpu>=1.7.4",
     "flask==3.1.2",
     "flask-migrate>=4.1.0",
     "flask-sqlalchemy==3.1.1",
@@ -16,7 +17,9 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "pyyaml>=6.0.3",
     "s3fs==2026.2.0",
+    "starlette>=0.52.1",
     "taxonomy-ontology-accelerator",
+    "uvicorn>=0.41.0",
     "waitress==3.0.2",
 ]
 

@@ -31,6 +31,8 @@ uv add -r requirements.txt
 uv add "git+https://x-access-token:<GITHUB_TOKEN>@github.com/alphagov/govuk-ai-accelerator-tw-accelerator.git"
 ```
 
+The default dependency set now includes `faiss-cpu`, so semantic deduplication can use FAISS when the configured threshold is reached. If you already have an existing virtualenv, run `uv sync` after pulling these changes.
+
 ---
 
 ### 2. Set up PostgreSQL
@@ -116,6 +118,8 @@ docker run -p 3000:3000 \
   -e AWS_SESSION_TOKEN \
   ontology-app
 ```
+
+Rebuild the image after pulling dependency changes so the container picks up `faiss-cpu` from `requirements.txt`.
 
 > **Note for Mac users:**  Inside Docker, use `host.docker.internal` (not `localhost`) in `DATABASE_URL` to reach a Postgres instance running on your Mac.
 
