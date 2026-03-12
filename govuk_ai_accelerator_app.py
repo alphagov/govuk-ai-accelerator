@@ -15,16 +15,22 @@ from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.exc import OperationalError
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import RedirectResponse
+from starlette.responses import HTMLResponse, RedirectResponse
 
 from scripts.pipeline.ontology_generator import run_ontology_background_task
 from scripts.pipeline.utils import error_response, is_yaml_file, executor
 from scripts.pipeline.constants import APP_HOST, APP_PORT, BLUEPRINTS
 from src.web_browser import routing
 
-from taxonomy_ontology_accelerator.web import app as visualizer_app
 from starlette.routing import Mount, Route
 from a2wsgi import ASGIMiddleware, WSGIMiddleware
+
+try:
+    from taxonomy_ontology_accelerator.web import app as visualizer_app
+    VISUALIZER_IMPORT_ERROR = None
+except ModuleNotFoundError as exc:
+    visualizer_app = None
+    VISUALIZER_IMPORT_ERROR = exc
 
 # Initialize database extension without app binding
 db = SQLAlchemy()
@@ -235,11 +241,35 @@ async def redirect_visualizer_root(request: Request) -> RedirectResponse:
     return RedirectResponse(url=target)
 
 
+async def visualizer_unavailable(request: Request) -> HTMLResponse:
+    _ = request
+    detail = "Install taxonomy_ontology_accelerator to enable the visualizer."
+    if VISUALIZER_IMPORT_ERROR is not None:
+        detail = f"{detail} Missing dependency: {VISUALIZER_IMPORT_ERROR}."
+    return HTMLResponse(
+        (
+            "<!DOCTYPE html><html><head><title>Visualizer unavailable</title></head>"
+            "<body><h1>Visualizer is unavailable</h1>"
+            f"<p>{detail}</p></body></html>"
+        ),
+        status_code=503,
+    )
+
+
+def create_visualizer_asgi_app():
+    if visualizer_app is not None:
+        return visualizer_app.app
+    return Starlette(routes=[
+        Route("/", visualizer_unavailable),
+        Route("/{path:path}", visualizer_unavailable),
+    ])
+
+
 def create_asgi_app():
     flask_app = create_flask_app()
     return Starlette(routes=[
         Route("/visualizer", redirect_visualizer_root),
-        Mount("/visualizer", visualizer_app.app),
+        Mount("/visualizer", create_visualizer_asgi_app()),
         Mount("/", WSGIMiddleware(flask_app)),
     ])
 
