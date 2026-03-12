@@ -170,9 +170,11 @@ def run_ontology_background_task(config: dict, domain_prompt: str, job_id: str |
         job_runs = None
         if output_dir:
             import re
-            match = re.search(r'(run_\d{8}_v[\d\.]+)', output_dir)
+            match = re.search(r'(run_\d{8}_v[\d\.]+.*)', str(output_dir))
             if match:
-                job_runs = match.group(1)
+                job_runs = match.group(1).rstrip('/')
+                if job_runs.endswith('/output'):
+                    job_runs = job_runs[:-7]
 
         if job_id:
             _update_job_status(job_id, "completed", job_runs=job_runs)
