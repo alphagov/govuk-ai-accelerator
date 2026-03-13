@@ -263,9 +263,9 @@
         let outputLink = '';
         
         if (job.status.toLowerCase() === 'completed' && job.job_runs) {
-            // Generate link to S3 explorer
-            outputLink = `<a href="/viewer/bucket/govuk-ai-accelerator-data-integration/${domainStr}/${job.job_runs}/" class="btn-small flat-btn blue-text"><i class="material-icons left">folder_open</i>Browse</a>`;
-            ttlLink = `<a href="/viewer/bucket/govuk-ai-accelerator-data-integration/${domainStr}/${job.job_runs}/ontology/ontology.ttl" class="blue-text" target="_blank">Download</a>`;
+            const targetBucket = 'govuk-ai-accelerator-data-integration';
+            outputLink = `<a href="/viewer/bucket/${targetBucket}/${domainStr}/${job.job_runs}/" class="btn-small flat-btn blue-text"><i class="material-icons left">folder_open</i>Browse</a>`;
+            ttlLink = `<a href="/viewer/bucket/download/buckets/${targetBucket}/${domainStr}/${job.job_runs}/output/ontology.ttl" class="blue-text" target="_blank">Download</a>`;
         }
 
         tr.innerHTML = `
