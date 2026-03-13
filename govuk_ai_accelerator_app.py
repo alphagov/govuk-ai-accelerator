@@ -126,8 +126,14 @@ def create_blueprints():
 
     @ontology_bp.route('/jobs', methods=['GET'])
     def list_jobs():
-        """Return a list of all jobs."""
-        jobs = db.session.query(ProcessingJob).order_by(ProcessingJob.created_at.desc()).limit(5).all()
+        """Return a list of all jobs created today, sorted by most recent."""
+        from datetime import datetime, timezone
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        jobs = db.session.query(ProcessingJob) \
+            .filter(ProcessingJob.created_at >= today_start) \
+            .order_by(ProcessingJob.created_at.desc()) \
+            .all()
         job_list = []
         for job in jobs:
             job_list.append({
