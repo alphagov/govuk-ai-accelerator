@@ -126,8 +126,13 @@ def create_blueprints():
 
     @ontology_bp.route('/jobs', methods=['GET'])
     def list_jobs():
-        """Return a list of all jobs."""
-        jobs = db.session.query(ProcessingJob).order_by(ProcessingJob.created_at.desc()).limit(5).all()
+
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        jobs = db.session.query(ProcessingJob) \
+            .filter(ProcessingJob.created_at >= today_start) \
+            .order_by(ProcessingJob.created_at.desc()) \
+            .limit(5).all()
         job_list = []
         for job in jobs:
             job_list.append({
@@ -171,8 +176,8 @@ def create_blueprints():
         url = s3_client.generate_presigned_url(
             "get_object",
             Params={"Bucket": bucket_name, "Key": path},
-            ExpiresIn=3600,
-        )  # URL expires in 1 hour
+            ExpiresIn=3600)  # URL expires in 1 hour
+            
         return redirect(url)
 
     @viewer_bp.route("/api/bucket/<bucket_name>/<path:path>", methods=['DELETE'])
