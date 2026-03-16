@@ -60,11 +60,12 @@
         <table class="striped highlight responsive-table" id="jobs-table">
           <thead>
             <tr>
-              <th>Job ID</th>
-              <th>Status</th>
-              <th>Domain</th>
-              <th>TTL File</th>
-              <th>Output</th>
+                <th>Job ID</th>
+                <th>Created</th>
+                <th>Status</th>
+                <th>Domain</th>
+                <th>TTL File</th>
+                <th>Output</th>
             </tr>
           </thead>
           <tbody id="jobs-tbody">
@@ -264,12 +265,13 @@
         
         if (job.status.toLowerCase() === 'completed' && job.job_runs) {
             const targetBucket = 'govuk-ai-accelerator-data-integration';
-            outputLink = `<a href="/viewer/bucket/${targetBucket}/${domainStr}/${job.job_runs}/" class="btn-small flat-btn blue-text"><i class="material-icons left">folder_open</i>Browse</a>`;
+            outputLink = `<a href="/viewer/bucket/${targetBucket}/${domainStr}/${job.job_runs}/" class="btn-small flat-btn blue-text"><i class="material-icons left">View File</a>`;
             ttlLink = `<a href="/viewer/bucket/download/buckets/${targetBucket}/${domainStr}/${job.job_runs}/output/ontology.ttl" class="blue-text" target="_blank">Download</a>`;
         }
 
         tr.innerHTML = `
           <td style="font-family: monospace; font-size: 0.9em;">${job.job_id}</td>
+          <td>${new Date(job.created_at).toLocaleString('en-GB', { timeZone: 'UTC' })}</td>
           <td>${statusHtml}</td>
           <td>${domainStr}</td>
           <td>${ttlLink}</td>
