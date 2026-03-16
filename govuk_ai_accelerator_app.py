@@ -127,7 +127,7 @@ def create_blueprints():
     @ontology_bp.route('/jobs', methods=['GET'])
     def list_jobs():
 
-        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = datetime(2026, 3, 13, tzinfo=timezone.utc) #temporary filter
         
         jobs = db.session.query(ProcessingJob) \
             .filter(ProcessingJob.created_at >= today_start) \
@@ -177,7 +177,7 @@ def create_blueprints():
             "get_object",
             Params={"Bucket": bucket_name, "Key": path},
             ExpiresIn=3600)  # URL expires in 1 hour
-            
+
         return redirect(url)
 
     @viewer_bp.route("/api/bucket/<bucket_name>/<path:path>", methods=['DELETE'])
