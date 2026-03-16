@@ -263,11 +263,11 @@
         let ttlLink = 'N/A';
         let outputLink = '';
         
-        if (job.status.toLowerCase() === 'completed' && job.job_runs) {
+        {#if (job.status.toLowerCase() === 'completed' && job.job_runs) {#}
             const targetBucket = 'govuk-ai-accelerator-data-integration';
-            outputLink = `<a href="/viewer/bucket/${targetBucket}/${domainStr}/${job.job_runs}/" class="btn-small flat-btn blue-text"><i class="material-icons left">View File</a>`;
+            outputLink = `<a href="/viewer/bucket/${targetBucket}/${domainStr}/${job.job_runs}/" class="btn-view">View File</a>`;
             ttlLink = `<a href="/viewer/bucket/download/buckets/${targetBucket}/${domainStr}/${job.job_runs}/output/ontology.ttl" class="blue-text" target="_blank">Download</a>`;
-        }
+        {#}#}
 
         tr.innerHTML = `
           <td style="font-family: monospace; font-size: 0.9em;">${job.job_id}</td>
