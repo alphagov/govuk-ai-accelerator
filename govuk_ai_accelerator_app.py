@@ -66,6 +66,18 @@ def create_blueprints():
     def index():
         return render_template('dashboard.html', active_page='dashboard')
 
+    @ontology_bp.route("/test_data")
+    def ontology_test_data():
+        try:
+            job = ProcessingJob(id=1, status="pending", domain="test")
+            db.session.add(job)
+            db.session.commit()
+        except OperationalError as oe:
+            from flask import current_app
+            current_app.logger.warning("Database unavailable, proceeding without job tracking: %s", oe)
+            tracking = False
+        return render_template('dashboard.html', active_page='dashboard')
+
     @ontology_bp.route('/submit', methods=['POST'])
     def upload_file():
         if 'file' not in request.files:
