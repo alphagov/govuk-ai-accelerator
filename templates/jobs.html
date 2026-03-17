@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+  <div class="col s12">
+    <div class="card">
+      <div class="card-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <span class="card-title" style="font-weight: bold; margin: 0; color: #1d70b8;">Historical Jobs</span>
+          <button id="refresh-jobs-btn" class="btn-flat waves-effect waves-teal" style="padding: 0 10px;">
+            <i class="material-icons">refresh</i>
+          </button>
+        </div>
+        
+        <p class="grey-text text-darken-1" style="margin-bottom: 20px;">
+          View all historical pipeline processing jobs and their current status.
+        </p>
+
+        <table class="striped highlight responsive-table" id="jobs-table">
+          <thead>
+            <tr>
+                <th style="width: 50px;">#</th>
+                <th>Job ID</th>
+                <th>Created</th>
+                <th>Status</th>
+                <th>Domain</th>
+                <th>TTL File</th>
+                <th>Output</th>
+            </tr>
+          </thead>
+          <tbody id="jobs-tbody">
+            <tr><td colspan="7" class="center-align grey-text">Loading jobs...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const jobsTbody = document.getElementById('jobs-tbody');
+    const refreshBtn = document.getElementById('refresh-jobs-btn');
+
+    async function fetchJobs() {
+      refreshBtn.classList.add('disabled');
+      try {
+        const response = await fetch("{{ url_for('ontology.list_jobs') }}");
+        if (!response.ok) throw new Error("Failed to fetch jobs");
+        const jobs = await response.json();
+        renderJobsTable(jobs);
+      } catch (err) {
+        console.error(err);
+        jobsTbody.innerHTML = `<tr><td colspan="7" class="center-align red-text">Error fetching jobs: ${err.message}</td></tr>`;
+      } finally {
+        refreshBtn.classList.remove('disabled');
+      }
+    }
+
+    function renderJobsTable(jobs) {
+      if (!jobs || jobs.length === 0) {
+        jobsTbody.innerHTML = '<tr><td colspan="7" class="center-align grey-text">No jobs found.</td></tr>';
+        return;
+      }
+
+      jobsTbody.innerHTML = '';
+      jobs.forEach((job, index) => {
+        const tr = document.createElement('tr');
+        
+        let statusHtml = '';
+        if (job.status.toLowerCase() === 'completed') {
+          statusHtml = '<span class="new badge green" data-badge-caption="done"></span>';
+        } else if (job.status.toLowerCase() === 'failed') {
+          statusHtml = `<span class="new badge red" data-badge-caption="failed"></span> <i class="material-icons tiny grey-text tooltipped" data-position="bottom" data-tooltip="${job.error || 'Unknown error'}">info_outline</i>`;
+        } else {
+          statusHtml = '<span class="new badge orange" data-badge-caption="pending"></span>';
+        }
+
+        const domainStr = job.domain ? job.domain : '-';
+        let ttlLink = 'N/A';
+        let outputLink = '';
+        
+        const targetBucket = 'govuk-ai-accelerator-data-integration';
+        if (job.status.toLowerCase() === 'completed') {
+            outputLink = `<a href="/viewer/bucket/${targetBucket}/${domainStr}/${job.job_runs}/" class="btn-view">View File</a>`;
+            ttlLink = `<a href="/viewer/bucket/download/buckets/${targetBucket}/${domainStr}/${job.job_runs}/output/ontology.ttl" class="blue-text" target="_blank">Download</a>`;
+        }
+
+        tr.innerHTML = `
+          <td class="grey-text">${index + 1}</td>
+          <td style="font-family: monospace; font-size: 0.9em;">${job.job_id}</td>
+          <td>${new Date(job.created_at).toLocaleString('en-GB', { timeZone: 'UTC' })}</td>
+          <td>${statusHtml}</td>
+          <td>${domainStr}</td>
+          <td>${ttlLink}</td>
+          <td>${outputLink}</td>
+        `;
+        jobsTbody.appendChild(tr);
+      });
+      M.Tooltip.init(document.querySelectorAll('.tooltipped'));
+    }
+
+    refreshBtn.addEventListener('click', fetchJobs);
+    fetchJobs();
+    setInterval(fetchJobs, 30000); // Slower refresh for historical view
+  });
+</script>
+<style>
+  .btn-view {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 1rem;
+      font-size: 0.9rem;
+      border-radius: 4px;
+      background-color: #1d70b8;
+      color: white;
+      transition: background-color 0.3s ease;
+      text-align: center;
+      line-height: normal;
+  }
+  .btn-view:hover {
+      background-color: #005a30;
+      color: white;
+  }
+</style>
+{% endblock %}

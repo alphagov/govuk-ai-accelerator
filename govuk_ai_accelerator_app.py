@@ -126,34 +126,25 @@ def create_blueprints():
 
     @ontology_bp.route('/jobs', methods=['GET'])
     def list_jobs():
+        today_start = datetime(2026, 3, 13, tzinfo=timezone.utc) #temporary filter to exclude previously tested runs
 
-        today_start = datetime(2026, 3, 13, tzinfo=timezone.utc) #temporary filter
+        limit = request.args.get('limit', type=int)
         
-        jobs = db.session.query(ProcessingJob) \
-            .filter(ProcessingJob.created_at >= today_start) \
-            .order_by(ProcessingJob.created_at.desc()) \
-            .limit(5).all()
-        job_list = []
-        for job in jobs:
-            job_list.append({
-                "job_id": job.id,
-                "domain": job.domain,
-                "status": job.status,
-                "job_runs": job.job_runs,
-                "error": job.error_message,
-                "created_at": job.created_at.isoformat() if job.created_at else None
-            })
+        query = (db.session.query(ProcessingJob)
+                .filter(ProcessingJob.created_at >= today_start)
+                .order_by(ProcessingJob.created_at.desc())
+                )
+        
+        if limit: 
+            query = query.limit(limit)
+            
+        jobs = query.all()
+        job_list = [{"job_id": job.id, "domain": job.domain, "status": job.status, "job_runs": job.job_runs, "error": job.error_message, "created_at": job.created_at.isoformat() if job.created_at else None} for job in jobs]
         return jsonify(job_list)
 
-    @ontology_bp.route('/opensearch/<domain_name>/status', methods=['GET'])
-    def open_search_status(domain_name):
-        """Return the status of a previously submitted job."""
-        client = boto3.client('opensearch', region_name='eu-west-1')
-
-        response = client.describe_domain(DomainName=domain_name)
-        status = response['DomainStatus']['Processing']
-        return jsonify({"status": f"Processing Status: {'Still Building' if status else 'Active'}",
-                        'domain_name': response['DomainStatus']['DomainName']})
+    @ontology_bp.route('/all_jobs', methods=['GET'])
+    def all_jobs():
+        return render_template('jobs.html', active_page='jobs')
 
 
     @viewer_bp.route("/bucket")
