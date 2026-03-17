@@ -226,7 +226,7 @@
     async function fetchJobs() {
       refreshBtn.classList.add('disabled');
       try {
-        const response = await fetch("{{ url_for('ontology.list_jobs') }}");
+        const response = await fetch("{{ url_for('ontology.list_jobs') }}?limit=5");
         if (!response.ok) throw new Error("Failed to fetch jobs");
         const jobs = await response.json();
         renderJobsTable(jobs);
