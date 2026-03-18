@@ -10,6 +10,7 @@ RUN apt-get update \
     libcurl4 \
     curl \
     postgresql-client \
+    pandoc \
     git \
     && apt-get -y clean && \
     rm -rf /var/lib/apt/lists/* /tmp/*
