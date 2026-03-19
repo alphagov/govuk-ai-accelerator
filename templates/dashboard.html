@@ -2,8 +2,8 @@
 
 {% block content %}
 <div class="row">
-  <div class="col s12 m5">
-    <div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div class="card full-width">
       <div class="card-content">
         <span class="card-title" style="font-weight: bold; color: #1d70b8;">Run Pipeline</span>
         <p class="grey-text text-darken-1" style="margin-bottom: 20px;">Upload your source configuration and domain prompt.</p>
@@ -12,8 +12,8 @@
           <div id="drop-zone" class="drop-zone" style="border: 2px dashed var(--gov-border); border-radius: 8px; padding: 2rem; text-align: center; margin-bottom: 1.5rem; transition: background-color 0.2s; cursor: pointer;">
             <i class="material-icons" style="font-size: 3rem; color: #1d70b8;">cloud_upload</i>
             <h6 style="margin: 10px 0; font-weight: bold;">Drag & Drop files here</h6>
-            <p class="grey-text text-darken-2" style="margin-bottom: 5px;">Required: <br/> <strong>.yaml / .yml</strong> (Configuration)</p>
-            <p class="grey-text text-darken-2" style="margin-top: 5px;">Optional: <br/> <strong>.txt</strong> (Domain Prompt)</p>
+            <p class="grey-text text-darken-2" style="margin-bottom: 5px;">Required: <strong>.yaml / .yml</strong> (Configuration)</p>
+            <p class="grey-text text-darken-2" style="margin-top: 5px;">Optional: <strong>.txt</strong> (Domain Prompt)</p>
             <p class="grey-text" style="font-size: 0.9em; margin-top: 15px;">or click to browse</p>
             
             <input type="file" id="file" name="file" accept=".yaml,.yml" style="display: none;" required>
@@ -47,8 +47,8 @@
     </div>
   </div>
 
-  <div class="col s12 m7" id="recent-jobs-column" style="display: none;">
-    <div class="card">
+  <div id="recent-jobs-column" style="display: none;">
+    <div class="card full-width">
       <div class="card-content">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
           <span class="card-title" style="font-weight: bold; margin: 0;">Recent Jobs</span>
@@ -66,6 +66,7 @@
                 <th>Domain</th>
                 <th>TTL File</th>
                 <th>Output</th>
+                <th>Visualise</th>
             </tr>
           </thead>
           <tbody id="jobs-tbody">
@@ -261,13 +262,16 @@
         const domainStr = job.domain ? job.domain : '-';
 
         let ttlLink = 'N/A';
+        let ttlLink = 'N/A';
         let outputLink = '';
+        let visualiserLink = 'N/A';
         
-        {#if (job.status.toLowerCase() === 'completed' && job.job_runs) {#}
+        if (job.status.toLowerCase() === 'completed' && job.job_runs) {
             const targetBucket = 'govuk-ai-accelerator-data-integration';
-            outputLink = `<a href="/viewer/bucket/${targetBucket}/${domainStr}/${job.job_runs}/" class="btn-view">View File</a>`;
+            outputLink = `<a href="/viewer/bucket/${targetBucket}/${domainStr}/${job.job_runs}/" class="btn-view">Browse Files</a>`;
             ttlLink = `<a href="/viewer/bucket/download/buckets/${targetBucket}/${domainStr}/${job.job_runs}/output/ontology.ttl" class="blue-text" target="_blank">Download</a>`;
-        {#}#}
+            visualiserLink = `<a href="/visualiser/visualise/?run=${domainStr}/${job.job_runs}" class="btn-view">Visualise</a>`;
+        }
 
         tr.innerHTML = `
           <td style="font-family: monospace; font-size: 0.9em;">${job.job_id}</td>
@@ -276,6 +280,7 @@
           <td>${domainStr}</td>
           <td>${ttlLink}</td>
           <td>${outputLink}</td>
+          <td>${visualiserLink}</td>
         `;
         jobsTbody.appendChild(tr);
       });
