@@ -7,11 +7,19 @@ from scripts.pipeline.logging_config import logger
 
 
 def download_content(html_output_dir: str, links, config):
+    protocol = config.get("general", "protocol", fallback="local")
+    if protocol == "local": protocol = "file"
+    
+    if "://" not in html_output_dir:
+        html_output_dir = f"{protocol}://{html_output_dir}"
+
     fs, clean_html_dir = fsspec.core.url_to_fs(html_output_dir)
 
     if isinstance(links, list):
         pass
     else:
+        if "://" not in links:
+            links = f"{protocol}://{links}"
         links_fs, links_path = fsspec.core.url_to_fs(links)
         if links_fs.exists(links_path):
             with links_fs.open(links_path, 'r') as file:
