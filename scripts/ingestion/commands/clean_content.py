@@ -1,25 +1,25 @@
 import os
+import fsspec
 
-Cyan = '\033[96m'
-Blue = "\033[34m"
-Bold = "\033[1m"
-Reset = "\033[0m"
+from scripts.pipeline.logging_config import logger
 
-def clean_content(output_dir):
-    print(Bold + Cyan + "🛀 Cleaning content..." + Reset)
-    print("")
+
+def clean_content(output_dir, config):
+    logger.info("🛀 Cleaning content...")
 
     files_cleaned = 0
 
-    output_files = os.listdir(output_dir)
+    fs, clean_output_dir = fsspec.core.url_to_fs(output_dir)
+    output_files = [f for f in fs.find(clean_output_dir, detail=False) if not fs.isdir(f)]
 
     if output_files:
         count = 0
-        for file in output_files:
+        for file_path in output_files:
             count += 1
-            progress = " (" + str(count) + "/" + str(len(output_files)) + ") "
+            file = os.path.basename(file_path)
+            progress = f"({count}/{len(output_files)})"
 
-            with open(output_dir + "/" + file, 'r') as content:
+            with fs.open(file_path, 'r') as content:
                 lines = content.readlines()
 
             new_lines = []
@@ -39,13 +39,11 @@ def clean_content(output_dir):
                     new_lines.append(line.lstrip())
                     previous_line_blank = False
 
-            with open(output_dir + "/" + file, 'w') as content:
+            with fs.open(file_path, 'w') as content:
                 content.writelines(new_lines)
-                content.close()
-            print("✅" + progress + Blue + Bold + file + Reset + " successfully cleaned")
+            logger.info("%s %s — cleaned", progress, file)
             files_cleaned += 1
 
-        print("")
-        print("🧼 " + str(files_cleaned) + " files cleaned")
+        logger.info("🧼 %d files cleaned", files_cleaned)
     else:
-        print("⚠️ No content files found. Check the output directory")
+        logger.warning("No content files found in %s. Check the output directory.", output_dir)

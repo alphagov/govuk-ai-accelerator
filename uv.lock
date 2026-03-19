@@ -1051,6 +1051,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "a2wsgi" },
+    { name = "beautifulsoup4" },
     { name = "boto3" },
     { name = "faiss-cpu" },
     { name = "flask" },
@@ -1058,9 +1059,11 @@ dependencies = [
     { name = "flask-sqlalchemy" },
     { name = "humanize" },
     { name = "psycopg2-binary" },
+    { name = "pypandoc" },
     { name = "pytest" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
+    { name = "requests" },
     { name = "s3fs" },
     { name = "starlette" },
     { name = "taxonomy-ontology-accelerator" },
@@ -1071,6 +1074,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "a2wsgi", specifier = ">=1.10.10" },
+    { name = "beautifulsoup4", specifier = "~=4.14.3" },
     { name = "boto3", specifier = "==1.42.42" },
     { name = "faiss-cpu", specifier = ">=1.7.4" },
     { name = "flask", specifier = "==3.1.2" },
@@ -1078,13 +1082,15 @@ requires-dist = [
     { name = "flask-sqlalchemy", specifier = "==3.1.1" },
     { name = "humanize", specifier = "==4.15.0" },
     { name = "psycopg2-binary", specifier = "==2.9.10" },
+    { name = "pypandoc", specifier = "~=1.16.2" },
     { name = "pytest", specifier = "==8.3.4" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "pyyaml", specifier = ">=6.0.3" },
+    { name = "requests", specifier = "~=2.32.5" },
     { name = "s3fs", specifier = "==2026.2.0" },
     { name = "starlette", specifier = ">=0.52.1" },
     { name = "taxonomy-ontology-accelerator", git = "https://github.com/alphagov/govuk-ai-accelerator-tw-accelerator.git?rev=development" },
-    { name = "uvicorn", specifier = ">=0.41.0" },
+    { name = "uvicorn", specifier = "==0.41.0" },
     { name = "waitress", specifier = "==3.0.2" },
 ]
 
@@ -2577,6 +2583,15 @@ wheels = [
 [package.optional-dependencies]
 crypto = [
     { name = "cryptography" },
+]
+
+[[package]]
+name = "pypandoc"
+version = "1.16.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/0b/18/9f5f70567b97758625335209b98d5cb857e19aa1a9306e9749567a240634/pypandoc-1.16.2.tar.gz", hash = "sha256:7a72a9fbf4a5dc700465e384c3bb333d22220efc4e972cb98cf6fc723cdca86b", size = 31477, upload-time = "2025-11-13T16:30:29.608Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bb/e9/b145683854189bba84437ea569bfa786f408c8dc5bc16d8eb0753f5583bf/pypandoc-1.16.2-py3-none-any.whl", hash = "sha256:c200c1139c8e3247baf38d1e9279e85d9f162499d1999c6aa8418596558fe79b", size = 19451, upload-time = "2025-11-13T16:30:07.66Z" },
 ]
 
 [[package]]
