@@ -130,8 +130,8 @@ async def _save_version_info(
 def _update_job_status(job_id: str, status: str, error_message: str | None = None, job_runs: str | None = None) -> None:
     """Update the processing job status in the database."""
     try:
-        from govuk_ai_accelerator_app import create_flask_app, db, ProcessingJob
-        app = create_flask_app()
+        from govuk_ai_accelerator_app import create_core_app, db, ProcessingJob
+        app = create_core_app()
         with app.app_context():
             job = db.session.get(ProcessingJob, job_id)
             if job:
@@ -170,3 +170,5 @@ def run_ontology_background_task(config: dict, domain_prompt: str, job_id: str |
         if job_id:
             _update_job_status(job_id, "failed", error_message=str(e))
         raise
+
+

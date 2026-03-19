@@ -1,7 +1,7 @@
 """GOV.UK AI Accelerator Flask Application."""
 
 import os
-
+import json
 import uvicorn
 import yaml
 import boto3
@@ -16,11 +16,12 @@ from sqlalchemy.exc import OperationalError
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse
-
+from scripts.pipeline.task_manager import start_task_manager
 from scripts.pipeline.ontology_generator import run_ontology_background_task
-from scripts.pipeline.utils import error_response, is_yaml_file, executor
+from scripts.pipeline.utils import error_response, is_yaml_file
 from scripts.pipeline.constants import APP_HOST, APP_PORT, BLUEPRINTS
 from src.web_browser import routing
+from flask import current_app
 
 from starlette.routing import Mount, Route
 from a2wsgi import ASGIMiddleware, WSGIMiddleware
@@ -43,6 +44,8 @@ class ProcessingJob(db.Model):
     id: Mapped[str] = mapped_column(String, primary_key=True)
     status: Mapped[str] = mapped_column(String)
     domain: Mapped[str] = mapped_column(String, nullable=True)
+    config_data: Mapped[str] = mapped_column(String, nullable=True)
+    domain_prompt: Mapped[str] = mapped_column(String, nullable=True)
     job_runs: Mapped[str] = mapped_column(String, nullable=True)
     error_message: Mapped[str] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
@@ -90,20 +93,18 @@ def create_blueprints():
           
             tracking = True
             try:
-                job = ProcessingJob(id=job_id, status="pending", domain=config_data.get('domain_name'))
+                job = ProcessingJob(
+                    id=job_id, 
+                    status="pending", 
+                    domain=config_data.get('domain_name'),
+                    config_data=json.dumps(config_data),
+                    domain_prompt=domain_prompt
+                )
                 db.session.add(job)
                 db.session.commit()
             except OperationalError as oe:
-                from flask import current_app
                 current_app.logger.warning("Database unavailable, proceeding without job tracking: %s", oe)
                 tracking = False
-
-            executor.submit(
-                run_ontology_background_task,
-                config_data,
-                domain_prompt,
-                job_id if tracking else None,
-            )
 
             response_payload = {"job_id": job_id, "status": "pending"}
             if not tracking:
@@ -226,6 +227,8 @@ def create_flask_app():
                 app.logger.warning("Could not initialize database: %s. Proceeding without database.", exc)
             else:
                 raise
+
+    start_task_manager(app)
 
     return app
 
