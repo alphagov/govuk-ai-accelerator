@@ -55,9 +55,6 @@ class PipelineConfig:
         self.domain_name = self.config.get('domain_name', None)
         path = self.config.get('path', {})
 
-        del self.config['version']
-        del self.config['path']
-    
 
         self.input_path = path.get('input_path', None)
         self.output_dir = path.get('output_dir', None)
