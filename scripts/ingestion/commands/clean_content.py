@@ -7,6 +7,10 @@ from scripts.pipeline.logging_config import logger
 def clean_content(output_dir, config):
     logger.info("🛀 Cleaning content...")
 
+    protocol = config.get("general", "protocol", fallback="local")
+    if protocol == "local": protocol = "file"
+    if "://" not in output_dir: output_dir = f"{protocol}://{output_dir}"
+
     files_cleaned = 0
 
     fs, clean_output_dir = fsspec.core.url_to_fs(output_dir)

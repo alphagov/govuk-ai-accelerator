@@ -27,6 +27,13 @@ def recursive_scan(path):
 
 def extract_content(output_dir, input_dir, output_format, config):
     logger.info("🤖 Extracting content...")
+    
+    protocol = config.get("general", "protocol", fallback="local")
+    if protocol == "local": protocol = "file"
+    
+    if "://" not in output_dir: output_dir = f"{protocol}://{output_dir}"
+    if "://" not in input_dir: input_dir = f"{protocol}://{input_dir}"
+
     skipped_input_files_count = 0
     output_files_count = 0
 
