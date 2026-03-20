@@ -269,7 +269,7 @@
             const targetBucket = 'govuk-ai-accelerator-data-integration';
             outputLink = `<a href="/viewer/bucket/${targetBucket}/${domainStr}/${job.job_runs}/" class="btn-view">Browse Files</a>`;
             ttlLink = `<a href="/viewer/bucket/download/buckets/${targetBucket}/${domainStr}/${job.job_runs}/output/ontology.ttl" class="blue-text" target="_blank">Download</a>`;
-            visualiserLink = `<a href="/visualizer/?run=${domainStr}/${job.job_runs}" class="btn-view">Visualise Ontology</a>`;
+            visualiserLink = `<a href="/visualizer/?run=${domainStr}/${job.job_runs}" class="btn-view">Visualise Graph</a>`;
         }
 
         tr.innerHTML = `
