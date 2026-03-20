@@ -26,6 +26,7 @@
                 <th>Domain</th>
                 <th>TTL File</th>
                 <th>Output</th>
+                <th>Visualise</th>
             </tr>
           </thead>
           <tbody id="jobs-tbody">
@@ -81,11 +82,13 @@
         const domainStr = job.domain ? job.domain : '-';
         let ttlLink = 'N/A';
         let outputLink = '';
+        let visualiserLink = 'N/A';
         
         const targetBucket = 'govuk-ai-accelerator-data-integration';
         if (job.status.toLowerCase() === 'completed') {
-            outputLink = `<a href="/viewer/bucket/${targetBucket}/${domainStr}/${job.job_runs}/" class="btn-view">View File</a>`;
+            outputLink = `<a href="/viewer/bucket/${targetBucket}/${domainStr}/${job.job_runs}/" class="btn-view">Browse Files</a>`;
             ttlLink = `<a href="/viewer/bucket/download/buckets/${targetBucket}/${domainStr}/${job.job_runs}/output/ontology.ttl" class="blue-text" target="_blank">Download</a>`;
+            visualiserLink = `<a href="/visualizer/?run=${domainStr}/${job.job_runs}" class="btn-view">Visualise Ontology</a>`;
         }
 
         tr.innerHTML = `
@@ -96,6 +99,7 @@
           <td>${domainStr}</td>
           <td>${ttlLink}</td>
           <td>${outputLink}</td>
+          <td>${visualiserLink}</td>
         `;
         jobsTbody.appendChild(tr);
       });
