@@ -149,6 +149,8 @@ def _update_job_status(job_id: str, status: str, error_message: str | None = Non
 
 def run_ontology_background_task(config: dict, domain_prompt: str, job_id: str | None = None) -> bool:
     """Run the ontology pipeline as a background task, updating job status if provided."""
+    if job_id:
+        _update_job_status(job_id, "running")
     try:
         output_dir = asyncio.run(run_ontology_pipeline(config_data=config, domain_prompt=domain_prompt))
         logger.info("Pipeline task completed successfully")
@@ -170,3 +172,5 @@ def run_ontology_background_task(config: dict, domain_prompt: str, job_id: str |
         if job_id:
             _update_job_status(job_id, "failed", error_message=str(e))
         raise
+
+
