@@ -1,7 +1,7 @@
 """add pipeline column with default
 
 Revision ID: afa873aa5d99
-Revises: f256f73ad477
+Revises: 17fafe2a9606
 Create Date: 2026-03-23 08:46:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'afa873aa5d99'
-down_revision = 'f256f73ad477'
+down_revision = '17fafe2a9606'
 branch_labels = None
 depends_on = None
 
