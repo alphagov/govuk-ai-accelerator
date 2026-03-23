@@ -20,6 +20,7 @@ from scripts.pipeline.task_manager import start_task_manager
 from scripts.pipeline.ontology_generator import run_ontology_background_task
 from scripts.pipeline.utils import error_response, is_yaml_file
 from scripts.pipeline.constants import APP_HOST, APP_PORT, BLUEPRINTS
+from scripts.ingestion.ingestion_pipeline import run_ingestion_background_task
 from src.web_browser import routing
 from flask import current_app
 
@@ -37,18 +38,19 @@ except ModuleNotFoundError as exc:
 db = SQLAlchemy()
 migrate = Migrate()
 
-
 class ProcessingJob(db.Model):
     """Model to track the status of submitted jobs."""
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     status: Mapped[str] = mapped_column(String)
+    pipeline: Mapped[str] = mapped_column(String, default="ontology", nullable=True)
     domain: Mapped[str] = mapped_column(String, nullable=True)
     config_data: Mapped[str] = mapped_column(String, nullable=True)
     domain_prompt: Mapped[str] = mapped_column(String, nullable=True)
     job_runs: Mapped[str] = mapped_column(String, nullable=True)
     error_message: Mapped[str] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+
 
 def create_blueprints():
     """Create and register blueprints."""
@@ -67,6 +69,18 @@ def create_blueprints():
 
     @ontology_bp.route("/", methods=['GET'])
     def index():
+        return render_template('dashboard.html', active_page='dashboard')
+
+    @ontology_bp.route('/test_data')
+    def test_data():
+        try:
+            job = ProcessingJob(id=12, status="pending", domain="test")
+            db.session.add(job)
+            db.session.commit()
+        except OperationalError as oe:
+            from flask import current_app
+            current_app.logger.warning("Database unavailable, proceeding without job tracking: %s", oe)
+            tracking = False
         return render_template('dashboard.html', active_page='dashboard')
 
     @ontology_bp.route('/submit', methods=['POST'])
@@ -117,13 +131,82 @@ def create_blueprints():
         except Exception as e:
             return error_response(f"Job submission failed: {str(e)}", 500)
 
+    @ontology_bp.route('/ingest', methods=['POST'])
+    def ingest_content():
+        """Trigger the ingestion pipeline with either an uploaded file or JSON config."""
+        job_id = str(uuid4())
+        config_content = None
+        links_list = None
+        
+        # Check if it's a JSON request
+        if request.is_json:
+            data = request.get_json()
+            config_content = data.get('config_content')
+            links_list = data.get('links')
+            
+        # Or an uploaded file
+        ini_file = request.files.get('file')
+        
+        if not ini_file and not config_content:
+            return error_response("Configuration (.ini) is missing. Upload a file or provide 'config_content' in JSON.")
+        
+        tracking = True
+        try:
+            # Create a ProcessingJob with explicit pipeline='ingestion'
+            job = ProcessingJob(id=job_id, status="pending", pipeline="ingestion")
+            db.session.add(job)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            from flask import current_app
+            current_app.logger.warning("Database unavailable, proceeding without job tracking: %s", e)
+            tracking = False
+
+        # Save the config file (either from upload or content string)
+        config_dir = os.path.join("scripts", "ingestion", "runs")
+        os.makedirs(config_dir, exist_ok=True)
+        config_path = os.path.join(config_dir, f"{job_id}.ini")
+        
+        if ini_file:
+            ini_file.save(config_path)
+            config_content = None
+        elif isinstance(config_content, str):
+            with open(config_path, "w") as f:
+                f.write(config_content)
+            config_content = None
+        else:
+            # It's a dict (or None), we'll pass it directly to the executor
+            config_path = None
+
+        executor.submit(
+            run_ingestion_background_task,
+            config_path=config_path,
+            config_content=config_content,
+            links_list=links_list,
+            job_id=job_id,
+        )
+
+        response_payload = {"job_id": job_id, "status": "pending"}
+        if not tracking:
+            response_payload["warning"] = "database unavailable; status cannot be tracked"
+
+        return jsonify(response_payload), 202
+
+    @ontology_bp.route('/ingest/status/<job_id>', methods=['GET'])
+    def ingest_job_status(job_id):
+        """Return the status of a previously submitted ingestion job."""
+        job = db.session.get(ProcessingJob, job_id)
+        if job is None:
+            return error_response("Ingestion job not found", 404)
+        return jsonify({"job_id": job.id, "status": job.status, "error": job.error_message, "created_at": job.created_at.isoformat() if job.created_at else None})
+
     @ontology_bp.route('/status/<job_id>', methods=['GET'])
     def job_status(job_id):
         """Return the status of a previously submitted job."""
         job = db.session.get(ProcessingJob, job_id)
         if job is None:
             return error_response("Job not found", 404)
-        return jsonify({"job_id": job.id, "Domain": job.domain, "status": job.status, "job_runs": job.job_runs, "error": job.error_message})
+        return jsonify({"job_id": job.id, "pipeline": job.pipeline, "domain": job.domain, "status": job.status, "job_runs": job.job_runs, "error": job.error_message})
 
     @ontology_bp.route('/jobs', methods=['GET'])
     def list_jobs():
@@ -133,14 +216,15 @@ def create_blueprints():
         
         query = (db.session.query(ProcessingJob)
                 .filter(ProcessingJob.created_at >= today_start)
-                .order_by(ProcessingJob.created_at.desc())
+                .filter(ProcessingJob.pipeline == "ontology")
                 )
-        
+        query = query.order_by(ProcessingJob.created_at.desc())
+
         if limit: 
             query = query.limit(limit)
             
         jobs = query.all()
-        job_list = [{"job_id": job.id, "domain": job.domain, "status": job.status, "job_runs": job.job_runs, "error": job.error_message, "created_at": job.created_at.isoformat() if job.created_at else None} for job in jobs]
+        job_list = [{"job_id": job.id, "pipeline": job.pipeline, "domain": job.domain, "status": job.status, "job_runs": job.job_runs, "error": job.error_message, "created_at": job.created_at.isoformat() if job.created_at else None} for job in jobs]
         return jsonify(job_list)
 
     @ontology_bp.route('/all_jobs', methods=['GET'])
@@ -199,7 +283,14 @@ def create_blueprints():
 
     return healthcheck_bp, ontology_bp, viewer_bp, home_bp
 
+# Cache for the app instance to prevent redundant re-initializations in background threads
+_cached_app = None
+
 def create_flask_app():
+    global _cached_app
+    if _cached_app:
+        return _cached_app
+        
     app = Flask(__name__)
 
     database_uri = os.getenv("DATABASE_URL", "sqlite:///:memory:")#fallback to in-memory SQLite if DATABASE_URL is not set TODO: fix this as might fallback in production if env var is missing
@@ -230,6 +321,7 @@ def create_flask_app():
 
     start_task_manager(app)
 
+    _cached_app = app
     return app
 
 
