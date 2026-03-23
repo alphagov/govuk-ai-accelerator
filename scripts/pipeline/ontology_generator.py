@@ -130,8 +130,8 @@ async def _save_version_info(
 def _update_job_status(job_id: str, status: str, error_message: str | None = None, job_runs: str | None = None) -> None:
     """Update the processing job status in the database."""
     try:
-        from govuk_ai_accelerator_app import create_core_app, db, ProcessingJob
-        app = create_core_app()
+        from govuk_ai_accelerator_app import create_flask_app, db, ProcessingJob
+        app = create_flask_app()
         with app.app_context():
             job = db.session.get(ProcessingJob, job_id)
             if job:
@@ -149,6 +149,8 @@ def _update_job_status(job_id: str, status: str, error_message: str | None = Non
 
 def run_ontology_background_task(config: dict, domain_prompt: str, job_id: str | None = None) -> bool:
     """Run the ontology pipeline as a background task, updating job status if provided."""
+    if job_id:
+        _update_job_status(job_id, "running")
     try:
         output_dir = asyncio.run(run_ontology_pipeline(config_data=config, domain_prompt=domain_prompt))
         logger.info("Pipeline task completed successfully")

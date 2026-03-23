@@ -18,7 +18,7 @@ from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse
 from scripts.pipeline.task_manager import start_task_manager
 from scripts.pipeline.ontology_generator import run_ontology_background_task
-from scripts.pipeline.utils import error_response, is_yaml_file
+from scripts.pipeline.utils import error_response, is_yaml_file, executor
 from scripts.pipeline.constants import APP_HOST, APP_PORT, BLUEPRINTS
 from scripts.ingestion.ingestion_pipeline import run_ingestion_background_task
 from src.web_browser import routing
@@ -175,7 +175,6 @@ def create_blueprints():
                 f.write(config_content)
             config_content = None
         else:
-            # It's a dict (or None), we'll pass it directly to the executor
             config_path = None
 
         executor.submit(
