@@ -52,26 +52,17 @@ class PipelineConfig:
         """Initialize pipeline config from dictionary."""
         self.config = kwargs
     
-        version = self.config.get('version', {})
         self.domain_name = self.config.get('domain_name', None)
         path = self.config.get('path', {})
 
         del self.config['version']
         del self.config['path']
     
-        self.version_number = version.get('number', None)
-        self.version_notes = version.get('notes', None)
+
         self.input_path = path.get('input_path', None)
         self.output_dir = path.get('output_dir', None)
         self.prompt_path = path.get('prompt_path', None)
 
-        if self.output_dir and self.version_number:
-            from datetime import datetime
-            date_str = datetime.now().strftime("%Y%m%d")
-            # Ensure clean path joining for both local and s3
-            base_dir = self.output_dir.rstrip('/')
-            run_folder = f"run_{date_str}_v{self.version_number}"
-            self.output_dir = f"{base_dir}/{run_folder}"
 
 
 def load_config_for_domain(config: dict | Path) -> tuple[OntologyConfig, Optional[PipelineConfig]]:
