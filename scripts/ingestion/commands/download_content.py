@@ -3,24 +3,19 @@ import requests
 from urllib.parse import urlparse
 import fsspec
 
-from scripts.pipeline.logging_config import logger
+from scripts.ingestion.commands.utils import get_logger, IngestionConfig
 
-
-def download_content(html_output_dir: str, links, config):
-    protocol = config.get("general", "protocol", fallback="local")
-    if protocol == "local": protocol = "file"
-    
-    if "://" not in html_output_dir:
-        html_output_dir = f"{protocol}://{html_output_dir}"
+def download_content(config: IngestionConfig):
+    logger = get_logger()
+    html_output_dir = config.html_dir_url
 
     fs, clean_html_dir = fsspec.core.url_to_fs(html_output_dir)
 
-    if isinstance(links, list):
-        pass
+    if config.links_list:
+        links = config.links_list
     else:
-        if "://" not in links:
-            links = f"{protocol}://{links}"
-        links_fs, links_path = fsspec.core.url_to_fs(links)
+        links_url = config.links_file_url
+        links_fs, links_path = fsspec.core.url_to_fs(links_url)
         if links_fs.exists(links_path):
             with links_fs.open(links_path, 'r') as file:
                 links = [line.rstrip('\n') for line in file if line.strip()]
