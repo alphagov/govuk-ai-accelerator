@@ -1,15 +1,13 @@
 import os
 import fsspec
 
-from scripts.pipeline.logging_config import logger
+from scripts.ingestion.commands.utils import get_logger, IngestionConfig
 
-
-def clean_content(output_dir, config):
+def clean_content(config: IngestionConfig):
+    logger = get_logger()
     logger.info("🛀 Cleaning content...")
 
-    protocol = config.get("general", "protocol", fallback="local")
-    if protocol == "local": protocol = "file"
-    if "://" not in output_dir: output_dir = f"{protocol}://{output_dir}"
+    output_dir = config.output_dir_url
 
     files_cleaned = 0
 

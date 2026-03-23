@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 import pypandoc
 import fsspec
 
-from scripts.pipeline.logging_config import logger
+from scripts.ingestion.commands.utils import get_logger, IngestionConfig
 
 
 def get_page_content_from_soup(soup, output_format):
@@ -25,14 +25,12 @@ def recursive_scan(path):
     return fs.find(root_path)
 
 
-def extract_content(output_dir, input_dir, output_format, config):
+def extract_content(config: IngestionConfig):
+    logger = get_logger()
     logger.info("🤖 Extracting content...")
     
-    protocol = config.get("general", "protocol", fallback="local")
-    if protocol == "local": protocol = "file"
-    
-    if "://" not in output_dir: output_dir = f"{protocol}://{output_dir}"
-    if "://" not in input_dir: input_dir = f"{protocol}://{input_dir}"
+    output_dir = config.output_dir_url
+    input_dir = config.html_dir_url
 
     skipped_input_files_count = 0
     output_files_count = 0
@@ -52,11 +50,11 @@ def extract_content(output_dir, input_dir, output_format, config):
 
         output_extension = ""
 
-        if output_format == "text":
+        if config.output_format == "text":
             output_extension = ".txt"
-        elif output_format == "html":
+        elif config.output_format == "html":
             output_extension = ".html"
-        elif output_format == "markdown":
+        elif config.output_format == "markdown":
             output_extension = ".md"
 
         rel_path = input_file[len(clean_input_dir) + 1:]
@@ -71,14 +69,14 @@ def extract_content(output_dir, input_dir, output_format, config):
                 input_file_content = file.read()
                 input_file_soup = BeautifulSoup(input_file_content, features="html.parser")
 
-                output_file_content = get_page_content_from_soup(input_file_soup, output_format)
+                output_file_content = get_page_content_from_soup(input_file_soup, config.output_format)
 
                 if output_file_content is None:
                     logger.warning("%s %s — no extractable content, skipping", progress, rel_path)
                     skipped_input_files_count += 1
                     continue
 
-                if output_format == "markdown":
+                if config.output_format == "markdown":
                     output_file_content = pypandoc.convert_text(output_file_content, format="html", to="gfm-raw_html")
 
                 parent_dir = clean_output_dir + "/" + os.path.dirname(output_file_path)
