@@ -123,22 +123,8 @@ async def _save_version_info(
     fs: AbstractFileSystem,
 ) -> None:
     """Save version metadata to the output directory."""
-    version_info = {
-        "version": config.version_number,
-        "notes": config.version_notes,
-    }
     run_root = _resolve_run_root(output_dir, config.output_dir)
-    version_file_path = f"{str(run_root).rstrip('/')}/version.json"
-    try:
-        parent_dir = version_file_path.rsplit("/", 1)[0]
-        if parent_dir:
-            fs.makedirs(parent_dir, exist_ok=True)
-        with fs.open(version_file_path, "w", encoding="utf-8") as handle:
-            json.dump(version_info, handle, indent=2)
-            handle.write("\n")
-        logger.info(f"Version info saved to {version_file_path}")
-    except Exception as e:
-        logger.warning(f"Failed to save version info: {e}")
+
 
 
 def _update_job_status(job_id: str, status: str, error_message: str | None = None, job_runs: str | None = None) -> None:
@@ -170,7 +156,7 @@ def run_ontology_background_task(config: dict, domain_prompt: str, job_id: str |
         job_runs = None
         if output_dir:
             import re
-            match = re.search(r'(run_\d{8}_v[\d\.]+.*)', str(output_dir))
+            match = re.search(r'(run-\d{8}-\d*\/.*)', str(output_dir))
             if match:
                 job_runs = match.group(1).rstrip('/')
                 if job_runs.endswith('/output'):

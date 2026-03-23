@@ -1,75 +1,72 @@
-import csv
 import os
 import requests
 from urllib.parse import urlparse
+import fsspec
 
-Cyan = '\033[96m'
-Blue = "\033[34m"
-Bold = "\033[1m"
-Reset = "\033[0m"
+from scripts.ingestion.commands.utils import get_logger, IngestionConfig
 
-def download_content(html_output_dir):
-    if os.path.exists("links.txt"):
-        with open("links.txt", 'r') as file:
-            links = [line.rstrip('\n') for line in file]
-    elif os.path.exists("links.csv"):
-        with open("links.csv", 'r') as file:
-            csv_file = csv.reader(file)
-            links = [line[0] for line in csv_file]
+def download_content(config: IngestionConfig):
+    logger = get_logger()
+    html_output_dir = config.html_dir_url
+
+    fs, clean_html_dir = fsspec.core.url_to_fs(html_output_dir)
+
+    if config.links_list:
+        links = config.links_list
     else:
-        print("⚠️ A links input file has not been found. See README.md for more details")
-        return
+        links_url = config.links_file_url
+        links_fs, links_path = fsspec.core.url_to_fs(links_url)
+        if links_fs.exists(links_path):
+            with links_fs.open(links_path, 'r') as file:
+                links = [line.rstrip('\n') for line in file if line.strip()]
+        else:
+            logger.warning("A links input file has not been found. See README.md for more details")
+            return
 
     output_file_count = 0
     link_skipped_count = 0
 
     if links:
-        print(Bold + Cyan + "🤖 Downloading content..." + Reset)
-        print("")
+        logger.info("🤖 Downloading content...")
         count = 0
         for link in links:
             count += 1
-            progress = " (" + str(count) + "/" + str(len(links)) + ") "
+            progress = f"({count}/{len(links)})"
 
             if urlparse(link).scheme != "https":
-                print("❌" + progress + Blue + Bold + link + Reset + " (Invalid URl - ensure that the URL uses https)")
+                logger.warning("%s %s — invalid URL (must use https)", progress, link)
                 link_skipped_count += 1
                 continue
 
             if urlparse(link).netloc != "www.gov.uk":
-                print("❌" + progress + Blue + Bold + link + Reset + " (Invalid URl - ensure that the URL has the 'www.gov.uk' host)")
+                logger.warning("%s %s — invalid URL (must have www.gov.uk host)", progress, link)
                 link_skipped_count += 1
                 continue
 
             url_path = urlparse(link).path
+            clean_output_file = clean_html_dir + url_path + ".html"
 
-            if os.path.exists(html_output_dir + url_path + ".html"):
-                print("❌" + progress + Blue + Bold + link + Reset + " (already exists)")
+            if fs.exists(clean_output_file):
+                logger.info("%s %s — skipped (already exists)", progress, link)
                 link_skipped_count += 1
                 continue
             else:
-                response = requests.get(link)
+                response = requests.get(link, timeout=30)
 
                 if not response.ok:
-                    print("❌" + progress + Blue + Bold + link + Reset + " (Error - status code: " + str(response.status_code) + ")")
+                    logger.error("%s %s — error (status code: %s)", progress, link, response.status_code)
                     link_skipped_count += 1
                     continue
 
-                output_file_path = html_output_dir + url_path + ".html"
+                fs.makedirs(fs._parent(clean_output_file), exist_ok=True)
 
-                os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
-
-                with open(output_file_path, 'wb') as file:
+                with fs.open(clean_output_file, 'wb') as file:
                     file.write(response.content)
 
                 output_file_count += 1
-
-                print("✅" + progress + Blue + Bold + link + Reset)
+                logger.info("%s %s — downloaded", progress, link)
     else:
-        print("⚠️ The links.txt does not contain any links. Please see links.example.txt for an example")
+        logger.warning("No links to process. Check your links file.")
 
-    print("")
-    print("📥 " + str(output_file_count) + " links processed")
-    print("⏭️ " + str(link_skipped_count) + " links skipped...")
-    print("")
-    print("Your html files are stored in " + Blue + Bold + html_output_dir + Reset)
+    logger.info("📥 %d links processed, %d skipped — html files stored in %s",
+                output_file_count, link_skipped_count, html_output_dir)
