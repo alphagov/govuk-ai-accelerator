@@ -21,31 +21,53 @@ flowchart TB
     end
 ```
 
-## Getting Started
+## Architecture
 
-### Pre-requisites
+The system uses an **API-First** approach:
+1. **Endpoint**: `POST /ontology/ingest`
+2. **Configuration**: Managed by the `IngestionConfig` dataclass in `scripts/ingestion/commands/utils.py`.
+3. **Background Processing**: Orchestrated by `ingestion_pipeline.py` using a Python thread executor.
 
-- Python
+### Key Features
+- **Cloud Support**: Uses `fsspec` for transparent access to S3 or local files.
+- **Stage & Move Logs**: Logs are staged in `/tmp/` during processing and atomically moved to the final `log_path` (S3 or local) upon completion.
+- **Timestamped Auditing**: Every run automatically generates a unique log file: `ingestion_YYYYMMDD_HHMMSS.log`.
 
-### Setting Up
+## Configuration Options
 
-Create a list of links that you would like to ingest. Both CSV and text files are supported. See links.example.csv or links.example.txt for an example. Text files will be prioritised over CSV
+The pipeline is configured via a JSON payload or a `.ini` file:
 
-The configuration can be changed in the config.ini:
-- **output_dir** - The output directory for the final output content
-- **output_format** - The final output format (html/text/markdown)
-- **html_dir** - The output directory for the downloaded html files
+- **output_dir**: Target directory for cleaned content (S3 or local).
+- **html_dir**: Intermediate directory for raw HTML.
+- **protocol**: `s3` or `local`.
+- **output_format**: `markdown` (default), `html`, or `text`.
+- **log_path**: Path for final consolidated logs.
+- **links**: A list of URLs or a path to a `links.txt` file.
+
+## Running the Ingestion
+
+### via API (Recommended)
+Submit a `POST` request to `http://localhost:3000/ontology/ingest` with a JSON payload:
+
+```json
+{
+  "config_content": {
+    "output_dir": "s3://your-bucket/output",
+    "protocol": "s3",
+    "html_dir": "s3://your-bucket/html-content",
+    "log_path": "s3://your-bucket/logs/ingest.log"
+  },
+  "links": ["https://www.gov.uk/guidance/your-link"]
+}
+```
 
 ### Running the Ingestion Process
 
-The steps are ran from the command line.
+The steps can be run from the project root:
 
-1. Navigate to the directory in which the ingestion.py file exists
-2. Run the ingestion process:
 ```bash
-python ingestion.py all 
+python -m scripts.ingestion.ingestion all 
 ```
-
 
 ### Steps
 
@@ -53,36 +75,32 @@ The ingestion process is made up of steps which can be run separately:
 
 #### 🪏 Download
 
-The "download" step will go through each link in the links file and save the response as a html file. The default output directory is html_content.
+The "download" step will go through each link in the links file and save the response as a html file.
 
 ```bash
-python ingestion.py download 
+python -m scripts.ingestion.ingestion download 
 ```
+
 #### ⚙️ Extract
 
-The "extract" step will extract the relevant text content from the html files. The default output directory is output.
+The "extract" step will extract the relevant text content from the html files.
 
 ```bash
-python ingestion.py extract 
+python -m scripts.ingestion.ingestion extract 
 ```
 
 #### 🛀 Clean
 
-The "clean" step will clean the data by doing the following:
-
-- Reduce multiple new lines in a row to just one new line
-- Remove any reference to printing the page (The print page is often used so that all sections for a page are included in a single link)
-
-The files will remain the output directory 
+The "clean" step will clean the data (trimming whitespace and removing print references).
 
 ```bash
-python ingestion.py clean 
+python -m scripts.ingestion.ingestion clean 
 ```
 
 #### All 
 
-All will run each step in order
+Runs each step in order:
 
 ```bash
-python ingestion.py all 
+python -m scripts.ingestion.ingestion all 
 ```
