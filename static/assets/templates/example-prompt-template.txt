@@ -1,0 +1,112 @@
+# Domain Prompt: <domain name>
+
+## Role & Task
+
+You are an ontology engineer with expertise in <domain name>
+Your task is to read a webpage of <source>
+advice and produce a **valid OWL 2.0 ontology** that captures the domain knowledge within it.
+
+---
+
+## 1. Domain Context
+
+<!-- WHY: The LLM needs to understand what <domain name> IS, what concepts recur
+     across every page, and what questions end-users will ask against this ontology. -->
+
+<Domain Name> follows a standard structure with these sections:
+
+- <section>
+
+The ontology must support queries such as:
+
+- <query>
+
+---
+
+## 2. Class Hierarchy Design
+
+<!-- WHY: Giving the LLM a skeleton prevents it from making everything a flat list of
+     classes or, conversely, inventing an over-deep hierarchy. -->
+
+Use **three tiers maximum**: Top-level class → Subclass → Instance.
+
+### Core Top-Level Classes
+
+Create these even if the page doesn't mention all:
+
+| Class              | Purpose                                                    |
+| ------------------ | ---------------------------------------------------------- |
+| <class>            | <purpose>                                                  |
+
+### Subclass Examples
+
+Create where the page warrants:
+
+- <subclass>
+
+---
+
+## 3. Instance vs Class Decision Rules
+
+<!-- WHY: This is the hardest modelling judgment. These five rules act as a sequential
+     filter the LLM should apply IN ORDER for every candidate entity. -->
+
+For every entity you extract, apply these tests **in order** — stop at the first decisive answer:
+
+| #   | Test                                                              | If YES →                  | If NO →               |
+| --- | ----------------------------------------------------------------- | ------------------------- | ---------------------- |
+| 1   | **Can there be multiple distinct instances of this thing?**       | **Class**                 | **Instance**           |
+| 2   | **Can this thing be created, destroyed, or change over time?**    | **Instance**              | Continue to next test  |
+| 3   | **Do I need OWL rules/restrictions to apply to this category?**   | **Class or Subclass**     | Continue to next test  |
+| 4   | **Do members have varying constraints or properties?**            | **Class or Subclass**     | Continue to next test  |
+| 5   | **Is there a known, relatively stable list of these?**            | **Instances of a class**  | Default to **Class**   |
+
+### Worked Examples for <example space>
+
+- <worked example>
+
+---
+
+## 4. Properties & Relationships
+
+<!-- WHY: Without explicit property guidance, the LLM will either under-specify (no
+     properties) or invent inconsistent ad-hoc names. -->
+
+### Object Properties (relationships between individuals)
+
+| Property              | Domain                 | Range              | Notes                                          |
+| --------------------- | ---------------------- | ------------------ | ---------------------------------------------- |
+| <property>            | <domain>               | <range>            | <notes>                                        |
+
+### Data Properties (literal values)
+
+| Property                | Domain              | Range          | Example                       |
+| ----------------------- | --------------------| -------------- | ----------------------------- |
+| <property>              | <domain>            | <range>        | <example>                     |
+
+
+---
+
+## 5. Key Domain-Specific Modelling Guidance
+
+<!-- WHY: The domain has subtleties that a generic ontology approach would miss.
+     These rules encode expert knowledge about the travel-advice domain. -->
+
+### 5a. <guidance>
+
+<guidance description>
+
+---
+
+## 6. Output Format Requirements
+
+<!-- WHY: Ensures the output is machine-parseable OWL, not just a description. -->
+
+- Output **valid OWL 2.0 in RDF/XML serialisation**
+- Use namespace: `http://example.org/fcdo-travel-advice#`
+- Import `http://www.w3.org/2002/07/owl#` and `http://www.w3.org/2001/XMLSchema#`
+- Every class, property, and instance must have an `rdfs:label` and `rdfs:comment`
+- Use `rdfs:comment` to capture the **source text** or paraphrase from the FCDO page
+  for traceability
+- Include `owl:versionInfo` with the page's "Still current at" date
+- Validate: no orphan classes, no undefined property references, all domains/ranges declared
