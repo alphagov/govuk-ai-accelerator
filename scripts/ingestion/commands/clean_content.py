@@ -21,7 +21,7 @@ def clean_content(config: IngestionConfig):
             file = os.path.basename(file_path)
             progress = f"({count}/{len(output_files)})"
 
-            with fs.open(file_path, 'r') as content:
+            with fs.open(file_path, 'r', encoding="utf-8") as content:
                 lines = content.readlines()
 
             new_lines = []
@@ -41,7 +41,7 @@ def clean_content(config: IngestionConfig):
                     new_lines.append(line.lstrip())
                     previous_line_blank = False
 
-            with fs.open(file_path, 'w') as content:
+            with fs.open(file_path, 'w', encoding="utf-8") as content:
                 content.writelines(new_lines)
             logger.info("%s %s — cleaned", progress, file)
             files_cleaned += 1
