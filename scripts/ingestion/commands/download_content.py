@@ -1,4 +1,3 @@
-import os
 import requests
 from urllib.parse import urlparse
 import fsspec
@@ -40,6 +39,11 @@ def download_content(config: IngestionConfig):
 
             if urlparse(link).netloc != "www.gov.uk":
                 logger.warning("%s %s — invalid URL (must have www.gov.uk host)", progress, link)
+                link_skipped_count += 1
+                continue
+
+            if urlparse(link).path.split('/')[-1] != "print":
+                logger.warning("%s %s — invalid URL (the Ingestion Process only supports printable pages at this time e.g. www.gov.uk/example/print)", progress, link)
                 link_skipped_count += 1
                 continue
 
