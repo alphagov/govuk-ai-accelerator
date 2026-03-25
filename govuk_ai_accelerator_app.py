@@ -138,21 +138,16 @@ def create_blueprints():
         config_content = None
         links_list = None
         
-        # Check if it's a JSON request
         if request.is_json:
             data = request.get_json()
             config_content = data.get('config_content')
             links_list = data.get('links')
             
-        # Or an uploaded file
-        ini_file = request.files.get('file')
-        
-        if not ini_file and not config_content:
-            return error_response("Configuration (.ini) is missing. Upload a file or provide 'config_content' in JSON.")
+        if not config_content:
+            return error_response("Configuration is missing. Provide 'config_content' in JSON.")
         
         tracking = True
         try:
-            # Create a ProcessingJob with explicit pipeline='ingestion'
             job = ProcessingJob(id=job_id, status="pending", pipeline="ingestion")
             db.session.add(job)
             db.session.commit()
@@ -162,20 +157,9 @@ def create_blueprints():
             current_app.logger.warning("Database unavailable, proceeding without job tracking: %s", e)
             tracking = False
 
-        # Save the config file (either from upload or content string)
-        config_dir = os.path.join("scripts", "ingestion", "runs")
-        os.makedirs(config_dir, exist_ok=True)
-        config_path = os.path.join(config_dir, f"{job_id}.ini")
-        
-        if ini_file:
-            ini_file.save(config_path)
-            config_content = None
-        elif isinstance(config_content, str):
-            with open(config_path, "w") as f:
-                f.write(config_content)
-            config_content = None
-        else:
-            config_path = None
+        config_path = None
+        if isinstance(config_content, str):
+            pass
 
         executor.submit(
             run_ingestion_background_task,
