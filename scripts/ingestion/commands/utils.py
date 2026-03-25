@@ -2,9 +2,9 @@ import configparser
 import logging
 import fsspec
 import os
-import tempfile
+import io
 from datetime import datetime, timezone
-from typing import Any, cast, Optional
+from typing import Any, cast, Optional, TextIO
 from dataclasses import dataclass, field
 
 @dataclass
@@ -16,7 +16,6 @@ class IngestionConfig:
     output_format: str
     log_path: str = "ingestion.log"
     links_list: Optional[list[str]] = None
-    temp_log_path: Optional[str] = None
     
     output_dir_url: str = field(init=False)
     html_dir_url: str = field(init=False)
@@ -31,14 +30,8 @@ class IngestionConfig:
             ext = ".log"
         self.log_path = f"{base}_{timestamp}{ext}"
             
-        if not self.temp_log_path:
-            temp_dir = tempfile.gettempdir()
-            filename = os.path.basename(self.log_path)
-            self.temp_log_path = os.path.join(temp_dir, filename)
-            with open(self.temp_log_path, 'w') as f:
-                f.write("")
-                
-        # Initialize URLs
+        # No more local temp log file creation
+        # URLs are still initialized
         self.output_dir_url = self.get_fsspec_url(self.output_dir)
         self.html_dir_url = self.get_fsspec_url(self.html_dir)
         self.links_file_url = self.get_fsspec_url(self.links_file)
@@ -83,7 +76,7 @@ def load_config(config_path: str = None, config_content: Any = None, links_list:
         links_list=links_list
     )
 
-def get_logger(log_path: str = None) -> logging.Logger:
+def get_logger(log_path: str = None, stream: TextIO = None) -> logging.Logger:
 
     logger = logging.getLogger("ontology-ingestion")
     
@@ -99,7 +92,11 @@ def get_logger(log_path: str = None) -> logging.Logger:
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
         
-        if log_path:
+        if stream:
+            stream_handler = logging.StreamHandler(stream)
+            stream_handler.setFormatter(formatter)
+            logger.addHandler(stream_handler)
+        elif log_path:
             file_handler = logging.FileHandler(log_path)
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
