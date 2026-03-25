@@ -18,11 +18,10 @@ def get_page_content_from_soup(soup, output_format):
                 return content.getText()
             elif output_format == "html" or output_format == "markdown":
                 return content.decode()
-
-
 def recursive_scan(path):
     fs, root_path = fsspec.core.url_to_fs(path)
     return fs.find(root_path)
+
 
 
 def extract_content(config: IngestionConfig):
@@ -37,14 +36,16 @@ def extract_content(config: IngestionConfig):
 
     out_fs, clean_output_dir = fsspec.core.url_to_fs(output_dir)
     in_fs, clean_input_dir = fsspec.core.url_to_fs(input_dir)
+    if not clean_input_dir.endswith('/'):
+        clean_input_dir += '/'
 
-    if not out_fs.exists(clean_output_dir):
-        out_fs.makedirs(clean_output_dir)
-
-    input_file_list = in_fs.find(clean_input_dir)
+    input_file_list = [f for f in in_fs.find(clean_input_dir) if f.rstrip('/') != clean_input_dir.rstrip('/')]
 
     count = 0
     for input_file in input_file_list:
+        if in_fs.isdir(input_file):
+            continue
+
         count += 1
         progress = f"({count}/{len(input_file_list)})"
 
@@ -57,7 +58,10 @@ def extract_content(config: IngestionConfig):
         elif config.output_format == "markdown":
             output_extension = ".md"
 
-        rel_path = input_file[len(clean_input_dir) + 1:]
+        if input_file.startswith(clean_input_dir):
+            rel_path = input_file[len(clean_input_dir):].lstrip('/')
+        else:
+            rel_path = input_file
         output_file_path = os.path.splitext(rel_path)[0] + output_extension
         full_output_path = clean_output_dir + "/" + output_file_path
 
@@ -65,14 +69,14 @@ def extract_content(config: IngestionConfig):
             logger.info("%s %s — skipped (already exists)", progress, output_file_path)
             skipped_input_files_count += 1
         else:
-            with in_fs.open(input_file, encoding="utf-8") as file:
+            with in_fs.open(input_file, 'rb') as file:
                 input_file_content = file.read()
                 input_file_soup = BeautifulSoup(input_file_content, features="html.parser")
 
                 output_file_content = get_page_content_from_soup(input_file_soup, config.output_format)
 
                 if output_file_content is None:
-                    logger.warning("%s %s — no extractable content, skipping", progress, rel_path)
+                    logger.warning("%s %s — no extractable content found in [%s], skipping", progress, rel_path, config.output_format)
                     skipped_input_files_count += 1
                     continue
 

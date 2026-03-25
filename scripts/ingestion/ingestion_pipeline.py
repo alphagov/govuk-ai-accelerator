@@ -2,6 +2,7 @@ import os
 import logging
 import fsspec
 import shutil
+import io
 from datetime import datetime, timezone
 from scripts.ingestion.commands.utils import load_config, get_logger
 from scripts.ingestion.commands import download_content, extract_content, clean_content
@@ -29,7 +30,8 @@ def run_ingestion_background_task(config_path: str = None, config_content: str =
         try:
             config_obj = load_config(config_path=config_path, config_content=config_content, links_list=links_list)
             
-            logger = get_logger(log_path=config_obj.temp_log_path)
+            log_buffer = io.StringIO()
+            logger = get_logger(stream=log_buffer)
             logger.info(f"🚀 Starting ingestion pipeline for job {job_id or 'manual'}")
             
             download_content(config_obj)
@@ -64,7 +66,7 @@ def run_ingestion_background_task(config_path: str = None, config_content: str =
                     db.session.rollback()
                     logging.warning(f"Could not update status for job {job_id}: {db_err}")
         finally:
-            if config_obj and config_obj.temp_log_path and os.path.exists(config_obj.temp_log_path):
+            if config_obj:
                 try:
                     final_url = config_obj.final_log_url
                     print(f"DEBUG: Finalizing log to {final_url}")
@@ -75,10 +77,8 @@ def run_ingestion_background_task(config_path: str = None, config_content: str =
                     if parent:
                         fs.makedirs(parent, exist_ok=True)
                         
-                    with open(config_obj.temp_log_path, 'rb') as local_f:
-                        with fs.open(fs_path, 'wb') as remote_f:
-                            shutil.copyfileobj(local_f, remote_f)
+                    with fs.open(fs_path, 'w') as remote_f:
+                        remote_f.write(log_buffer.getvalue())
                             
-                    os.remove(config_obj.temp_log_path)
                 except Exception as log_err:
                     print(f"Error finalizing log file: {log_err}")
