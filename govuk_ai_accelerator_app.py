@@ -214,6 +214,10 @@ def create_blueprints():
     def all_jobs():
         return render_template('jobs.html', active_page='jobs')
 
+    @ontology_bp.route('/ingestion')
+    def ingestion():
+        return render_template('ingestion.html', active_page='ingestion')
+
 
     @viewer_bp.route("/bucket")
     def viewer_load():
