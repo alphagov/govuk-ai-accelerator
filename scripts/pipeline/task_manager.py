@@ -4,6 +4,33 @@ import json
 from sqlalchemy.exc import OperationalError
 from scripts.pipeline.logging_config import logger
 
+from datetime import datetime, timedelta, timezone
+
+def cleanup_stale_jobs(app):
+    """Mark jobs older than 24 hours as failed if they are still in non-terminal states."""
+    with app.app_context():
+        from govuk_ai_accelerator_app import db, ProcessingJob
+        
+        stale_threshold = datetime.now(timezone.utc) - timedelta(hours=24)
+        
+        try:
+            stale_jobs = db.session.query(ProcessingJob).filter(
+                ProcessingJob.status.in_(['pending', 'running']),
+                ProcessingJob.created_at < stale_threshold
+            ).all()
+            
+            for job in stale_jobs:
+                logger.info(f"Marking stale job {job.id} (created at {job.created_at}) as failed.")
+                job.status = 'failed'
+                job.error_message = "Job timed out after 24 hours"
+            
+            if stale_jobs:
+                db.session.commit()
+                logger.info(f"Cleaned up {len(stale_jobs)} stale jobs.")
+        except Exception as e:
+            logger.error(f"Error during stale jobs cleanup: {e}")
+            db.session.rollback()
+
 def start_task_manager(app):
     """Start a background daemon thread that polls the database for pending jobs."""
     def worker():
@@ -25,8 +52,19 @@ def start_task_manager(app):
             except Exception as e:
                 logger.error(f"Error recovering running jobs: {e}")
 
+            # Initial stale job cleanup
+            cleanup_stale_jobs(app)
+
+        last_cleanup = time.time()
+        cleanup_interval = 900 # 15 minutes
+
         while True:
             try:
+                # Periodic stale job cleanup
+                if time.time() - last_cleanup > cleanup_interval:
+                    cleanup_stale_jobs(app)
+                    last_cleanup = time.time()
+
                 with app.app_context():
                     from govuk_ai_accelerator_app import db, ProcessingJob
                     from scripts.pipeline.utils import executor
