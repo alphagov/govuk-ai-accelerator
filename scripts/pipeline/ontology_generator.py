@@ -160,7 +160,7 @@ def run_ontology_background_task(config: dict, domain_prompt: str, job_id: str |
             import re
             match = re.search(r'(run-\d{8}-\d*\/.*)', str(output_dir))
             if match:
-                job_runs = match.group(1).rstrip('/')
+                job_runs = match.group(1).rstrip('/')   
                 if job_runs.endswith('/output'):
                     job_runs = job_runs[:-7]
 
