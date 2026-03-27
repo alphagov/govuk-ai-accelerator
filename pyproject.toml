@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "a2wsgi>=1.10.10",
+    "beautifulsoup4~=4.14.3",
     "boto3==1.42.42",
     "faiss-cpu>=1.7.4",
     "flask==3.1.2",
@@ -13,17 +14,17 @@ dependencies = [
     "flask-sqlalchemy==3.1.1",
     "humanize==4.15.0",
     "psycopg2-binary==2.9.10",
+    "pypandoc~=1.16.2",
     "pytest==8.3.4",
-    "beautifulsoup4>=4.14.3",
-    "pypandoc>=1.16.2",
-    "requests>=2.32.5",
+    "python-dotenv>=1.2.2",
     "pyyaml>=6.0.3",
+    "requests~=2.32.5",
     "s3fs==2026.2.0",
     "starlette>=0.52.1",
     "taxonomy-ontology-accelerator",
-    "uvicorn>=0.41.0",
+    "uvicorn==0.41.0",
     "waitress==3.0.2",
 ]
 
 [tool.uv.sources]
-taxonomy-ontology-accelerator = { git = "https://github.com/alphagov/govuk-ai-accelerator-tw-accelerator.git", rev = "development" }
+taxonomy-ontology-accelerator = { path = "../govuk-ai-accelerator-tw-accelerator/dist/taxonomy_ontology_accelerator-2.0.27-py3-none-any.whl" }

@@ -125,6 +125,7 @@
 
                 if (submitBtn.disabled) return;
 
+                //
                 // Validate domain field
                 if (!domainInput.value.trim()) {
                     showStatus('Please enter a domain name.', 'red');
@@ -143,10 +144,22 @@
                 uploadStatus.style.display = 'none';
 
                 try {
-                    const formData = new FormData(uploadForm);
-                    const response = await fetch("{{ url_for('ontology.upload_file') }}", {
+                    // Read the JSON file content
+                    const file = fileInput.files[0];
+                    const fileContent = await file.text();
+                    const jsonData = JSON.parse(fileContent);
+
+                    // Send as JSON to the endpoint, including the domain from the form
+                    const response = await fetch("{{ url_for('ontology.ingest_content') }}", {
                         method: 'POST',
-                        body: formData
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            domain: domainInput.value.trim(),
+                            config_content: jsonData.config_content,
+                            links: jsonData.links
+                        })
                     });
 
                     const data = await response.json();
