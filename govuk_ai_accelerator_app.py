@@ -21,6 +21,7 @@ from scripts.pipeline.ontology_generator import run_ontology_background_task
 from scripts.pipeline.utils import error_response, is_yaml_file, executor
 from scripts.pipeline.constants import APP_HOST, APP_PORT, BLUEPRINTS
 from scripts.ingestion.ingestion_pipeline import run_ingestion_background_task
+from src.aws_helper import create_bucket_folder
 from src.web_browser import routing
 from flask import current_app
 
@@ -137,15 +138,23 @@ def create_blueprints():
         job_id = str(uuid4())
         config_content = None
         links_list = None
-        
+        domain_name = None
+
         if request.is_json:
             data = request.get_json()
             config_content = data.get('config_content')
             links_list = data.get('links')
-            
+            domain_name = data.get('domain')  # Fixed the typo here
+
         if not config_content:
             return error_response("Configuration is missing. Provide 'config_content' in JSON.")
-        
+
+        if domain_name:
+            bucket_name = os.getenv('S3_BUCKET_NAME', 'govuk-ai-accelerator-data-integration')
+            from flask import current_app
+            current_app.logger.warning("Creating folder: %s", domain_name)
+            create_bucket_folder(bucket_name, domain_name)
+
         tracking = True
         try:
             job = ProcessingJob(id=job_id, status="pending", pipeline="ingestion")
