@@ -17,6 +17,15 @@ def _queue_test_app(tmp_path):
     return app
 
 
+def test_sqlite_is_treated_as_single_leader_mode(tmp_path):
+    app = _queue_test_app(tmp_path)
+
+    with app.app_context():
+        leader_connection = task_manager._try_acquire_leader_connection(app_module.db)
+
+    assert leader_connection is True
+
+
 def test_claim_next_pending_job_sets_progress_fields(tmp_path):
     app = _queue_test_app(tmp_path)
 

@@ -5,7 +5,7 @@ import threading
 import time
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, text
 from sqlalchemy.exc import OperationalError
 
 from scripts.pipeline.constants import EXECUTOR_MAX_WORKERS
@@ -14,10 +14,64 @@ from scripts.pipeline.logging_config import logger
 
 PROGRESS_TIMEOUT = timedelta(minutes=10)
 IDLE_POLL_INTERVAL_SECONDS = 5
+LEADER_RETRY_INTERVAL_SECONDS = 5
+LEADER_LOCK_ID = 420021
 
 
 def _worker_id() -> str:
     return os.getenv("HOSTNAME") or socket.gethostname()
+
+
+def _uses_postgres(db) -> bool:
+    return db.engine.url.get_backend_name().startswith("postgresql")
+
+
+def _try_acquire_leader_connection(db):
+    """Acquire a dedicated Postgres advisory lock connection for the queue leader."""
+    if not _uses_postgres(db):
+        return True
+
+    connection = db.engine.connect()
+    acquired = connection.execute(
+        text("SELECT pg_try_advisory_lock(:lock_id)"),
+        {"lock_id": LEADER_LOCK_ID},
+    ).scalar()
+
+    if acquired:
+        logger.info(f"Queue leadership acquired with advisory lock {LEADER_LOCK_ID}.")
+        return connection
+
+    connection.close()
+    return None
+
+
+def _release_leader_connection(connection):
+    """Release the dedicated advisory lock connection."""
+    if connection is None or connection is True:
+        return
+
+    try:
+        connection.execute(
+            text("SELECT pg_advisory_unlock(:lock_id)"),
+            {"lock_id": LEADER_LOCK_ID},
+        )
+    except Exception:
+        pass
+    finally:
+        connection.close()
+
+
+def _leader_connection_is_healthy(connection) -> bool:
+    if connection is None:
+        return False
+    if connection is True:
+        return True
+
+    try:
+        connection.execute(text("SELECT 1"))
+        return True
+    except Exception:
+        return False
 
 
 def cleanup_stale_jobs(app):
@@ -165,9 +219,22 @@ def start_task_manager(app):
         slots = threading.BoundedSemaphore(EXECUTOR_MAX_WORKERS)
         last_cleanup = 0.0
         cleanup_interval = 60
+        leader_connection = None
 
         while True:
             try:
+                with app.app_context():
+                    from govuk_ai_accelerator_app import db
+
+                    if not _leader_connection_is_healthy(leader_connection):
+                        if leader_connection not in (None, True):
+                            _release_leader_connection(leader_connection)
+                        leader_connection = _try_acquire_leader_connection(db)
+
+                if leader_connection is None:
+                    time.sleep(LEADER_RETRY_INTERVAL_SECONDS)
+                    continue
+
                 if time.time() - last_cleanup > cleanup_interval:
                     recover_stale_running_jobs(app)
                     cleanup_stale_jobs(app)
@@ -209,6 +276,9 @@ def start_task_manager(app):
                 future.add_done_callback(lambda _future: slots.release())
 
             except OperationalError:
+                if leader_connection not in (None, True):
+                    _release_leader_connection(leader_connection)
+                leader_connection = None
                 time.sleep(5)
             except Exception as exc:
                 logger.error(f"Task manager encountered error: {exc}")
