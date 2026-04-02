@@ -126,8 +126,13 @@ async def _save_version_info(
     run_root = _resolve_run_root(output_dir, config.output_dir)
 
 
-
-def _update_job_status(job_id: str, status: str, error_message: str | None = None, job_runs: str | None = None) -> None:
+def _update_job_status(
+    job_id: str,
+    status: str,
+    error_message: str | None = None,
+    job_runs: str | None = None,
+    clear_lease: bool = False,
+) -> None:
     """Update the processing job status in the database."""
     try:
         from govuk_ai_accelerator_app import create_flask_app, db, ProcessingJob
@@ -140,6 +145,10 @@ def _update_job_status(job_id: str, status: str, error_message: str | None = Non
                     job.error_message = error_message
                 if job_runs is not None:
                     job.job_runs = job_runs
+                if clear_lease:
+                    job.claimed_by = None
+                    job.claimed_at = None
+                    job.heartbeat_at = None
                 db.session.commit()
     except OperationalError as exc:
         logger.warning("Unable to update job status (%s): %s", status, exc)
@@ -149,28 +158,24 @@ def _update_job_status(job_id: str, status: str, error_message: str | None = Non
 
 def run_ontology_background_task(config: dict, domain_prompt: str, job_id: str | None = None) -> bool:
     """Run the ontology pipeline as a background task, updating job status if provided."""
-    if job_id:
-        _update_job_status(job_id, "running")
     try:
         output_dir = asyncio.run(run_ontology_pipeline(config_data=config, domain_prompt=domain_prompt))
         logger.info("Pipeline task completed successfully")
-        
+
         job_runs = None
         if output_dir:
             import re
             match = re.search(r'(run-\d{8}-\d*\/.*)', str(output_dir))
             if match:
-                job_runs = match.group(1).rstrip('/')   
+                job_runs = match.group(1).rstrip('/')
                 if job_runs.endswith('/output'):
                     job_runs = job_runs[:-7]
 
         if job_id:
-            _update_job_status(job_id, "completed", job_runs=job_runs)
+            _update_job_status(job_id, "completed", job_runs=job_runs, clear_lease=True)
         return True
     except Exception as e:
         logger.error(f"Pipeline task failed: {str(e)}")
         if job_id:
-            _update_job_status(job_id, "failed", error_message=str(e))
+            _update_job_status(job_id, "failed", error_message=str(e), clear_lease=True)
         raise
-
-
