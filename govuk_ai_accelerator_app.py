@@ -297,14 +297,17 @@ def create_flask_app():
     app = Flask(__name__)
 
     database_uri = os.getenv("DATABASE_URL")
-    require_database_url = os.getenv("REQUIRE_DATABASE_URL", "").lower() == "true"
+    allow_in_memory_db = os.getenv("ALLOW_IN_MEMORY_DB", "").lower() == "true"
 
     if database_uri:
         app.config["SQLALCHEMY_DATABASE_URI"] = database_uri
-    elif require_database_url:
-        raise RuntimeError("DATABASE_URL must be set for durable job processing")
-    else:
+    elif allow_in_memory_db:
         app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+    else:
+        raise RuntimeError(
+            "DATABASE_URL must be set for durable job processing. "
+            "Set ALLOW_IN_MEMORY_DB=true only for local development."
+        )
 
     db.init_app(app)
     migrate.init_app(app, db)
