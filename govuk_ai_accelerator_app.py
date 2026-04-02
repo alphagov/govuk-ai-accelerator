@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from flask import Flask, request, jsonify, render_template, Blueprint, Response, redirect
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, upgrade
-from sqlalchemy import String
+from sqlalchemy import DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.exc import OperationalError
 from starlette.applications import Starlette
@@ -39,6 +39,7 @@ except ModuleNotFoundError as exc:
 db = SQLAlchemy()
 migrate = Migrate()
 
+
 class ProcessingJob(db.Model):
     """Model to track the status of submitted jobs."""
 
@@ -50,7 +51,14 @@ class ProcessingJob(db.Model):
     domain_prompt: Mapped[str] = mapped_column(String, nullable=True, default=None)
     job_runs: Mapped[str] = mapped_column(String, nullable=True)
     error_message: Mapped[str] = mapped_column(String, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    claimed_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
 
 
 def create_blueprints():
@@ -88,15 +96,15 @@ def create_blueprints():
     def upload_file():
         if 'file' not in request.files:
             return error_response("Configuration file is missing")
-        
+
         yaml_file = request.files['file']
-        
+
         if not yaml_file.filename or not is_yaml_file(yaml_file.filename):
             return error_response("Invalid YAML file. Please upload a .yaml or .yml file.")
-        
+
         domain_prompt = None
         domain_prompt_file = request.files.get('text_file')
-        
+
         try:
             config_data = yaml.safe_load(yaml_file)
 
@@ -105,15 +113,14 @@ def create_blueprints():
 
             job_id = str(uuid4())
 
-          
             tracking = True
             try:
                 job = ProcessingJob(
-                    id=job_id, 
-                    status="pending", 
+                    id=job_id,
+                    status="pending",
                     domain=config_data.get('domain_name'),
                     config_data=json.dumps(config_data),
-                    domain_prompt=domain_prompt
+                    domain_prompt=domain_prompt,
                 )
                 db.session.add(job)
                 db.session.commit()
@@ -138,22 +145,14 @@ def create_blueprints():
         job_id = str(uuid4())
         config_content = None
         links_list = None
-        domain_name = None
 
         if request.is_json:
             data = request.get_json()
             config_content = data.get('config_content')
             links_list = data.get('links')
-            domain_name = data.get('domain')  # Fixed the typo here
 
         if not config_content:
             return error_response("Configuration is missing. Provide 'config_content' in JSON.")
-
-        if domain_name:
-            bucket_name = os.getenv('S3_BUCKET_NAME', 'govuk-ai-accelerator-data-integration')
-            from flask import current_app
-            current_app.logger.warning("Creating folder: %s", domain_name)
-            create_bucket_folder(bucket_name, domain_name)
 
         tracking = True
         try:
@@ -202,35 +201,42 @@ def create_blueprints():
 
     @ontology_bp.route('/jobs', methods=['GET'])
     def list_jobs():
-        today_start = datetime(2026, 3, 13, tzinfo=timezone.utc) #temporary filter to exclude previously tested runs
+        today_start = datetime(2026, 3, 13, tzinfo=timezone.utc)
 
         limit = request.args.get('limit', type=int)
-        
-        query = (db.session.query(ProcessingJob)
-                .filter(ProcessingJob.created_at >= today_start)
-                .filter(ProcessingJob.pipeline == "ontology")
-                )
+
+        query = (
+            db.session.query(ProcessingJob)
+            .filter(ProcessingJob.created_at >= today_start)
+            .filter(ProcessingJob.pipeline == "ontology")
+        )
         query = query.order_by(ProcessingJob.created_at.desc())
 
-        if limit: 
+        if limit:
             query = query.limit(limit)
-            
+
         jobs = query.all()
-        job_list = [{"job_id": job.id, "pipeline": job.pipeline, "domain": job.domain, "status": job.status, "job_runs": job.job_runs, "error": job.error_message, "created_at": job.created_at.isoformat() if job.created_at else None} for job in jobs]
+        job_list = [
+            {
+                "job_id": job.id,
+                "pipeline": job.pipeline,
+                "domain": job.domain,
+                "status": job.status,
+                "job_runs": job.job_runs,
+                "error": job.error_message,
+                "created_at": job.created_at.isoformat() if job.created_at else None,
+            }
+            for job in jobs
+        ]
         return jsonify(job_list)
 
     @ontology_bp.route('/all_jobs', methods=['GET'])
     def all_jobs():
         return render_template('jobs.html', active_page='jobs')
 
-    @ontology_bp.route('/ingestion')
-    def ingestion():
-        return render_template('ingestion.html', active_page='ingestion')
-
-
     @viewer_bp.route("/bucket")
     def viewer_load():
-        return routing.index() # Active page logic needs to be handled in routing inside the library if possible or we accept it won't highlight
+        return routing.index()
 
     @viewer_bp.route("/bucket/<bucket_name>", defaults={"path": ""})
     @viewer_bp.route("/bucket/<bucket_name>/<path:path>")
@@ -248,7 +254,8 @@ def create_blueprints():
         url = s3_client.generate_presigned_url(
             "get_object",
             Params={"Bucket": bucket_name, "Key": path},
-            ExpiresIn=3600)  # URL expires in 1 hour
+            ExpiresIn=3600,
+        )
 
         return redirect(url)
 
@@ -260,37 +267,48 @@ def create_blueprints():
 
             if path.endswith('/'):
                 responses = bucket.objects.filter(Prefix=path).delete()
-                
+
                 errors = []
                 for response in responses:
                     if 'Errors' in response:
                         errors.extend(response['Errors'])
-                
+
                 if errors:
                     error_messages = ", ".join([f"{e.get('Key')}: {e.get('Message')}" for e in errors])
                     return jsonify({"error": f"Failed to delete some objects: {error_messages}"}), 500
             else:
                 s3.Object(bucket_name, path).delete()
                 print(path, bucket, bucket.objects.filter(Prefix=path))
-                
+
             return jsonify({"message": f"Successfully deleted {path} from {bucket_name}"}), 200
         except Exception as e:
             return jsonify({"error": f"Failed to delete object: {str(e)}"}), 500
 
     return healthcheck_bp, ontology_bp, viewer_bp, home_bp
 
-# Cache for the app instance to prevent redundant re-initializations in background threads
+
 _cached_app = None
+
 
 def create_flask_app():
     global _cached_app
     if _cached_app:
         return _cached_app
-        
+
     app = Flask(__name__)
 
-    database_uri = os.getenv("DATABASE_URL", "sqlite:///:memory:")#fallback to in-memory SQLite if DATABASE_URL is not set TODO: fix this as might fallback in production if env var is missing
-    app.config["SQLALCHEMY_DATABASE_URI"] = database_uri
+    database_uri = os.getenv("DATABASE_URL")
+    allow_in_memory_db = os.getenv("ALLOW_IN_MEMORY_DB", "").lower() == "true"
+
+    if database_uri:
+        app.config["SQLALCHEMY_DATABASE_URI"] = database_uri
+    elif allow_in_memory_db:
+        app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+    else:
+        raise RuntimeError(
+            "DATABASE_URL must be set for durable job processing. "
+            "Set ALLOW_IN_MEMORY_DB=true only for local development."
+        )
 
     db.init_app(app)
     migrate.init_app(app, db)
@@ -300,7 +318,6 @@ def create_flask_app():
     app.register_blueprint(ontology_bp)
     app.register_blueprint(viewer_bp)
     app.register_blueprint(home_bp)
-
 
     with app.app_context():
         try:
