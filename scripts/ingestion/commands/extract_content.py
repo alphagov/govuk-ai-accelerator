@@ -6,8 +6,15 @@ import fsspec
 
 from scripts.ingestion.commands.utils import get_logger, IngestionConfig
 
+def create_string_from_list(items):
+    if len(items) > 1:
+        formatted_string = ", ".join(items[:-1]) + " and " + items[-1]
+    else:
+        formatted_string = "".join(items)
 
-def get_page_content_from_soup(soup, output_format):
+    return formatted_string
+
+def get_page_content_from_soup(soup, output_format, logger, progress, input_file):
     candidate_ids = ["guide-contents", "content"]
 
     for candidate_id in candidate_ids:
@@ -18,6 +25,9 @@ def get_page_content_from_soup(soup, output_format):
                 return content.getText()
             elif output_format == "html" or output_format == "markdown":
                 return content.decode()
+        else:
+            logger.warning("%s %s — Unsupported content (required ID not found. Ensure the HTML contains a tag with a specified ID - %s)", progress, input_file, create_string_from_list(candidate_ids))
+
 def recursive_scan(path):
     fs, root_path = fsspec.core.url_to_fs(path)
     return fs.find(root_path)
@@ -73,7 +83,7 @@ def extract_content(config: IngestionConfig):
                 input_file_content = file.read()
                 input_file_soup = BeautifulSoup(input_file_content, features="html.parser")
 
-                output_file_content = get_page_content_from_soup(input_file_soup, config.output_format)
+                output_file_content = get_page_content_from_soup(input_file_soup, config.output_format, logger, progress, input_file)
 
                 if output_file_content is None:
                     logger.warning("%s %s — no extractable content found in [%s], skipping", progress, rel_path, config.output_format)
