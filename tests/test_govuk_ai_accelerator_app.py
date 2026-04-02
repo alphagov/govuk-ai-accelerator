@@ -1,7 +1,9 @@
 import builtins
 import importlib
+import os
 import sys
 
+import pytest
 from werkzeug.test import Client
 from werkzeug.wrappers import Response
 
@@ -12,6 +14,18 @@ def _app_module():
 
 def _client():
     return Client(_app_module().create_app(), Response)
+
+
+@pytest.fixture(autouse=True)
+def _allow_in_memory_db_for_app_tests(monkeypatch):
+    monkeypatch.setenv("ALLOW_IN_MEMORY_DB", "true")
+    app_module = sys.modules.get("govuk_ai_accelerator_app")
+    if app_module is not None:
+        app_module._cached_app = None
+    yield
+    app_module = sys.modules.get("govuk_ai_accelerator_app")
+    if app_module is not None:
+        app_module._cached_app = None
 
 
 def test_create_app_redirects_visualizer_without_trailing_slash():
