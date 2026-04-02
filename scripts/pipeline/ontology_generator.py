@@ -60,11 +60,11 @@ def _mark_job_progress(job_id: str | None, stage: str) -> None:
             if job:
                 job.last_progress_at = datetime.now(timezone.utc)
                 db.session.commit()
-        logger.info(f"[job={job_id}] progress={stage}")
+        logger.info(f"[job={job_id}] progress stage={stage}")
     except OperationalError as exc:
-        logger.warning(f"[job={job_id}] unable to record progress {stage}: {exc}")
+        logger.warning(f"[job={job_id}] unable to record progress stage={stage}: {exc}")
     except Exception as exc:
-        logger.exception(f"[job={job_id}] error recording progress {stage}: {exc}")
+        logger.exception(f"[job={job_id}] error recording progress stage={stage}: {exc}")
 
 
 async def run_ontology_pipeline(
@@ -81,7 +81,9 @@ async def run_ontology_pipeline(
     ontology_config, pipeline_config = load_config_for_domain(config=config_data)
     _mark_job_progress(job_id, "config-loaded")
 
-    logger.info(f"[job={job_id}] Starting ontology pipeline for domain: {pipeline_config.domain_name}")
+    logger.info(
+        f"[job={job_id}] starting ontology pipeline domain={pipeline_config.domain_name}"
+    )
 
     fs = fsspec.filesystem(ontology_config.filesystem.protocol)
 
@@ -109,7 +111,9 @@ async def run_ontology_pipeline(
     await _save_pipeline_output(pipeline, pipeline_config, fs)
     _mark_job_progress(job_id, "artifacts-saved")
 
-    logger.info(f"[job={job_id}] Ontology pipeline completed successfully for domain: {pipeline_config.domain_name}")
+    logger.info(
+        f"[job={job_id}] ontology pipeline completed domain={pipeline_config.domain_name}"
+    )
     return str(pipeline.state.output_dir)
 
 
@@ -213,10 +217,11 @@ def _update_job_status(
                     job.claimed_at = None
                     job.heartbeat_at = None
                 db.session.commit()
+        logger.info(f"[job={job_id}] status updated status={status} job_runs={job_runs}")
     except OperationalError as exc:
-        logger.warning(f"[job={job_id}] Unable to update job status {status}: {exc}")
+        logger.warning(f"[job={job_id}] unable to update job status={status}: {exc}")
     except Exception as exc:
-        logger.exception(f"[job={job_id}] Error updating job status {status}: {exc}")
+        logger.exception(f"[job={job_id}] error updating job status={status}: {exc}")
 
 
 def run_ontology_background_task(config: dict, domain_prompt: str, job_id: str | None = None) -> bool:
@@ -231,7 +236,7 @@ def run_ontology_background_task(config: dict, domain_prompt: str, job_id: str |
                 job_id=job_id,
             )
         )
-        logger.info(f"[job={job_id}] Pipeline task completed successfully")
+        logger.info(f"[job={job_id}] pipeline task completed successfully")
 
         job_runs = None
         if output_dir:
@@ -249,7 +254,7 @@ def run_ontology_background_task(config: dict, domain_prompt: str, job_id: str |
             _update_job_status(job_id, "completed", job_runs=job_runs, clear_lease=True)
         return True
     except Exception as e:
-        logger.error(f"[job={job_id}] Pipeline task failed: {str(e)}")
+        logger.error(f"[job={job_id}] pipeline task failed error={str(e)}")
         if job_id:
             _update_job_status(job_id, "failed", error_message=str(e), clear_lease=True)
         raise

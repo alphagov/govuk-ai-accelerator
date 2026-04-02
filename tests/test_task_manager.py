@@ -52,9 +52,12 @@ def test_claim_next_pending_job_sets_progress_fields(tmp_path):
 
     assert claimed_job == {
         "job_id": "pending-job",
+        "domain": "pip",
         "config_data": {"domain_name": "pip"},
         "domain_prompt": "prompt",
+        "attempt_count": 1,
     }
+
     assert job.status == "running"
     assert job.claimed_by == "pod-a"
     assert job.claimed_at is not None
