@@ -1,0 +1,10 @@
+{
+  "config_content": {
+    "output_dir": "s3://govuk-ai-accelerator-data-integration/tester1/laser_test",
+    "protocol": "s3",
+    "html_dir": "s3://govuk-ai-accelerator-data-integration/tester1/html_content2_laser_test",
+    "output_format": "markdown",
+    "log_path": "s3://govuk-ai-accelerator-data-integration/tester1/logs/ingestion_laser_test.log"
+  },
+  "links": ["https://www.gov.uk/guidance/provide-psc-verification", "https://www.gov.uk/guidance/verify-your-identity-for-companies-house", "https://www.gov.uk/file-your-company-annual-accounts"]
+}
