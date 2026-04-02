@@ -21,6 +21,7 @@ from scripts.pipeline.ontology_generator import run_ontology_background_task
 from scripts.pipeline.utils import error_response, is_yaml_file, executor
 from scripts.pipeline.constants import APP_HOST, APP_PORT, BLUEPRINTS
 from scripts.ingestion.ingestion_pipeline import run_ingestion_background_task
+from src.aws_helper import create_bucket_folder
 from src.web_browser import routing
 from flask import current_app
 

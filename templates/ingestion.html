@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="row">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div class="card full-width">
+                <div class="card-content">
+                    <span class="card-title" style="font-weight: bold; color: #1d70b8;">Run Pipeline</span>
+                    <p class="grey-text text-darken-1" style="margin-bottom: 20px;">Upload a JSON file containing a list of links for processing.</p>
+
+                    <form id="upload-form" enctype="multipart/form-data">
+                        <!-- Domain Text Input -->
+                        <div class="input-field" style="margin-bottom: 1.5rem;">
+                            <input id="domain" name="domain" type="text" maxlength="255" required>
+                            <label for="domain">Domain *</label>
+                            <span class="helper-text" data-error="Domain is required" data-success="">Enter the domain name (max 255 characters)</span>
+                        </div>
+
+                        <div id="drop-zone" class="drop-zone" style="border: 2px dashed var(--gov-border); border-radius: 8px; padding: 2rem; text-align: center; margin-bottom: 1.5rem; transition: background-color 0.2s; cursor: pointer;">
+                            <i class="material-icons" style="font-size: 3rem; color: #1d70b8;">cloud_upload</i>
+                            <h6 style="margin: 10px 0; font-weight: bold;">Drag & Drop JSON file here</h6>
+                            <p class="grey-text text-darken-2" style="margin-bottom: 5px;">Required: <strong>.json</strong> (List of Links)</p>
+                            <p class="grey-text text-darken-2" style="margin-top: 5px; font-size: 0.9em;">File should contain an array of URLs to process</p>
+                            <p class="grey-text" style="font-size: 0.9em; margin-top: 15px;">or click to browse</p>
+
+                            <input type="file" id="file" name="file" accept=".json" style="display: none;" required>
+                        </div>
+
+                        <ul class="collection" id="file-list" style="border: none; margin-bottom: 1.5rem; display: none;">
+                            <li class="collection-item avatar" id="json-file-item" style="display: none; min-height: auto; padding-left: 50px;">
+                                <i class="material-icons circle orange" style="width: 30px; height: 30px; line-height: 30px; left: 10px;">code</i>
+                                <span class="title" id="json-file-name" style="font-weight: 500;"></span>
+                                <p class="grey-text" style="font-size: 0.8rem;">JSON Links File</p>
+                            </li>
+                        </ul>
+
+                        <div id="upload-status" style="display: none; margin-bottom: 1rem; padding: 10px; border-radius: 4px;"></div>
+
+                        <button class="btn waves-effect waves-light" type="submit" id="submit-btn" style="width: 100%; background-color: #1d70b8;">
+                            Upload & Start <i class="material-icons right">send</i>
+                        </button>
+
+                        <div class="progress" id="upload-progress" style="display: none;">
+                            <div class="indeterminate"></div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('file');
+            const fileList = document.getElementById('file-list');
+            const domainInput = document.getElementById('domain');
+
+            dropZone.addEventListener('click', () => {
+                const tempInput = document.createElement('input');
+                tempInput.type = 'file';
+                tempInput.accept = '.json';
+                tempInput.onchange = e => handleFiles(e.target.files);
+                tempInput.click();
+            });
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.style.backgroundColor = 'rgba(29, 112, 184, 0.05)';
+                    dropZone.style.borderColor = '#1d70b8';
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.style.backgroundColor = '';
+                    dropZone.style.borderColor = 'var(--gov-border)';
+                }, false);
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                handleFiles(e.dataTransfer.files);
+            });
+
+            function handleFiles(files) {
+                // Reset
+                const dtJson = new DataTransfer();
+                let hasJson = false;
+
+                Array.from(files).forEach(file => {
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    if (ext === 'json') {
+                        dtJson.items.add(file);
+                        document.getElementById('json-file-name').textContent = file.name;
+                        document.getElementById('json-file-item').style.display = 'block';
+                        hasJson = true;
+                    }
+                });
+
+                if (hasJson) {
+                    fileInput.files = dtJson.files;
+                    fileList.style.display = 'block';
+                }
+            }
+
+            // ---- Form Submission ----
+            const uploadForm = document.getElementById('upload-form');
+            const submitBtn = document.getElementById('submit-btn');
+            const progressBar = document.getElementById('upload-progress');
+            const uploadStatus = document.getElementById('upload-status');
+
+            uploadForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                if (submitBtn.disabled) return;
+
+                //
+                // Validate domain field
+                if (!domainInput.value.trim()) {
+                    showStatus('Please enter a domain name.', 'red');
+                    domainInput.focus();
+                    return;
+                }
+
+                if (!fileInput.files.length) {
+                    showStatus('Please select a JSON file containing a list of links.', 'red');
+                    return;
+                }
+
+                submitBtn.disabled = true;
+                submitBtn.style.display = 'none';
+                progressBar.style.display = 'block';
+                uploadStatus.style.display = 'none';
+
+                try {
+                    // Read the JSON file content
+                    const file = fileInput.files[0];
+                    const fileContent = await file.text();
+                    const jsonData = JSON.parse(fileContent);
+
+                    // Send as JSON to the endpoint, including the domain from the form
+                    const response = await fetch("{{ url_for('ontology.ingest_content') }}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            domain: domainInput.value.trim(),
+                            config_content: jsonData.config_content,
+                            links: jsonData.links
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        showStatus(`Pipeline started! Job ID: ${data.job_id.substring(0,8)}...`, 'green');
+                        uploadForm.reset(); // Clear all form fields including domain
+                        fileInput.value = '';
+                        fileList.style.display = 'none';
+                        document.getElementById('json-file-item').style.display = 'none';
+                    } else {
+                        showStatus(`Error: ${data.error}`, 'red');
+                    }
+                } catch (err) {
+                    showStatus(`Connection error: ${err.message}`, 'red');
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.style.display = 'block';
+                    progressBar.style.display = 'none';
+                }
+            });
+
+            function showStatus(msg, colorName) {
+                uploadStatus.textContent = msg;
+                uploadStatus.className = `${colorName} lighten-4 ${colorName}-text text-darken-3`;
+                uploadStatus.style.display = 'block';
+            }
+        });
+    </script>
+{% endblock %}
