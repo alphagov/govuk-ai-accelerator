@@ -12,8 +12,7 @@ from scripts.pipeline.constants import EXECUTOR_MAX_WORKERS
 from scripts.pipeline.logging_config import logger
 
 
-LEASE_TIMEOUT = timedelta(minutes=10)
-HEARTBEAT_INTERVAL_SECONDS = 30
+PROGRESS_TIMEOUT = timedelta(minutes=10)
 IDLE_POLL_INTERVAL_SECONDS = 5
 
 
@@ -48,46 +47,50 @@ def cleanup_stale_jobs(app):
                 db.session.commit()
                 logger.info(f"Cleaned up {len(stale_jobs)} stale jobs.")
         except Exception as exc:
-            logger.error("Error during stale jobs cleanup: %s", exc)
+            logger.error(f"Error during stale jobs cleanup: {exc}")
             db.session.rollback()
 
 
 def recover_stale_running_jobs(app):
-    """Requeue running jobs whose lease has expired."""
+    """Requeue running jobs whose last real progress has expired."""
     with app.app_context():
         from govuk_ai_accelerator_app import ProcessingJob, db
 
-        cutoff = datetime.now(timezone.utc) - LEASE_TIMEOUT
+        cutoff = datetime.now(timezone.utc) - PROGRESS_TIMEOUT
 
         try:
             stale_jobs = db.session.query(ProcessingJob).filter(
                 ProcessingJob.status == "running",
                 or_(
-                    ProcessingJob.heartbeat_at < cutoff,
+                    ProcessingJob.last_progress_at < cutoff,
                     and_(
-                        ProcessingJob.heartbeat_at.is_(None),
+                        ProcessingJob.last_progress_at.is_(None),
                         ProcessingJob.claimed_at < cutoff,
                     ),
                     and_(
-                        ProcessingJob.heartbeat_at.is_(None),
+                        ProcessingJob.last_progress_at.is_(None),
                         ProcessingJob.claimed_at.is_(None),
                     ),
                 ),
             ).all()
 
             for job in stale_jobs:
-                logger.info(f"Requeuing stale leased job {job.id}.")
+                logger.info(
+                    f"Requeuing stale progress job {job.id}. "
+                    f"claimed_by={job.claimed_by} claimed_at={job.claimed_at} "
+                    f"last_progress_at={job.last_progress_at}"
+                )
                 job.status = "pending"
                 job.claimed_by = None
                 job.claimed_at = None
                 job.heartbeat_at = None
-                job.error_message = "Job lease expired; requeued."
+                job.error_message = "Job progress timed out; requeued."
 
             if stale_jobs:
                 db.session.commit()
                 logger.info(f"Recovered {len(stale_jobs)} stale running jobs.")
         except Exception as exc:
-            logger.error("Error recovering stale running jobs: %s", exc)
+            logger.error(f"Error recovering stale running jobs: {exc}")
             db.session.rollback()
 
 
@@ -107,10 +110,16 @@ def claim_next_pending_job(db, job_model, worker_id: str):
     job.status = "running"
     job.claimed_by = worker_id
     job.claimed_at = now
-    job.heartbeat_at = now
+    job.heartbeat_at = None
+    job.last_progress_at = now
     job.attempt_count = (job.attempt_count or 0) + 1
     job.error_message = None
     db.session.commit()
+
+    logger.info(
+        f"[job={job.id}] claimed by worker={worker_id} "
+        f"attempt={job.attempt_count} claimed_at={job.claimed_at}"
+    )
 
     return {
         "job_id": job.id,
@@ -134,48 +143,16 @@ def requeue_claimed_job(db, job_model, job_id: str, error_message: str | None = 
     db.session.commit()
 
 
-def touch_job_heartbeat(app, job_id: str, worker_id: str):
-    """Refresh the heartbeat for a running job claimed by this worker."""
-    with app.app_context():
-        from govuk_ai_accelerator_app import ProcessingJob, db
-
-        try:
-            job = db.session.get(ProcessingJob, job_id)
-            if job and job.status == "running" and job.claimed_by == worker_id:
-                job.heartbeat_at = datetime.now(timezone.utc)
-                db.session.commit()
-        except Exception as exc:
-            logger.warning(f"Failed to heartbeat job {job_id}: {exc}")
-            db.session.rollback()
-
-
-def heartbeat_loop(app, job_id: str, worker_id: str, stop_event: threading.Event):
-    """Background loop that periodically refreshes a job lease heartbeat."""
-    while not stop_event.wait(HEARTBEAT_INTERVAL_SECONDS):
-        touch_job_heartbeat(app, job_id, worker_id)
-
-
 def run_claimed_job(app, worker_id: str, claimed_job: dict):
-    """Run a claimed job while a background thread keeps its lease alive."""
+    """Run a claimed job without a synthetic heartbeat thread."""
     from scripts.pipeline.ontology_generator import run_ontology_background_task
 
-    stop_event = threading.Event()
-    heartbeat_thread = threading.Thread(
-        target=heartbeat_loop,
-        args=(app, claimed_job["job_id"], worker_id, stop_event),
-        daemon=True,
+    logger.info(f"[job={claimed_job['job_id']}] starting execution on worker={worker_id}")
+    run_ontology_background_task(
+        claimed_job["config_data"],
+        claimed_job["domain_prompt"],
+        claimed_job["job_id"],
     )
-    heartbeat_thread.start()
-
-    try:
-        run_ontology_background_task(
-            claimed_job["config_data"],
-            claimed_job["domain_prompt"],
-            claimed_job["job_id"],
-        )
-    finally:
-        stop_event.set()
-        heartbeat_thread.join(timeout=1)
 
 
 def start_task_manager(app):
@@ -213,10 +190,6 @@ def start_task_manager(app):
                     slots.release()
                     time.sleep(IDLE_POLL_INTERVAL_SECONDS)
                     continue
-
-                logger.info(
-                    f"Worker {worker_id} claimed job {claimed_job['job_id']}."
-                )
 
                 try:
                     future = executor.submit(run_claimed_job, app, worker_id, claimed_job)
