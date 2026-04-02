@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import uuid4
@@ -37,7 +38,6 @@ def _with_job_output_path(config_data: dict | None, job_id: str | None) -> dict 
     if normalized.endswith("/output"):
         normalized = normalized[:-7]
 
-    # Avoid double-wrapping if caller already supplied a run-specific path.
     if run_id in normalized:
         path_config["output_dir"] = f"{normalized}/output"
         return config_copy
@@ -46,10 +46,32 @@ def _with_job_output_path(config_data: dict | None, job_id: str | None) -> dict 
     return config_copy
 
 
+def _mark_job_progress(job_id: str | None, stage: str) -> None:
+    """Record real pipeline progress so stale detection reflects actual work."""
+    if not job_id:
+        return
+
+    try:
+        from govuk_ai_accelerator_app import ProcessingJob, create_flask_app, db
+
+        app = create_flask_app()
+        with app.app_context():
+            job = db.session.get(ProcessingJob, job_id)
+            if job:
+                job.last_progress_at = datetime.now(timezone.utc)
+                db.session.commit()
+        logger.info(f"[job={job_id}] progress={stage}")
+    except OperationalError as exc:
+        logger.warning(f"[job={job_id}] unable to record progress {stage}: {exc}")
+    except Exception as exc:
+        logger.exception(f"[job={job_id}] error recording progress {stage}: {exc}")
+
+
 async def run_ontology_pipeline(
     config_data: dict | None = None,
     domain_prompt: str | None = None,
     incremental: bool = False,
+    job_id: str | None = None,
 ) -> str:
     """Run the ontology generation pipeline asynchronously."""
     from taxonomy_ontology_accelerator.ontology_engine.pipeline_builder import (
@@ -57,8 +79,9 @@ async def run_ontology_pipeline(
     )
 
     ontology_config, pipeline_config = load_config_for_domain(config=config_data)
+    _mark_job_progress(job_id, "config-loaded")
 
-    logger.info(f"Starting ontology pipeline for domain: {pipeline_config.domain_name}")
+    logger.info(f"[job={job_id}] Starting ontology pipeline for domain: {pipeline_config.domain_name}")
 
     fs = fsspec.filesystem(ontology_config.filesystem.protocol)
 
@@ -72,12 +95,21 @@ async def run_ontology_pipeline(
     )
 
     pipeline = _setup_pipeline(pipeline, pipeline_config)
-    pipeline = await _extract_ontology(pipeline)
-    pipeline = await _process_ontology(pipeline)
-    pipeline = await _create_ontology_graph(pipeline)
-    await _save_pipeline_output(pipeline, pipeline_config, fs)
+    _mark_job_progress(job_id, "pipeline-setup")
 
-    logger.info(f"Ontology pipeline completed successfully for domain: {pipeline_config.domain_name}")
+    pipeline = await _extract_ontology(pipeline)
+    _mark_job_progress(job_id, "ontology-extracted")
+
+    pipeline = await _process_ontology(pipeline)
+    _mark_job_progress(job_id, "ontology-processed")
+
+    pipeline = await _create_ontology_graph(pipeline)
+    _mark_job_progress(job_id, "graph-created")
+
+    await _save_pipeline_output(pipeline, pipeline_config, fs)
+    _mark_job_progress(job_id, "artifacts-saved")
+
+    logger.info(f"[job={job_id}] Ontology pipeline completed successfully for domain: {pipeline_config.domain_name}")
     return str(pipeline.state.output_dir)
 
 
@@ -165,7 +197,7 @@ def _update_job_status(
 ) -> None:
     """Update the processing job status in the database."""
     try:
-        from govuk_ai_accelerator_app import create_flask_app, db, ProcessingJob
+        from govuk_ai_accelerator_app import ProcessingJob, create_flask_app, db
 
         app = create_flask_app()
         with app.app_context():
@@ -182,16 +214,23 @@ def _update_job_status(
                     job.heartbeat_at = None
                 db.session.commit()
     except OperationalError as exc:
-        logger.warning("Unable to update job status (%s): %s", status, exc)
+        logger.warning(f"[job={job_id}] Unable to update job status {status}: {exc}")
     except Exception as exc:
-        logger.exception("Error updating job status: %s", exc)
+        logger.exception(f"[job={job_id}] Error updating job status {status}: {exc}")
 
 
 def run_ontology_background_task(config: dict, domain_prompt: str, job_id: str | None = None) -> bool:
     """Run the ontology pipeline as a background task, updating job status if provided."""
     try:
         job_config = _with_job_output_path(config, job_id)
-        output_dir = asyncio.run(run_ontology_pipeline(config_data=job_config, domain_prompt=domain_prompt))
+        _mark_job_progress(job_id, "execution-started")
+        output_dir = asyncio.run(
+            run_ontology_pipeline(
+                config_data=job_config,
+                domain_prompt=domain_prompt,
+                job_id=job_id,
+            )
+        )
         logger.info(f"[job={job_id}] Pipeline task completed successfully")
 
         job_runs = None
@@ -204,9 +243,7 @@ def run_ontology_background_task(config: dict, domain_prompt: str, job_id: str |
                 if job_runs.endswith("/output"):
                     job_runs = job_runs[:-7]
             elif job_id:
-                domain_name = (job_config or {}).get("domain_name")
-                if domain_name:
-                    job_runs = f"{job_id}"
+                job_runs = job_id
 
         if job_id:
             _update_job_status(job_id, "completed", job_runs=job_runs, clear_lease=True)

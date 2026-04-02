@@ -17,7 +17,7 @@ def _queue_test_app(tmp_path):
     return app
 
 
-def test_claim_next_pending_job_sets_lease_fields(tmp_path):
+def test_claim_next_pending_job_sets_progress_fields(tmp_path):
     app = _queue_test_app(tmp_path)
 
     with app.app_context():
@@ -49,11 +49,11 @@ def test_claim_next_pending_job_sets_lease_fields(tmp_path):
     assert job.status == "running"
     assert job.claimed_by == "pod-a"
     assert job.claimed_at is not None
-    assert job.heartbeat_at is not None
+    assert job.last_progress_at is not None
     assert job.attempt_count == 1
 
 
-def test_recover_stale_running_jobs_requeues_only_expired_leases(tmp_path):
+def test_recover_stale_running_jobs_requeues_only_jobs_without_recent_progress(tmp_path):
     app = _queue_test_app(tmp_path)
     now = datetime.now(timezone.utc)
 
@@ -65,7 +65,7 @@ def test_recover_stale_running_jobs_requeues_only_expired_leases(tmp_path):
                 domain="pip",
                 claimed_by="pod-a",
                 claimed_at=now - timedelta(minutes=20),
-                heartbeat_at=now - timedelta(minutes=20),
+                last_progress_at=now - timedelta(minutes=20),
                 created_at=now - timedelta(minutes=21),
             )
         )
@@ -76,7 +76,7 @@ def test_recover_stale_running_jobs_requeues_only_expired_leases(tmp_path):
                 domain="pip",
                 claimed_by="pod-b",
                 claimed_at=now - timedelta(minutes=2),
-                heartbeat_at=now - timedelta(minutes=1),
+                last_progress_at=now - timedelta(minutes=1),
                 created_at=now - timedelta(minutes=3),
             )
         )
@@ -90,7 +90,6 @@ def test_recover_stale_running_jobs_requeues_only_expired_leases(tmp_path):
     assert stale_job.status == "pending"
     assert stale_job.claimed_by is None
     assert stale_job.claimed_at is None
-    assert stale_job.heartbeat_at is None
 
     assert fresh_job.status == "running"
     assert fresh_job.claimed_by == "pod-b"
