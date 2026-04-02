@@ -3,6 +3,7 @@ import time
 import json
 from sqlalchemy.exc import OperationalError
 from scripts.pipeline.logging_config import logger
+from scripts.pipeline.constants import EXECUTOR_MAX_WORKERS
 
 from datetime import datetime, timedelta, timezone
 
@@ -30,6 +31,44 @@ def cleanup_stale_jobs(app):
         except Exception as e:
             logger.error(f"Error during stale jobs cleanup: {e}")
             db.session.rollback()
+
+
+def claim_next_pending_job(db, job_model, max_running_jobs=EXECUTOR_MAX_WORKERS):
+    """Claim the oldest pending job only when executor capacity is available."""
+    running_jobs = db.session.query(job_model).filter_by(status='running').count()
+    if running_jobs >= max_running_jobs:
+        return None
+
+    job = (
+        db.session.query(job_model)
+        .filter_by(status='pending')
+        .order_by(job_model.created_at.asc())
+        .with_for_update(skip_locked=True)
+        .first()
+    )
+    if job is None:
+        return None
+
+    job.status = 'running'
+    db.session.commit()
+
+    return {
+        "job_id": job.id,
+        "config_data": json.loads(job.config_data) if job.config_data else {},
+        "domain_prompt": job.domain_prompt,
+    }
+
+
+def return_job_to_pending(db, job_model, job_id, error_message=None):
+    """Return a claimed job to pending if it could not be submitted for execution."""
+    job = db.session.get(job_model, job_id)
+    if job is None:
+        return
+
+    job.status = 'pending'
+    if error_message is not None:
+        job.error_message = error_message
+    db.session.commit()
 
 def start_task_manager(app):
     """Start a background daemon thread that polls the database for pending jobs."""
@@ -70,22 +109,35 @@ def start_task_manager(app):
                     from scripts.pipeline.utils import executor
                     from scripts.pipeline.ontology_generator import run_ontology_background_task
 
-                    job = db.session.query(ProcessingJob).filter_by(status='pending').order_by(ProcessingJob.created_at.asc()).with_for_update(skip_locked=True).first()
-                    if job:
-                        # Mark running to prevent double processing
-                        job.status = 'running'
-                        db.session.commit()
-                        
-                        config_data = json.loads(job.config_data) if job.config_data else {}
-                        domain_prompt = job.domain_prompt
-                        
-                        logger.info(f"Picked up job {job.id} from queue. Submitting to background executor.")
-                        executor.submit(
-                            run_ontology_background_task,
-                            config_data,
-                            domain_prompt,
-                            job.id
+                    claimed_job = claim_next_pending_job(
+                        db=db,
+                        job_model=ProcessingJob,
+                    )
+                    if claimed_job:
+                        logger.info(
+                            "Picked up job %s from queue. Submitting to background executor.",
+                            claimed_job["job_id"],
                         )
+                        try:
+                            executor.submit(
+                                run_ontology_background_task,
+                                claimed_job["config_data"],
+                                claimed_job["domain_prompt"],
+                                claimed_job["job_id"],
+                            )
+                        except Exception as exc:
+                            logger.error(
+                                "Failed to submit job %s to background executor: %s",
+                                claimed_job["job_id"],
+                                exc,
+                            )
+                            return_job_to_pending(
+                                db=db,
+                                job_model=ProcessingJob,
+                                job_id=claimed_job["job_id"],
+                                error_message=None,
+                            )
+                            raise
                     else:
                         time.sleep(5)
             except OperationalError:
