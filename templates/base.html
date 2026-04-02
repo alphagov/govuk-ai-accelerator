@@ -151,7 +151,7 @@
           <a href="/ontology" class="collection-item {% if active_page == 'dashboard' %}active{% endif %}">Dashboard</a>
           <a href="/viewer/bucket/govuk-ai-accelerator-data-integration" class="collection-item {% if active_page == 'explorer' %}active{% endif %}">File Explorer</a>
           <a href="{{ url_for('ontology.all_jobs') }}" class="collection-item {% if active_page == 'jobs' %}active{% endif %}">Jobs</a>
-          <a href="{{ url_for('ontology.ingestion') }}" class="collection-item {% if active_page == 'ingestion' %}active{% endif %}">Ingestion</a>
+          <a href="{{ url_for('ontology.ingest_content') }}" class="collection-item {% if active_page == 'ingestion' %}active{% endif %}">Ingestion</a>
         </div>
       </aside>
 
