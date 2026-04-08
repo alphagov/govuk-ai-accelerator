@@ -3,7 +3,7 @@ APP_PORT = 3000
 
 YAML_EXTENSIONS = ('.yaml', '.yml')
 
-EXECUTOR_MAX_WORKERS = 4
+EXECUTOR_MAX_WORKERS = 1
 
 BLUEPRINTS = {
     'healthcheck': {'prefix': '/healthcheck'},

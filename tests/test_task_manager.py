@@ -26,6 +26,76 @@ def test_sqlite_is_treated_as_single_leader_mode(tmp_path):
     assert leader_connection is True
 
 
+def test_maintenance_runs_under_advisory_lock_in_sqlite(tmp_path):
+    """In SQLite mode, _try_run_maintenance should run cleanup without errors."""
+    app = _queue_test_app(tmp_path)
+    now = datetime.now(timezone.utc)
+
+    with app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="old-stale-job",
+                status="running",
+                domain="pip",
+                claimed_by="dead-pod",
+                claimed_at=now - timedelta(minutes=20),
+                last_progress_at=now - timedelta(minutes=20),
+                created_at=now - timedelta(minutes=21),
+            )
+        )
+        app_module.db.session.commit()
+
+        task_manager._try_run_maintenance(app, app_module.db)
+
+        job = app_module.db.session.get(app_module.ProcessingJob, "old-stale-job")
+
+    assert job.status == "pending"
+    assert job.claimed_by is None
+
+
+def test_two_pods_claim_different_jobs(tmp_path):
+    """Two callers using claim_next_pending_job get different jobs."""
+    app = _queue_test_app(tmp_path)
+    now = datetime.now(timezone.utc)
+
+    with app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="job-1",
+                status="pending",
+                domain="pip",
+                config_data='{"domain_name": "pip"}',
+                domain_prompt="prompt",
+                created_at=now - timedelta(seconds=2),
+            )
+        )
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="job-2",
+                status="pending",
+                domain="pip",
+                config_data='{"domain_name": "pip"}',
+                domain_prompt="prompt",
+                created_at=now - timedelta(seconds=1),
+            )
+        )
+        app_module.db.session.commit()
+
+        first = task_manager.claim_next_pending_job(
+            db=app_module.db,
+            job_model=app_module.ProcessingJob,
+            worker_id="pod-a",
+        )
+        second = task_manager.claim_next_pending_job(
+            db=app_module.db,
+            job_model=app_module.ProcessingJob,
+            worker_id="pod-b",
+        )
+
+    assert first["job_id"] == "job-1"
+    assert second["job_id"] == "job-2"
+
+
 def test_claim_next_pending_job_sets_progress_fields(tmp_path):
     app = _queue_test_app(tmp_path)
 
