@@ -14,7 +14,6 @@ from scripts.pipeline.logging_config import logger
 
 PROGRESS_TIMEOUT = timedelta(minutes=10)
 IDLE_POLL_INTERVAL_SECONDS = 5
-LEADER_RETRY_INTERVAL_SECONDS = 5
 LEADER_LOCK_ID = 420021
 
 
@@ -63,18 +62,6 @@ def _release_leader_connection(connection):
     finally:
         connection.close()
 
-
-def _leader_connection_is_healthy(connection) -> bool:
-    if connection is None:
-        return False
-    if connection is True:
-        return True
-
-    try:
-        connection.execute(text("SELECT 1"))
-        return True
-    except Exception:
-        return False
 
 
 def cleanup_stale_jobs(app):
@@ -224,6 +211,19 @@ def run_claimed_job(app, worker_id: str, claimed_job: dict):
     )
 
 
+def _try_run_maintenance(app, db):
+    """Run stale-job recovery and cleanup if this pod can acquire the advisory lock."""
+    connection = _try_acquire_leader_connection(db)
+    if connection is None:
+        return
+
+    try:
+        recover_stale_running_jobs(app)
+        cleanup_stale_jobs(app)
+    finally:
+        _release_leader_connection(connection)
+
+
 def start_task_manager(app):
     """Start a background daemon thread that polls the database for pending jobs."""
 
@@ -234,7 +234,6 @@ def start_task_manager(app):
         slots = threading.BoundedSemaphore(EXECUTOR_MAX_WORKERS)
         last_cleanup = 0.0
         cleanup_interval = 60
-        leader_connection = None
 
         logger.info(
             f"[queue] task manager thread started worker={worker_id} max_workers={EXECUTOR_MAX_WORKERS}"
@@ -242,21 +241,11 @@ def start_task_manager(app):
 
         while True:
             try:
-                with app.app_context():
-                    from govuk_ai_accelerator_app import db
-
-                    if not _leader_connection_is_healthy(leader_connection):
-                        if leader_connection not in (None, True):
-                            _release_leader_connection(leader_connection)
-                        leader_connection = _try_acquire_leader_connection(db)
-
-                if leader_connection is None:
-                    time.sleep(LEADER_RETRY_INTERVAL_SECONDS)
-                    continue
-
                 if time.time() - last_cleanup > cleanup_interval:
-                    recover_stale_running_jobs(app)
-                    cleanup_stale_jobs(app)
+                    with app.app_context():
+                        from govuk_ai_accelerator_app import db
+
+                        _try_run_maintenance(app, db)
                     last_cleanup = time.time()
 
                 if not slots.acquire(blocking=False):
@@ -302,9 +291,6 @@ def start_task_manager(app):
                 future.add_done_callback(_release_slot)
 
             except OperationalError:
-                if leader_connection not in (None, True):
-                    _release_leader_connection(leader_connection)
-                leader_connection = None
                 time.sleep(5)
             except Exception as exc:
                 logger.error(f"[queue] task manager encountered error: {exc}")
