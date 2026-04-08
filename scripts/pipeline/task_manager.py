@@ -5,20 +5,76 @@ import threading
 import time
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, text
 from sqlalchemy.exc import OperationalError
 
 from scripts.pipeline.constants import EXECUTOR_MAX_WORKERS
 from scripts.pipeline.logging_config import logger
 
 
-LEASE_TIMEOUT = timedelta(minutes=10)
-HEARTBEAT_INTERVAL_SECONDS = 30
+PROGRESS_TIMEOUT = timedelta(minutes=10)
 IDLE_POLL_INTERVAL_SECONDS = 5
+LEADER_RETRY_INTERVAL_SECONDS = 5
+LEADER_LOCK_ID = 420021
 
 
 def _worker_id() -> str:
     return os.getenv("HOSTNAME") or socket.gethostname()
+
+
+def _uses_postgres(db) -> bool:
+    return db.engine.url.get_backend_name().startswith("postgresql")
+
+
+def _try_acquire_leader_connection(db):
+    """Acquire a dedicated Postgres advisory lock connection for the queue leader."""
+    if not _uses_postgres(db):
+        logger.info("[queue] sqlite mode detected; treating this pod as leader")
+        return True
+
+    connection = db.engine.connect()
+    acquired = connection.execute(
+        text("SELECT pg_try_advisory_lock(:lock_id)"),
+        {"lock_id": LEADER_LOCK_ID},
+    ).scalar()
+
+    if acquired:
+        logger.info(f"[queue] advisory lock {LEADER_LOCK_ID} acquired")
+        return connection
+
+    connection.close()
+    logger.info(f"[queue] advisory lock {LEADER_LOCK_ID} not acquired")
+    return None
+
+
+def _release_leader_connection(connection):
+    """Release the dedicated advisory lock connection."""
+    if connection is None or connection is True:
+        return
+
+    try:
+        connection.execute(
+            text("SELECT pg_advisory_unlock(:lock_id)"),
+            {"lock_id": LEADER_LOCK_ID},
+        )
+        logger.info(f"[queue] advisory lock {LEADER_LOCK_ID} released")
+    except Exception:
+        pass
+    finally:
+        connection.close()
+
+
+def _leader_connection_is_healthy(connection) -> bool:
+    if connection is None:
+        return False
+    if connection is True:
+        return True
+
+    try:
+        connection.execute(text("SELECT 1"))
+        return True
+    except Exception:
+        return False
 
 
 def cleanup_stale_jobs(app):
@@ -36,7 +92,8 @@ def cleanup_stale_jobs(app):
 
             for job in stale_jobs:
                 logger.info(
-                    f"Marking stale job {job.id} (created at {job.created_at}) as failed."
+                    f"[job={job.id}] marking 24h stale job as failed "
+                    f"status={job.status} domain={job.domain} created_at={job.created_at}"
                 )
                 job.status = "failed"
                 job.error_message = "Job timed out after 24 hours"
@@ -46,48 +103,53 @@ def cleanup_stale_jobs(app):
 
             if stale_jobs:
                 db.session.commit()
-                logger.info(f"Cleaned up {len(stale_jobs)} stale jobs.")
+                logger.info(f"[queue] cleaned up {len(stale_jobs)} stale jobs")
         except Exception as exc:
-            logger.error("Error during stale jobs cleanup: %s", exc)
+            logger.error(f"[queue] error during stale jobs cleanup: {exc}")
             db.session.rollback()
 
 
 def recover_stale_running_jobs(app):
-    """Requeue running jobs whose lease has expired."""
+    """Requeue running jobs whose last real progress has expired."""
     with app.app_context():
         from govuk_ai_accelerator_app import ProcessingJob, db
 
-        cutoff = datetime.now(timezone.utc) - LEASE_TIMEOUT
+        cutoff = datetime.now(timezone.utc) - PROGRESS_TIMEOUT
 
         try:
             stale_jobs = db.session.query(ProcessingJob).filter(
                 ProcessingJob.status == "running",
                 or_(
-                    ProcessingJob.heartbeat_at < cutoff,
+                    ProcessingJob.last_progress_at < cutoff,
                     and_(
-                        ProcessingJob.heartbeat_at.is_(None),
+                        ProcessingJob.last_progress_at.is_(None),
                         ProcessingJob.claimed_at < cutoff,
                     ),
                     and_(
-                        ProcessingJob.heartbeat_at.is_(None),
+                        ProcessingJob.last_progress_at.is_(None),
                         ProcessingJob.claimed_at.is_(None),
                     ),
                 ),
             ).all()
 
             for job in stale_jobs:
-                logger.info(f"Requeuing stale leased job {job.id}.")
+                logger.info(
+                    f"[job={job.id}] requeueing stale job "
+                    f"domain={job.domain} worker={job.claimed_by} "
+                    f"claimed_at={job.claimed_at} last_progress_at={job.last_progress_at} "
+                    f"attempt={job.attempt_count}"
+                )
                 job.status = "pending"
                 job.claimed_by = None
                 job.claimed_at = None
                 job.heartbeat_at = None
-                job.error_message = "Job lease expired; requeued."
+                job.error_message = "Job progress timed out; requeued."
 
             if stale_jobs:
                 db.session.commit()
-                logger.info(f"Recovered {len(stale_jobs)} stale running jobs.")
+                logger.info(f"[queue] recovered {len(stale_jobs)} stale running jobs")
         except Exception as exc:
-            logger.error("Error recovering stale running jobs: %s", exc)
+            logger.error(f"[queue] error recovering stale running jobs: {exc}")
             db.session.rollback()
 
 
@@ -107,15 +169,23 @@ def claim_next_pending_job(db, job_model, worker_id: str):
     job.status = "running"
     job.claimed_by = worker_id
     job.claimed_at = now
-    job.heartbeat_at = now
+    job.heartbeat_at = None
+    job.last_progress_at = now
     job.attempt_count = (job.attempt_count or 0) + 1
     job.error_message = None
     db.session.commit()
 
+    logger.info(
+        f"[job={job.id}] claimed domain={job.domain} worker={worker_id} "
+        f"attempt={job.attempt_count} claimed_at={job.claimed_at}"
+    )
+
     return {
         "job_id": job.id,
+        "domain": job.domain,
         "config_data": json.loads(job.config_data) if job.config_data else {},
         "domain_prompt": job.domain_prompt,
+        "attempt_count": job.attempt_count,
     }
 
 
@@ -125,6 +195,7 @@ def requeue_claimed_job(db, job_model, job_id: str, error_message: str | None = 
     if job is None:
         return
 
+    logger.info(f"[job={job_id}] requeueing after executor submission failure")
     job.status = "pending"
     job.claimed_by = None
     job.claimed_at = None
@@ -134,48 +205,23 @@ def requeue_claimed_job(db, job_model, job_id: str, error_message: str | None = 
     db.session.commit()
 
 
-def touch_job_heartbeat(app, job_id: str, worker_id: str):
-    """Refresh the heartbeat for a running job claimed by this worker."""
-    with app.app_context():
-        from govuk_ai_accelerator_app import ProcessingJob, db
-
-        try:
-            job = db.session.get(ProcessingJob, job_id)
-            if job and job.status == "running" and job.claimed_by == worker_id:
-                job.heartbeat_at = datetime.now(timezone.utc)
-                db.session.commit()
-        except Exception as exc:
-            logger.warning(f"Failed to heartbeat job {job_id}: {exc}")
-            db.session.rollback()
-
-
-def heartbeat_loop(app, job_id: str, worker_id: str, stop_event: threading.Event):
-    """Background loop that periodically refreshes a job lease heartbeat."""
-    while not stop_event.wait(HEARTBEAT_INTERVAL_SECONDS):
-        touch_job_heartbeat(app, job_id, worker_id)
-
-
 def run_claimed_job(app, worker_id: str, claimed_job: dict):
-    """Run a claimed job while a background thread keeps its lease alive."""
+    """Run a claimed job without a synthetic heartbeat thread."""
     from scripts.pipeline.ontology_generator import run_ontology_background_task
 
-    stop_event = threading.Event()
-    heartbeat_thread = threading.Thread(
-        target=heartbeat_loop,
-        args=(app, claimed_job["job_id"], worker_id, stop_event),
-        daemon=True,
+    logger.info(
+        f"[job={claimed_job['job_id']}] execution starting "
+        f"worker={worker_id} domain={claimed_job['domain']} attempt={claimed_job['attempt_count']}"
     )
-    heartbeat_thread.start()
-
-    try:
-        run_ontology_background_task(
-            claimed_job["config_data"],
-            claimed_job["domain_prompt"],
-            claimed_job["job_id"],
-        )
-    finally:
-        stop_event.set()
-        heartbeat_thread.join(timeout=1)
+    run_ontology_background_task(
+        claimed_job["config_data"],
+        claimed_job["domain_prompt"],
+        claimed_job["job_id"],
+    )
+    logger.info(
+        f"[job={claimed_job['job_id']}] execution returned "
+        f"worker={worker_id} domain={claimed_job['domain']}"
+    )
 
 
 def start_task_manager(app):
@@ -188,15 +234,33 @@ def start_task_manager(app):
         slots = threading.BoundedSemaphore(EXECUTOR_MAX_WORKERS)
         last_cleanup = 0.0
         cleanup_interval = 60
+        leader_connection = None
+
+        logger.info(
+            f"[queue] task manager thread started worker={worker_id} max_workers={EXECUTOR_MAX_WORKERS}"
+        )
 
         while True:
             try:
+                with app.app_context():
+                    from govuk_ai_accelerator_app import db
+
+                    if not _leader_connection_is_healthy(leader_connection):
+                        if leader_connection not in (None, True):
+                            _release_leader_connection(leader_connection)
+                        leader_connection = _try_acquire_leader_connection(db)
+
+                if leader_connection is None:
+                    time.sleep(LEADER_RETRY_INTERVAL_SECONDS)
+                    continue
+
                 if time.time() - last_cleanup > cleanup_interval:
                     recover_stale_running_jobs(app)
                     cleanup_stale_jobs(app)
                     last_cleanup = time.time()
 
                 if not slots.acquire(blocking=False):
+                    logger.info(f"[queue] no free worker slots on worker={worker_id}")
                     time.sleep(1)
                     continue
 
@@ -214,10 +278,6 @@ def start_task_manager(app):
                     time.sleep(IDLE_POLL_INTERVAL_SECONDS)
                     continue
 
-                logger.info(
-                    f"Worker {worker_id} claimed job {claimed_job['job_id']}."
-                )
-
                 try:
                     future = executor.submit(run_claimed_job, app, worker_id, claimed_job)
                 except Exception as exc:
@@ -233,12 +293,21 @@ def start_task_manager(app):
                     slots.release()
                     raise
 
-                future.add_done_callback(lambda _future: slots.release())
+                def _release_slot(_future):
+                    logger.info(
+                        f"[job={claimed_job['job_id']}] releasing worker slot on worker={worker_id}"
+                    )
+                    slots.release()
+
+                future.add_done_callback(_release_slot)
 
             except OperationalError:
+                if leader_connection not in (None, True):
+                    _release_leader_connection(leader_connection)
+                leader_connection = None
                 time.sleep(5)
             except Exception as exc:
-                logger.error(f"Task manager encountered error: {exc}")
+                logger.error(f"[queue] task manager encountered error: {exc}")
                 time.sleep(5)
 
     thread = threading.Thread(target=worker, daemon=True)

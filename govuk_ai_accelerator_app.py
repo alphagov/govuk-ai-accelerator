@@ -21,7 +21,6 @@ from scripts.pipeline.ontology_generator import run_ontology_background_task
 from scripts.pipeline.utils import error_response, is_yaml_file, executor
 from scripts.pipeline.constants import APP_HOST, APP_PORT, BLUEPRINTS
 from scripts.ingestion.ingestion_pipeline import run_ingestion_background_task
-from src.aws_helper import create_bucket_folder
 from src.web_browser import routing
 from flask import current_app
 
@@ -35,7 +34,6 @@ except ModuleNotFoundError as exc:
     visualizer_app = None
     VISUALIZER_IMPORT_ERROR = exc
 
-# Initialize database extension without app binding
 db = SQLAlchemy()
 migrate = Migrate()
 
@@ -54,6 +52,7 @@ class ProcessingJob(db.Model):
     claimed_by: Mapped[str | None] = mapped_column(String, nullable=True)
     claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_progress_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
