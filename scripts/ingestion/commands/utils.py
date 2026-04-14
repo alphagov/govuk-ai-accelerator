@@ -7,6 +7,9 @@ from datetime import datetime, timezone
 from typing import Any, cast, Optional, TextIO
 from dataclasses import dataclass, field
 
+DEFAULT_S3_BUCKET = "govuk-ai-accelerator-data-integration"
+
+
 @dataclass
 class IngestionConfig:
     output_dir: str
@@ -16,7 +19,8 @@ class IngestionConfig:
     output_format: str
     log_path: str = "ingestion.log"
     links_list: Optional[list[str]] = None
-    
+    domain: Optional[str] = None
+
     output_dir_url: str = field(init=False)
     html_dir_url: str = field(init=False)
     links_file_url: str = field(init=False)
@@ -24,14 +28,12 @@ class IngestionConfig:
 
     def __post_init__(self):
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        
+
         base, ext = os.path.splitext(self.log_path)
         if not ext:
             ext = ".log"
         self.log_path = f"{base}_{timestamp}{ext}"
-            
-        # No more local temp log file creation
-        # URLs are still initialized
+
         self.output_dir_url = self.get_fsspec_url(self.output_dir)
         self.html_dir_url = self.get_fsspec_url(self.html_dir)
         self.links_file_url = self.get_fsspec_url(self.links_file)
@@ -46,16 +48,37 @@ class IngestionConfig:
             return path
         return f"{protocol}://{self.resolve_path(path)}"
 
-def load_config(config_path: str = None, config_content: Any = None, links_list: list[str] = None) -> IngestionConfig:
+
+def _domain_defaults(domain: str) -> dict:
+    bucket = os.getenv("S3_BUCKET_NAME", DEFAULT_S3_BUCKET)
+    base = f"s3://{bucket}/{domain}"
+    return {
+        "output_dir": f"{base}/output",
+        "html_dir": f"{base}/html_content",
+        "protocol": "s3",
+        "log_path": f"{base}/ingestion.log",
+    }
+
+
+def load_config(
+    config_path: str = None,
+    config_content: Any = None,
+    links_list: list[str] = None,
+    domain: str = None,
+) -> IngestionConfig:
+    overrides = _domain_defaults(domain) if domain else {}
+
     if isinstance(config_content, dict):
+        merged = {**overrides, **{k: v for k, v in config_content.items() if v is not None}}
         return IngestionConfig(
-            output_dir=config_content.get("output_dir", "output"),
-            html_dir=config_content.get("html_dir", "html_content"),
-            protocol=config_content.get("protocol", "local"),
-            links_file=config_content.get("links_file", "links.txt"),
-            output_format=config_content.get("output_format", "markdown"),
-            log_path=config_content.get("log_path", "ingestion.log"),
-            links_list=links_list
+            output_dir=merged.get("output_dir", "output"),
+            html_dir=merged.get("html_dir", "html_content"),
+            protocol=merged.get("protocol", "local"),
+            links_file=merged.get("links_file", "links.txt"),
+            output_format=merged.get("output_format", "markdown"),
+            log_path=merged.get("log_path", "ingestion.log"),
+            links_list=links_list,
+            domain=domain,
         )
 
     config = configparser.ConfigParser()
@@ -63,17 +86,18 @@ def load_config(config_path: str = None, config_content: Any = None, links_list:
         config.read(config_path)
     elif isinstance(config_content, str):
         config.read_string(config_content)
-    
+
     section = "general" if config.has_section("general") else "DEFAULT"
-    
+
     return IngestionConfig(
-        output_dir=config.get(section, "output_dir", fallback="output"),
-        html_dir=config.get(section, "html_dir", fallback="html_content"),
-        protocol=config.get(section, "protocol", fallback="local"),
+        output_dir=config.get(section, "output_dir", fallback=overrides.get("output_dir", "output")),
+        html_dir=config.get(section, "html_dir", fallback=overrides.get("html_dir", "html_content")),
+        protocol=config.get(section, "protocol", fallback=overrides.get("protocol", "local")),
         links_file=config.get(section, "links_file", fallback="links.txt"),
         output_format=config.get(section, "output_format", fallback="markdown"),
-        log_path=config.get(section, "log_path", fallback="ingestion.log"),
-        links_list=links_list
+        log_path=config.get(section, "log_path", fallback=overrides.get("log_path", "ingestion.log")),
+        links_list=links_list,
+        domain=domain,
     )
 
 def get_logger(log_path: str = None, stream: TextIO = None) -> logging.Logger:
