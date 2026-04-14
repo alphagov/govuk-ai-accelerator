@@ -20,7 +20,9 @@ from scripts.pipeline.task_manager import start_task_manager
 from scripts.pipeline.ontology_generator import run_ontology_background_task
 from scripts.pipeline.utils import error_response, is_yaml_file, executor
 from scripts.pipeline.constants import APP_HOST, APP_PORT, BLUEPRINTS
+from scripts.ingestion.commands.utils import DEFAULT_S3_BUCKET
 from scripts.ingestion.ingestion_pipeline import run_ingestion_background_task
+from src.aws_helper import create_bucket_folder
 from src.web_browser import routing
 from flask import current_app
 
@@ -138,42 +140,53 @@ def create_blueprints():
         except Exception as e:
             return error_response(f"Job submission failed: {str(e)}", 500)
 
+    @ontology_bp.route('/domains', methods=['GET'])
+    def domains_page():
+        """Render the Domains menu page so IAs can launch an ingestion run."""
+        return render_template('domains.html', active_page='domains')
+
     @ontology_bp.route('/ingest', methods=['POST'])
     def ingest_content():
-        """Trigger the ingestion pipeline with either an uploaded file or JSON config."""
+        """Trigger the ingestion pipeline for the given domain and URL list."""
         job_id = str(uuid4())
+        domain = None
         config_content = None
         links_list = None
 
         if request.is_json:
-            data = request.get_json()
+            data = request.get_json() or {}
+            domain = (data.get('domain') or '').strip() or None
             config_content = data.get('config_content')
             links_list = data.get('links')
 
-        if not config_content:
-            return error_response("Configuration is missing. Provide 'config_content' in JSON.")
+        if not domain:
+            return error_response("Domain is required.")
+        if not links_list:
+            return error_response("A URL list with at least one URL is required.")
+
+        bucket_name = os.getenv('S3_BUCKET_NAME', DEFAULT_S3_BUCKET)
+        try:
+            create_bucket_folder(bucket_name, domain)
+        except Exception as s3_err:
+            current_app.logger.warning("Could not ensure S3 folder for domain %s: %s", domain, s3_err)
 
         tracking = True
         try:
-            job = ProcessingJob(id=job_id, status="pending", pipeline="ingestion")
+            job = ProcessingJob(id=job_id, status="pending", pipeline="ingestion", domain=domain)
             db.session.add(job)
             db.session.commit()
         except Exception as e:
             db.session.rollback()
-            from flask import current_app
             current_app.logger.warning("Database unavailable, proceeding without job tracking: %s", e)
             tracking = False
 
-        config_path = None
-        if isinstance(config_content, str):
-            pass
-
         executor.submit(
             run_ingestion_background_task,
-            config_path=config_path,
+            config_path=None,
             config_content=config_content,
             links_list=links_list,
             job_id=job_id,
+            domain=domain,
         )
 
         response_payload = {"job_id": job_id, "status": "pending"}
