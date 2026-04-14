@@ -7,14 +7,14 @@ from datetime import datetime, timezone
 from scripts.ingestion.commands.utils import load_config, get_logger
 from scripts.ingestion.commands import download_content, extract_content, clean_content
 
-def run_ingestion_background_task(config_path: str = None, config_content: str = None, links_list: list[str] = None, job_id: str = None):
-    
+def run_ingestion_background_task(config_path: str = None, config_content: str = None, links_list: list[str] = None, job_id: str = None, domain: str = None):
+
     from govuk_ai_accelerator_app import db, ProcessingJob, create_flask_app
-    
+
     app = create_flask_app()
-    
-    print(f"DEBUG: Starting ingestion job {job_id}")
-    
+
+    print(f"DEBUG: Starting ingestion job {job_id} (domain={domain})")
+
     with app.app_context():
         if job_id:
             try:
@@ -25,10 +25,10 @@ def run_ingestion_background_task(config_path: str = None, config_content: str =
             except Exception as e:
                 db.session.rollback()
                 logging.warning(f"Could not update status for job {job_id}: {e}")
-        
+
         config_obj = None
         try:
-            config_obj = load_config(config_path=config_path, config_content=config_content, links_list=links_list)
+            config_obj = load_config(config_path=config_path, config_content=config_content, links_list=links_list, domain=domain)
             
             log_buffer = io.StringIO()
             logger = get_logger(stream=log_buffer)

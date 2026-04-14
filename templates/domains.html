@@ -5,8 +5,8 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <div class="card full-width">
                 <div class="card-content">
-                    <span class="card-title" style="font-weight: bold; color: #1d70b8;">Run Pipeline</span>
-                    <p class="grey-text text-darken-1" style="margin-bottom: 20px;">Upload a JSON file containing a list of links for processing.</p>
+                    <span class="card-title" style="font-weight: bold; color: #1d70b8;">Ingest Webpages for a Domain</span>
+                    <p class="grey-text text-darken-1" style="margin-bottom: 20px;">Upload a plain-text file containing one URL per line. Output is written to the domain's folder in S3.</p>
 
                     <form id="upload-form" enctype="multipart/form-data">
                         <!-- Domain Text Input -->
@@ -18,26 +18,25 @@
 
                         <div id="drop-zone" class="drop-zone" style="border: 2px dashed var(--gov-border); border-radius: 8px; padding: 2rem; text-align: center; margin-bottom: 1.5rem; transition: background-color 0.2s; cursor: pointer;">
                             <i class="material-icons" style="font-size: 3rem; color: #1d70b8;">cloud_upload</i>
-                            <h6 style="margin: 10px 0; font-weight: bold;">Drag & Drop JSON file here</h6>
-                            <p class="grey-text text-darken-2" style="margin-bottom: 5px;">Required: <strong>.json</strong> (List of Links)</p>
-                            <p class="grey-text text-darken-2" style="margin-top: 5px; font-size: 0.9em;">File should contain an array of URLs to process</p>
+                            <h6 style="margin: 10px 0; font-weight: bold;">Drag &amp; Drop URL list here</h6>
+                            <p class="grey-text text-darken-2" style="margin-bottom: 5px;">Required: <strong>.txt</strong> file with one URL per line</p>
                             <p class="grey-text" style="font-size: 0.9em; margin-top: 15px;">or click to browse</p>
 
-                            <input type="file" id="file" name="file" accept=".json" style="display: none;" required>
+                            <input type="file" id="file" name="file" accept=".txt,text/plain" style="display: none;" required>
                         </div>
 
                         <ul class="collection" id="file-list" style="border: none; margin-bottom: 1.5rem; display: none;">
-                            <li class="collection-item avatar" id="json-file-item" style="display: none; min-height: auto; padding-left: 50px;">
-                                <i class="material-icons circle orange" style="width: 30px; height: 30px; line-height: 30px; left: 10px;">code</i>
-                                <span class="title" id="json-file-name" style="font-weight: 500;"></span>
-                                <p class="grey-text" style="font-size: 0.8rem;">JSON Links File</p>
+                            <li class="collection-item avatar" id="txt-file-item" style="display: none; min-height: auto; padding-left: 50px;">
+                                <i class="material-icons circle orange" style="width: 30px; height: 30px; line-height: 30px; left: 10px;">description</i>
+                                <span class="title" id="txt-file-name" style="font-weight: 500;"></span>
+                                <p class="grey-text" style="font-size: 0.8rem;">URL list (one per line)</p>
                             </li>
                         </ul>
 
                         <div id="upload-status" style="display: none; margin-bottom: 1rem; padding: 10px; border-radius: 4px;"></div>
 
                         <button class="btn waves-effect waves-light" type="submit" id="submit-btn" style="width: 100%; background-color: #1d70b8;">
-                            Upload & Start <i class="material-icons right">send</i>
+                            Upload &amp; Start <i class="material-icons right">send</i>
                         </button>
 
                         <div class="progress" id="upload-progress" style="display: none;">
@@ -61,7 +60,7 @@
             dropZone.addEventListener('click', () => {
                 const tempInput = document.createElement('input');
                 tempInput.type = 'file';
-                tempInput.accept = '.json';
+                tempInput.accept = '.txt,text/plain';
                 tempInput.onchange = e => handleFiles(e.target.files);
                 tempInput.click();
             });
@@ -94,27 +93,25 @@
             });
 
             function handleFiles(files) {
-                // Reset
-                const dtJson = new DataTransfer();
-                let hasJson = false;
+                const dt = new DataTransfer();
+                let hasTxt = false;
 
                 Array.from(files).forEach(file => {
                     const ext = file.name.split('.').pop().toLowerCase();
-                    if (ext === 'json') {
-                        dtJson.items.add(file);
-                        document.getElementById('json-file-name').textContent = file.name;
-                        document.getElementById('json-file-item').style.display = 'block';
-                        hasJson = true;
+                    if (ext === 'txt') {
+                        dt.items.add(file);
+                        document.getElementById('txt-file-name').textContent = file.name;
+                        document.getElementById('txt-file-item').style.display = 'block';
+                        hasTxt = true;
                     }
                 });
 
-                if (hasJson) {
-                    fileInput.files = dtJson.files;
+                if (hasTxt) {
+                    fileInput.files = dt.files;
                     fileList.style.display = 'block';
                 }
             }
 
-            // ---- Form Submission ----
             const uploadForm = document.getElementById('upload-form');
             const submitBtn = document.getElementById('submit-btn');
             const progressBar = document.getElementById('upload-progress');
@@ -122,11 +119,8 @@
 
             uploadForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-
                 if (submitBtn.disabled) return;
 
-                //
-                // Validate domain field
                 if (!domainInput.value.trim()) {
                     showStatus('Please enter a domain name.', 'red');
                     domainInput.focus();
@@ -134,7 +128,7 @@
                 }
 
                 if (!fileInput.files.length) {
-                    showStatus('Please select a JSON file containing a list of links.', 'red');
+                    showStatus('Please select a .txt file containing one URL per line.', 'red');
                     return;
                 }
 
@@ -144,12 +138,18 @@
                 uploadStatus.style.display = 'none';
 
                 try {
-                    // Read the JSON file content
                     const file = fileInput.files[0];
                     const fileContent = await file.text();
-                    const jsonData = JSON.parse(fileContent);
+                    const links = fileContent
+                        .split(/\r?\n/)
+                        .map(line => line.trim())
+                        .filter(Boolean);
 
-                    // Send as JSON to the endpoint, including the domain from the form
+                    if (!links.length) {
+                        showStatus('The uploaded file contains no URLs.', 'red');
+                        return;
+                    }
+
                     const response = await fetch("{{ url_for('ontology.ingest_content') }}", {
                         method: 'POST',
                         headers: {
@@ -157,8 +157,7 @@
                         },
                         body: JSON.stringify({
                             domain: domainInput.value.trim(),
-                            config_content: jsonData.config_content,
-                            links: jsonData.links
+                            links: links,
                         })
                     });
 
@@ -166,10 +165,10 @@
 
                     if (response.ok) {
                         showStatus(`Pipeline started! Job ID: ${data.job_id.substring(0,8)}...`, 'green');
-                        uploadForm.reset(); // Clear all form fields including domain
+                        uploadForm.reset();
                         fileInput.value = '';
                         fileList.style.display = 'none';
-                        document.getElementById('json-file-item').style.display = 'none';
+                        document.getElementById('txt-file-item').style.display = 'none';
                     } else {
                         showStatus(`Error: ${data.error}`, 'red');
                     }
