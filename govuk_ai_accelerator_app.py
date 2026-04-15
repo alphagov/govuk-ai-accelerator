@@ -234,6 +234,10 @@ def create_blueprints():
     def all_jobs():
         return render_template('jobs.html', active_page='jobs')
 
+    @ontology_bp.route('/dag', methods=['GET'])
+    def show_dag():
+        return render_template('dag.html', active_page='dag')
+
     @viewer_bp.route("/bucket")
     def viewer_load():
         return routing.index()

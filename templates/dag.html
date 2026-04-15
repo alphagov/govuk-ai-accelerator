@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+  <div class="col s12">
+    <div class="card">
+      <div class="card-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <span class="card-title" style="font-weight: bold; color: #1d70b8;">DAG Visualisation</span>
+        </div>
+
+        <div id="cy" style="height: 600px; width: 100%; border: 1px solid var(--gov-border); border-radius: 8px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    cytoscape({
+      container: document.getElementById('cy'),
+      boxSelectionEnabled: false,
+      autounselectify: true,
+      autoungrabify: true,
+      layout: {
+        name: 'breadthfirst',
+        directed: true,
+        padding: 30,
+        spacingFactor: 1.5,
+        animate: false,
+      },
+      style: [
+        {
+          selector: 'node',
+          style: {
+            'background-color': '#1d70b8',
+            'label': 'data(label)',
+            'color': '#ffffff',
+            'font-size': '13px',
+            'text-valign': 'center',
+            'text-halign': 'center',
+            'text-wrap': 'wrap',
+            'text-max-width': '140px',
+            'padding': '12px',
+            'shape': 'circle',
+            'width': 'label',
+            'height': 'label'
+          }
+        },
+        {
+          selector: 'node[type = "entity"]',
+          style: {
+            'background-color': 'lightblue',
+          }
+        },
+        {
+          selector: 'node[type = "alias"]',
+          style: {
+            'background-color': 'orange',
+          }
+        },
+        {
+          selector: 'edge',
+          style: {
+            'label': 'data(label)',
+            'width': 3,
+            'line-color': '#5b8db3',
+            'target-arrow-color': '#5b8db3',
+            'target-arrow-shape': 'triangle',
+            'curve-style': 'bezier'
+          }
+        }
+      ],
+      elements: {
+        nodes: [
+          { data: { id: 'visa__creative_worker_visa', label: 'visa__creative_worker_visa', type: 'entity' } },
+          { data: { id: 'temporary_work_creative_worker_visa', label: 'Temporary Work - Creative Worker visa', type: 'alias' } },
+          { data: { id: 'creative_worker_visa__temporary_work', label: 'Creative Worker visa (Temporary Work)', type: 'alias' } },
+        ],
+        edges: [
+          { data: { source: 'visa__creative_worker_visa', target: 'temporary_work_creative_worker_visa', label: 'Alias (5)' } },
+          { data: { source: 'visa__creative_worker_visa', target: 'creative_worker_visa__temporary_work', label: 'Alias (10)' } },
+        ]
+      }
+    });
+  });
+</script>
+{% endblock %}
