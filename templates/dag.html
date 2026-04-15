@@ -9,7 +9,21 @@
           <span class="card-title" style="font-weight: bold; color: #1d70b8;">DAG Visualisation</span>
         </div>
 
-        <div id="cy" style="height: 600px; width: 100%; border: 1px solid var(--gov-border); border-radius: 8px;"></div>
+        <div class="row" style="margin-top: 20px;">
+          <div class="col s12 m8">
+            <div id="cy" style="height: 600px; width: 100%; border: 1px solid var(--gov-border); border-radius: 8px;"></div>
+          </div>
+          <div class="col s12 m4">
+            <div class="card" style="height: 600px; border: 1px solid var(--gov-border); border-radius: 8px;">
+              <div class="card-content" style="height: 100%; display: flex; flex-direction: column;">
+                <span id="properties-title" class="card-title" style="font-weight: bold; color: #1d70b8; margin-bottom: 16px;"></span>
+                <div id="properties-box" style="flex: 1; white-space: pre-wrap; overflow-y: auto; font-family: monospace; color: #3c3c3c;">
+                  Select a node to see its label.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -20,15 +34,16 @@
 <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    cytoscape({
+    const propertiesBox = document.getElementById('properties-box');
+    const cy = cytoscape({
       container: document.getElementById('cy'),
       boxSelectionEnabled: false,
-      autounselectify: true,
+      autounselectify: false,
       autoungrabify: true,
       layout: {
         name: 'breadthfirst',
-        directed: true,
         padding: 30,
+        circle: true,
         spacingFactor: 1.5,
         animate: false,
       },
@@ -38,16 +53,16 @@
           style: {
             'background-color': '#1d70b8',
             'label': 'data(label)',
-            'color': '#ffffff',
+            'color': '#000000',
             'font-size': '13px',
             'text-valign': 'center',
             'text-halign': 'center',
             'text-wrap': 'wrap',
             'text-max-width': '140px',
             'padding': '12px',
-            'shape': 'circle',
-            'width': 'label',
-            'height': 'label'
+            'shape': 'ellipse',
+            'width': '100',
+            'height': '100'
           }
         },
         {
@@ -60,6 +75,18 @@
           selector: 'node[type = "alias"]',
           style: {
             'background-color': 'orange',
+          }
+        },
+        {
+          selector: 'node:selected',
+          style: {
+            'background-color': 'darkgrey',
+          }
+        },
+        {
+          selector: 'node.neighbor',
+          style: {
+            'background-color': 'lightgrey',
           }
         },
         {
@@ -76,15 +103,98 @@
       ],
       elements: {
         nodes: [
-          { data: { id: 'visa__creative_worker_visa', label: 'visa__creative_worker_visa', type: 'entity' } },
-          { data: { id: 'temporary_work_creative_worker_visa', label: 'Temporary Work - Creative Worker visa', type: 'alias' } },
-          { data: { id: 'creative_worker_visa__temporary_work', label: 'Creative Worker visa (Temporary Work)', type: 'alias' } },
+          {
+            data: {
+              id: 'visa__creative_worker_visa',
+              label: 'visa__creative_worker_visa',
+              type: 'entity'
+            }
+          },
+          {
+            data: {
+              id: 'temporary_work_creative_worker_visa',
+              label: 'Temporary Work - Creative Worker visa',
+              type: 'alias',
+              occurrences: [
+                {
+                  link: 'https://www.gov.uk/creative-worker-visa/apply#:~:text=Temporary%20Work%20%2D%20Creative%20Worker%20visa',
+                  context: 'Apply from outside the UK. You must apply online for a Temporary Work - Creative Worker visa. Proving your identity and providing supporting documents.'
+                },
+                {
+                  link: 'https://www.gov.uk/creative-worker-visa/creative-worker-concession#:~:text=Temporary%20Work%20%2D%20Creative%20Worker%20visa',
+                  context: 'Apply for a Temporary Work - Creative Worker visa to work in the UK in the creative industry - eligibility, extend, bring your family.'
+                }
+              ]
+            }
+          },
+          {
+            data: {
+              id: 'creative_worker_visa__temporary_work',
+              label: 'Creative Worker visa (Temporary Work)',
+              type: 'alias',
+              occurrences: [
+                {
+                  link: 'https://www.gov.uk/creative-worker-visa/creative-worker-concession#:~:text=Creative%20Worker%20visa%20(Temporary%20Work)',
+                  context: 'Creative Worker visa (Temporary Work)'
+                }
+              ]
+            }
+          },
+          {
+            data: {
+              id: 'tier_5_temporary_worker_visa',
+              label: 'Tier 5 Temporary Worker visa',
+              type: 'alias'
+            }
+          }
         ],
         edges: [
-          { data: { source: 'visa__creative_worker_visa', target: 'temporary_work_creative_worker_visa', label: 'Alias (5)' } },
-          { data: { source: 'visa__creative_worker_visa', target: 'creative_worker_visa__temporary_work', label: 'Alias (10)' } },
+          {
+            data: {
+              source: 'visa__creative_worker_visa',
+              target: 'temporary_work_creative_worker_visa',
+              label: 'Alias (5)'
+            }
+          },
+          {
+            data: {
+              source: 'visa__creative_worker_visa',
+              target: 'creative_worker_visa__temporary_work',
+              label: 'Alias (10)'
+            }
+          },
+          {
+            data: {
+              source: 'visa__creative_worker_visa',
+              target: 'tier_5_temporary_worker_visa',
+              label: 'Alias (3)'
+            }
+          }
         ]
       }
+    });
+
+    cy.on('tap', 'node', function(evt) {
+      const node = evt.target;
+      cy.nodes().removeClass('neighbor');
+      node.neighborhood().addClass('neighbor');
+
+      const occurrences = node.data('occurrences');
+      const propertiesTitle = document.getElementById('properties-title');
+      var text = '';
+      if (!occurrences) {
+        propertiesBox.textContent = '';
+        propertiesTitle.textContent = '';
+        return;
+      }
+      for (var i = 0; i < occurrences.length; i++) {
+        text += `<p><a href="${occurrences[i].link}" target="_blank">View on GOV.UK</a></p>`;
+        text += `<p>${occurrences[i].context}</p>`;
+        text += '<hr>';
+      }
+      propertiesBox.innerHTML = text;
+
+      propertiesTitle.textContent = `${node.data('label')} (${occurrences.length})`;
     });
   });
 </script>
