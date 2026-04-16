@@ -5,9 +5,24 @@ import os
 import io
 from datetime import datetime, timezone
 from typing import Any, cast, Optional, TextIO
+from urllib.parse import urlparse
 from dataclasses import dataclass, field
 
 DEFAULT_S3_BUCKET = "govuk-ai-accelerator-data-integration"
+
+
+def slug_from_url(url: str) -> str:
+    """Convert a gov.uk /print URL into a flat, filesystem-safe slug.
+
+    https://www.gov.uk/foreign-travel-advice/print       -> foreign-travel-advice
+    https://www.gov.uk/government/publications/visa/print -> government-publications-visa
+    """
+    path = urlparse(url).path.strip("/")
+    if path.endswith("/print"):
+        path = path[: -len("/print")]
+    elif path == "print":
+        path = ""
+    return path.replace("/", "-")
 
 
 @dataclass
@@ -53,7 +68,7 @@ def _domain_defaults(domain: str) -> dict:
     bucket = os.getenv("S3_BUCKET_NAME", DEFAULT_S3_BUCKET)
     base = f"s3://{bucket}/{domain}"
     return {
-        "output_dir": f"{base}/output",
+        "output_dir": f"{base}/input",
         "html_dir": f"{base}/html_content",
         "protocol": "s3",
         "log_path": f"{base}/ingestion.log",
