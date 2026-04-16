@@ -253,11 +253,11 @@ def create_blueprints():
                         "occurrences": [
                             {
                                 "link": "https://www.gov.uk/creative-worker-visa/apply#:~:text=Temporary%20Work%20%2D%20Creative%20Worker%20visa",
-                                "context": "Apply from outside the UK. You must apply online for a Temporary Work - Creative Worker visa. Proving your identity and providing supporting documents."
+                                "context": "Apply from outside the UK. You must apply online for a <span class=\"occurrence\">Temporary Work - Creative Worker visa</span>. Proving your identity and providing supporting documents."
                             },
                             {
                                 "link": "https://www.gov.uk/creative-worker-visa/creative-worker-concession#:~:text=Temporary%20Work%20%2D%20Creative%20Worker%20visa",
-                                "context": "Apply for a Temporary Work - Creative Worker visa to work in the UK in the creative industry - eligibility, extend, bring your family."
+                                "context": "Apply for a <span class=\"occurrence\">Temporary Work - Creative Worker visa</span> to work in the UK in the creative industry - eligibility, extend, bring your family."
                             }
                         ]
                     }
@@ -270,7 +270,7 @@ def create_blueprints():
                         "occurrences": [
                             {
                                 "link": "https://www.gov.uk/creative-worker-visa/creative-worker-concession#:~:text=Creative%20Worker%20visa%20(Temporary%20Work)",
-                                "context": "Creative Worker visa (Temporary Work)"
+                                "context": "<span class=\"occurrence\">Creative Worker visa (Temporary Work)</span>"
                             }
                         ]
                     }
