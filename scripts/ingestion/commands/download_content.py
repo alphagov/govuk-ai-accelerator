@@ -1,3 +1,4 @@
+import json
 import requests
 from urllib.parse import urlparse
 import fsspec
@@ -9,6 +10,7 @@ def download_content(config: IngestionConfig):
     html_output_dir = config.html_dir_url
 
     fs, clean_html_dir = fsspec.core.url_to_fs(html_output_dir)
+    sources: dict[str, str] = {}
 
     if config.links_list:
         links = config.links_list
@@ -67,10 +69,21 @@ def download_content(config: IngestionConfig):
             with fs.open(clean_output_file, 'wb') as file:
                 file.write(response.content)
 
+            sources[slug] = link
             output_file_count += 1
             logger.info("%s %s — downloaded", progress, link)
     else:
         logger.warning("No links to process. Check your links file.")
+
+    if sources:
+        sources_url = f"{config.output_dir_url}/sources.json"
+        sources_fs, sources_path = fsspec.core.url_to_fs(sources_url)
+        parent = sources_fs._parent(sources_path)
+        if parent:
+            sources_fs.makedirs(parent, exist_ok=True)
+        with sources_fs.open(sources_path, 'w', encoding='utf-8') as file:
+            json.dump(dict(sorted(sources.items())), file, indent=2)
+        logger.info("🔗 Sources sidecar written: %s", sources_url)
 
     logger.info("📥 %d links processed, %d skipped — html files stored in %s",
                 output_file_count, link_skipped_count, html_output_dir)
