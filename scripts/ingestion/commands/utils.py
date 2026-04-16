@@ -116,22 +116,27 @@ def load_config(
     )
 
 def get_logger(log_path: str = None, stream: TextIO = None) -> logging.Logger:
+    """Return the shared ingestion logger.
 
+    When called with a `stream` or `log_path`, existing handlers are dropped and
+    fresh ones attached — so each ingestion run writes to its own buffer/file
+    without leaking into the previous run.
+    """
     logger = logging.getLogger("ontology-ingestion")
-    
-    if log_path:
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    if stream is not None or log_path is not None:
         for handler in logger.handlers[:]:
             logger.removeHandler(handler)
 
-    if not logger.handlers:
         logger.setLevel(logging.INFO)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        
+        logger.propagate = False
+
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
-        
-        if stream:
+
+        if stream is not None:
             stream_handler = logging.StreamHandler(stream)
             stream_handler.setFormatter(formatter)
             logger.addHandler(stream_handler)
@@ -139,7 +144,11 @@ def get_logger(log_path: str = None, stream: TextIO = None) -> logging.Logger:
             file_handler = logging.FileHandler(log_path)
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
-            
+    elif not logger.handlers:
+        logger.setLevel(logging.INFO)
         logger.propagate = False
-        
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+
     return logger
