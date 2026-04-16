@@ -236,7 +236,78 @@ def create_blueprints():
 
     @ontology_bp.route('/dag', methods=['GET'])
     def show_dag():
-        return render_template('dag.html', active_page='dag')
+        dag_elements = {
+            "nodes": [
+                {
+                    "data": {
+                        "id": "visa__creative_worker_visa",
+                        "label": "visa__creative_worker_visa",
+                        "type": "entity"
+                    }
+                },
+                {
+                    "data": {
+                        "id": "temporary_work_creative_worker_visa",
+                        "label": "Temporary Work - Creative Worker visa",
+                        "type": "alias",
+                        "occurrences": [
+                            {
+                                "link": "https://www.gov.uk/creative-worker-visa/apply#:~:text=Temporary%20Work%20%2D%20Creative%20Worker%20visa",
+                                "context": "Apply from outside the UK. You must apply online for a Temporary Work - Creative Worker visa. Proving your identity and providing supporting documents."
+                            },
+                            {
+                                "link": "https://www.gov.uk/creative-worker-visa/creative-worker-concession#:~:text=Temporary%20Work%20%2D%20Creative%20Worker%20visa",
+                                "context": "Apply for a Temporary Work - Creative Worker visa to work in the UK in the creative industry - eligibility, extend, bring your family."
+                            }
+                        ]
+                    }
+                },
+                {
+                    "data": {
+                        "id": "creative_worker_visa__temporary_work",
+                        "label": "Creative Worker visa (Temporary Work)",
+                        "type": "alias",
+                        "occurrences": [
+                            {
+                                "link": "https://www.gov.uk/creative-worker-visa/creative-worker-concession#:~:text=Creative%20Worker%20visa%20(Temporary%20Work)",
+                                "context": "Creative Worker visa (Temporary Work)"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "data": {
+                        "id": "tier_5_temporary_worker_visa",
+                        "label": "Tier 5 Temporary Worker visa",
+                        "type": "alias"
+                    }
+                }
+            ],
+            "edges": [
+                {
+                    "data": {
+                        "source": "visa__creative_worker_visa",
+                        "target": "temporary_work_creative_worker_visa",
+                        "label": "Alias (5)"
+                    }
+                },
+                {
+                    "data": {
+                        "source": "visa__creative_worker_visa",
+                        "target": "creative_worker_visa__temporary_work",
+                        "label": "Alias (10)"
+                    }
+                },
+                {
+                    "data": {
+                        "source": "visa__creative_worker_visa",
+                        "target": "tier_5_temporary_worker_visa",
+                        "label": "Alias (3)"
+                    }
+                }
+            ]
+        }
+        return render_template('dag.html', active_page='dag', dag_elements=dag_elements)
 
     @viewer_bp.route("/bucket")
     def viewer_load():
