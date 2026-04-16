@@ -38,7 +38,12 @@ def _make_config(monkeypatch, links):
     )
 
 
-def _ok_response(body=b"<html>x</html>"):
+_VALID_HTML = (
+    b'<html><body><div id="content"><h1>Hi</h1><p>Body.</p></div></body></html>'
+)
+
+
+def _ok_response(body=_VALID_HTML):
     resp = MagicMock()
     resp.ok = True
     resp.status_code = 200

@@ -5,7 +5,7 @@ import shutil
 import io
 from datetime import datetime, timezone
 from scripts.ingestion.commands.utils import load_config, get_logger
-from scripts.ingestion.commands import download_content, extract_content, clean_content
+from scripts.ingestion.commands import download_content, clean_content
 
 def run_ingestion_background_task(config_path: str = None, config_content: str = None, links_list: list[str] = None, job_id: str = None, domain: str = None):
 
@@ -35,9 +35,7 @@ def run_ingestion_background_task(config_path: str = None, config_content: str =
             logger.info(f"🚀 Starting ingestion pipeline for job {job_id or 'manual'}")
             
             download_content(config_obj)
-            
-            extract_content(config_obj)
-            
+
             clean_content(config_obj)
             
             if job_id:
