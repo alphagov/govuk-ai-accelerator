@@ -10,7 +10,7 @@ def test_load_config_with_domain_derives_s3_paths(monkeypatch):
     config = load_config(domain="visa", links_list=["https://www.gov.uk/x/print"])
 
     assert config.protocol == "s3"
-    assert config.output_dir_url == "s3://my-bucket/visa/output"
+    assert config.output_dir_url == "s3://my-bucket/visa/input"
     assert config.html_dir_url == "s3://my-bucket/visa/html_content"
     # Log file lives at the root of the domain folder with a timestamp.
     assert re.match(

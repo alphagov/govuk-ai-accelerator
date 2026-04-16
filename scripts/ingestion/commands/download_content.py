@@ -2,7 +2,7 @@ import requests
 from urllib.parse import urlparse
 import fsspec
 
-from scripts.ingestion.commands.utils import get_logger, IngestionConfig
+from scripts.ingestion.commands.utils import get_logger, IngestionConfig, slug_from_url
 
 def download_content(config: IngestionConfig):
     logger = get_logger()
@@ -47,28 +47,28 @@ def download_content(config: IngestionConfig):
                 link_skipped_count += 1
                 continue
 
-            url_path = urlparse(link).path
-            clean_output_file = clean_html_dir + url_path + ".html"
-
-            if fs.exists(clean_output_file):
-                logger.info("%s %s — skipped (already exists)", progress, link)
+            slug = slug_from_url(link)
+            if not slug:
+                logger.warning("%s %s — could not derive slug from URL; skipping", progress, link)
                 link_skipped_count += 1
                 continue
-            else:
-                response = requests.get(link, timeout=30)
 
-                if not response.ok:
-                    logger.error("%s %s — error (status code: %s)", progress, link, response.status_code)
-                    link_skipped_count += 1
-                    continue
+            clean_output_file = f"{clean_html_dir}/{slug}.html"
 
-                fs.makedirs(fs._parent(clean_output_file), exist_ok=True)
+            response = requests.get(link, timeout=30)
 
-                with fs.open(clean_output_file, 'wb') as file:
-                    file.write(response.content)
+            if not response.ok:
+                logger.error("%s %s — error (status code: %s)", progress, link, response.status_code)
+                link_skipped_count += 1
+                continue
 
-                output_file_count += 1
-                logger.info("%s %s — downloaded", progress, link)
+            fs.makedirs(clean_html_dir, exist_ok=True)
+
+            with fs.open(clean_output_file, 'wb') as file:
+                file.write(response.content)
+
+            output_file_count += 1
+            logger.info("%s %s — downloaded", progress, link)
     else:
         logger.warning("No links to process. Check your links file.")
 
