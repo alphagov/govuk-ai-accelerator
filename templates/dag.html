@@ -32,8 +32,11 @@
 
 {% block extra_js %}
 <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
+<script src="https://unpkg.com/dagre/dist/dagre.min.js"></script>
+<script src="https://unpkg.com/cytoscape-dagre/cytoscape-dagre.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
+    cytoscape.use(cytoscapeDagre);
     const propertiesBox = document.getElementById('properties-box');
     const dagElements = {{ dag_elements | tojson }};
     const cy = cytoscape({
@@ -42,11 +45,8 @@
       autounselectify: false,
       autoungrabify: true,
       layout: {
-        name: 'breadthfirst',
-        padding: 30,
-        circle: true,
-        spacingFactor: 1.5,
-        animate: false,
+        name: 'dagre',
+        padding: 30
       },
       style: [
         {
