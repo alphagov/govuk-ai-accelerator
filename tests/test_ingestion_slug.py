@@ -14,6 +14,12 @@ from scripts.ingestion.commands.utils import slug_from_url
         ),
         ("https://www.gov.uk/foreign-travel-advice/print/", "foreign-travel-advice"),
         ("https://www.gov.uk/get-document-legalised/print", "get-document-legalised"),
+        ("https://www.gov.uk/evisa", "evisa"),
+        ("https://www.gov.uk/foreign-travel-advice/thailand", "foreign-travel-advice-thailand"),
+        (
+            "https://www.report-error-evisa.homeoffice.gov.uk/",
+            "report-error-evisa.homeoffice.gov.uk",
+        ),
     ],
 )
 def test_slug_from_url_strips_print_and_flattens(url, expected):
