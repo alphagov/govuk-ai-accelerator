@@ -1,11 +1,14 @@
-"""Tests for overwrite-by-default and flat output layout in ingestion commands."""
+"""Tests for the merged download+extract stage.
+
+The pipeline no longer writes intermediate HTML files; downloading a URL should
+produce the cleaned markdown directly in `<domain>/input/<slug>.md`.
+"""
 from unittest.mock import patch, MagicMock
 
 import fsspec
 import pytest
 
 from scripts.ingestion.commands.download_content import download_content
-from scripts.ingestion.commands.extract_content import extract_content
 from scripts.ingestion.commands.utils import IngestionConfig
 
 
@@ -20,7 +23,6 @@ def _clean_memory_fs():
 
 
 def _make_config(monkeypatch, links, output_format="markdown"):
-    """Build an IngestionConfig pointing at fsspec's in-memory filesystem."""
     monkeypatch.setattr(
         IngestionConfig,
         "get_fsspec_url",
@@ -38,7 +40,7 @@ def _make_config(monkeypatch, links, output_format="markdown"):
     )
 
 
-def _fake_response(body: bytes):
+def _ok_response(body: bytes):
     resp = MagicMock()
     resp.ok = True
     resp.status_code = 200
@@ -46,92 +48,111 @@ def _fake_response(body: bytes):
     return resp
 
 
-def test_download_writes_flat_html_file_named_after_slug(monkeypatch):
+HTML_WITH_GUIDE_CONTENTS = (
+    b'<html><body><div id="guide-contents">'
+    b'<h1>Travel</h1><p>Some guidance.</p>'
+    b'</div></body></html>'
+)
+
+HTML_WITH_CONTENT_ONLY = (
+    b'<html><body><main id="content">'
+    b'<h1>Visa</h1><p>Visa info.</p>'
+    b'</main></body></html>'
+)
+
+HTML_WITH_NEITHER = (
+    b'<html><body><h1>Orphan</h1><p>No known id on wrappers.</p></body></html>'
+)
+
+
+def test_download_writes_markdown_directly_to_output_dir(monkeypatch):
     config = _make_config(
         monkeypatch,
         links=["https://www.gov.uk/foreign-travel-advice/print"],
     )
-
     with patch(
         "scripts.ingestion.commands.download_content.requests.get",
-        return_value=_fake_response(b"<html>fresh</html>"),
+        return_value=_ok_response(HTML_WITH_GUIDE_CONTENTS),
     ):
         download_content(config)
 
     fs = fsspec.filesystem("memory")
-    assert fs.exists("/test-domain/html_content/foreign-travel-advice.html")
-    # No nested directory created.
-    assert not fs.exists("/test-domain/html_content/foreign-travel-advice/print.html")
+    md_path = "/test-domain/input/foreign-travel-advice.md"
+    assert fs.exists(md_path), "merged pipeline should write markdown directly"
+    with fs.open(md_path, "r", encoding="utf-8") as f:
+        body = f.read()
+    assert "Travel" in body
+    assert "Some guidance." in body
 
 
-def test_download_overwrites_existing_file(monkeypatch):
+def test_download_never_writes_html_content_directory(monkeypatch):
     config = _make_config(
         monkeypatch,
         links=["https://www.gov.uk/foreign-travel-advice/print"],
     )
-    fs = fsspec.filesystem("memory")
-    fs.makedirs("/test-domain/html_content", exist_ok=True)
-    with fs.open(
-        "/test-domain/html_content/foreign-travel-advice.html", "wb"
-    ) as f:
-        f.write(b"<html>stale</html>")
-
     with patch(
         "scripts.ingestion.commands.download_content.requests.get",
-        return_value=_fake_response(b"<html>fresh</html>"),
+        return_value=_ok_response(HTML_WITH_GUIDE_CONTENTS),
     ):
         download_content(config)
 
-    with fs.open("/test-domain/html_content/foreign-travel-advice.html", "rb") as f:
-        assert f.read() == b"<html>fresh</html>"
-
-
-def test_extract_writes_flat_markdown_named_after_slug(monkeypatch):
-    config = _make_config(monkeypatch, links=[])
     fs = fsspec.filesystem("memory")
-    fs.makedirs("/test-domain/html_content", exist_ok=True)
-    html_body = (
-        b'<html><body><div id="content">Fresh body</div></body></html>'
-    )
-    with fs.open(
-        "/test-domain/html_content/foreign-travel-advice.html", "wb"
-    ) as f:
-        f.write(html_body)
-
-    with patch(
-        "scripts.ingestion.commands.extract_content.pypandoc.convert_text",
-        side_effect=lambda content, format, to: "Fresh body",
-    ):
-        extract_content(config)
-
-    assert fs.exists("/test-domain/input/foreign-travel-advice.md")
-    assert not fs.exists("/test-domain/input/foreign-travel-advice/print.md")
+    html_leaks = [p for p in fs.store.keys() if "/html_content" in p]
+    assert html_leaks == [], f"no html_content/ files should be written, got: {html_leaks}"
 
 
-def test_extract_overwrites_existing_markdown(monkeypatch):
-    config = _make_config(monkeypatch, links=[])
+def test_download_overwrites_existing_markdown(monkeypatch):
     fs = fsspec.filesystem("memory")
-    fs.makedirs("/test-domain/html_content", exist_ok=True)
     fs.makedirs("/test-domain/input", exist_ok=True)
-    html_body = (
-        b'<html><body><div id="content">Fresh body</div></body></html>'
+    with fs.open("/test-domain/input/foreign-travel-advice.md", "w", encoding="utf-8") as f:
+        f.write("stale markdown from a prior run")
+
+    config = _make_config(
+        monkeypatch,
+        links=["https://www.gov.uk/foreign-travel-advice/print"],
     )
-    with fs.open(
-        "/test-domain/html_content/foreign-travel-advice.html", "wb"
-    ) as f:
-        f.write(html_body)
-    with fs.open(
-        "/test-domain/input/foreign-travel-advice.md", "w", encoding="utf-8"
-    ) as f:
-        f.write("stale markdown")
-
     with patch(
-        "scripts.ingestion.commands.extract_content.pypandoc.convert_text",
-        side_effect=lambda content, format, to: "Fresh body",
+        "scripts.ingestion.commands.download_content.requests.get",
+        return_value=_ok_response(HTML_WITH_GUIDE_CONTENTS),
     ):
-        extract_content(config)
+        download_content(config)
 
-    with fs.open(
-        "/test-domain/input/foreign-travel-advice.md", "r", encoding="utf-8"
-    ) as f:
-        assert f.read() == "Fresh body"
+    with fs.open("/test-domain/input/foreign-travel-advice.md", "r", encoding="utf-8") as f:
+        body = f.read()
+    assert "stale markdown" not in body
+    assert "Travel" in body
+
+
+def test_download_falls_back_to_content_id_when_guide_contents_missing(monkeypatch):
+    config = _make_config(
+        monkeypatch,
+        links=["https://www.gov.uk/visa/print"],
+    )
+    with patch(
+        "scripts.ingestion.commands.download_content.requests.get",
+        return_value=_ok_response(HTML_WITH_CONTENT_ONLY),
+    ):
+        download_content(config)
+
+    fs = fsspec.filesystem("memory")
+    md_path = "/test-domain/input/visa.md"
+    assert fs.exists(md_path)
+    with fs.open(md_path, "r", encoding="utf-8") as f:
+        assert "Visa info." in f.read()
+
+
+def test_download_skips_page_with_no_extractable_content(monkeypatch):
+    config = _make_config(
+        monkeypatch,
+        links=["https://www.gov.uk/orphan-page/print"],
+    )
+    with patch(
+        "scripts.ingestion.commands.download_content.requests.get",
+        return_value=_ok_response(HTML_WITH_NEITHER),
+    ):
+        download_content(config)
+
+    fs = fsspec.filesystem("memory")
+    assert not fs.exists("/test-domain/input/orphan-page.md")
+    # Sidecar should not exist either — no successful extractions.
+    assert not fs.exists("/test-domain/input/sources.json")
