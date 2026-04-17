@@ -14,7 +14,7 @@ dependencies = [
     "flask-sqlalchemy==3.1.1",
     "humanize==4.15.0",
     "psycopg2-binary==2.9.10",
-    "pypandoc~=1.16.2",
+    "markdownify>=0.14.1",
     "pytest==8.3.4",
     "python-dotenv>=1.2.2",
     "pyyaml>=6.0.3",
