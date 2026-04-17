@@ -220,7 +220,6 @@ def create_blueprints():
         query = (
             db.session.query(ProcessingJob)
             .filter(ProcessingJob.created_at >= today_start)
-            .filter(ProcessingJob.pipeline == "ontology")
         )
         query = query.order_by(ProcessingJob.created_at.desc())
 
