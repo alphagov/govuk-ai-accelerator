@@ -44,9 +44,27 @@
       boxSelectionEnabled: false,
       autounselectify: false,
       autoungrabify: true,
+      // layout: {
+      //   name: 'dagre',
+      //   padding: 30,
+      //   boundingBox: { x1: 0, y1: 0, w: 10000, h: 600 },
+      // },
       layout: {
-        name: 'dagre',
-        padding: 30
+        name: 'concentric',
+        concentric: function(node) {
+          if (node.data('type') === 'entity' && node.degree() === 0) {
+            return 3;
+          } else if (node.data('type') === 'entity') {
+            return 2;
+          } else if (node.data('type') === 'alias') {
+            return 1;
+          }
+          throw new Error(`Unknown node type: '${node.data('type')}'`);
+        },
+        levelWidth: function (nodes) {
+          return 1;
+        },
+        minNodeSpacing: 100
       },
       style: [
         {
