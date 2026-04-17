@@ -78,8 +78,8 @@ def test_sidecar_written_with_slug_to_url_mapping(monkeypatch):
     with fs.open("/test-domain/input/sources.json", "r", encoding="utf-8") as f:
         sources = json.load(f)
     assert sources == {
-        "foreign-travel-advice": "https://www.gov.uk/foreign-travel-advice/print",
-        "get-document-legalised": "https://www.gov.uk/get-document-legalised/print",
+        "memory:///test-domain/input/foreign-travel-advice.md": "https://www.gov.uk/foreign-travel-advice/print",
+        "memory:///test-domain/input/get-document-legalised.md": "https://www.gov.uk/get-document-legalised/print",
     }
 
 
@@ -103,7 +103,7 @@ def test_sidecar_overwrites_stale_entries(monkeypatch):
     with fs.open("/test-domain/input/sources.json", "r", encoding="utf-8") as f:
         sources = json.load(f)
     assert sources == {
-        "foreign-travel-advice": "https://www.gov.uk/foreign-travel-advice/print"
+        "memory:///test-domain/input/foreign-travel-advice.md": "https://www.gov.uk/foreign-travel-advice/print"
     }
 
 
@@ -144,5 +144,5 @@ def test_sidecar_excludes_invalid_links(monkeypatch):
     with fs.open("/test-domain/input/sources.json", "r", encoding="utf-8") as f:
         sources = json.load(f)
     assert sources == {
-        "foreign-travel-advice": "https://www.gov.uk/foreign-travel-advice/print"
+        "memory:///test-domain/input/foreign-travel-advice.md": "https://www.gov.uk/foreign-travel-advice/print"
     }

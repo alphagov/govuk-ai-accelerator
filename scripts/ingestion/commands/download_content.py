@@ -115,7 +115,8 @@ def download_content(config: IngestionConfig):
         with fs.open(output_file_path, "w", encoding="utf-8") as file:
             file.write(rendered)
 
-        sources[slug] = link
+        s3_key = f"{config.output_dir_url}/{slug}.md"
+        sources[s3_key] = link
         output_file_count += 1
         logger.info("%s %s — stored as %s%s", progress, link, slug, extension)
 
