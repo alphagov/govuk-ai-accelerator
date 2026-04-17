@@ -21,29 +21,10 @@ if TYPE_CHECKING:
 
 
 def _with_job_output_path(config_data: dict | None, job_id: str | None) -> dict | None:
-    """Ensure every job writes to a unique run-specific output path."""
+    """Pass config through unchanged — the library allocates run-specific output dirs."""
     if config_data is None:
         return None
-
-    config_copy = json.loads(json.dumps(config_data))
-    path_config = config_copy.setdefault("path", {})
-
-    existing_output_dir = path_config.get("output_dir")
-    if not existing_output_dir:
-        return config_copy
-
-    normalized = str(existing_output_dir).rstrip("/")
-    run_id = job_id or str(uuid4())
-
-    if normalized.endswith("/output"):
-        normalized = normalized[:-7]
-
-    if run_id in normalized:
-        path_config["output_dir"] = f"{normalized}/output"
-        return config_copy
-
-    path_config["output_dir"] = f"{normalized}/{run_id}/output"
-    return config_copy
+    return json.loads(json.dumps(config_data))
 
 
 def _mark_job_progress(job_id: str | None, stage: str) -> None:
@@ -224,6 +205,23 @@ def _update_job_status(
         logger.exception(f"[job={job_id}] error updating job status={status}: {exc}")
 
 
+def _persist_config_yaml(config: dict, output_dir: str) -> None:
+    """Save the config YAML alongside the run output for auditability."""
+    run_root = _resolve_run_root(output_dir, None)
+    config_url = f"{run_root}/config.yaml"
+    try:
+        fs, fs_path = fsspec.core.url_to_fs(config_url)
+        parent = fs._parent(fs_path)
+        if parent:
+            fs.makedirs(parent, exist_ok=True)
+        import yaml as yaml_mod
+        with fs.open(fs_path, "w") as f:
+            yaml_mod.dump(config, f, default_flow_style=False, sort_keys=False)
+        logger.info(f"Persisted config.yaml at {config_url}")
+    except Exception as exc:
+        logger.warning(f"Could not persist config.yaml: {exc}")
+
+
 def run_ontology_background_task(config: dict, domain_prompt: str, job_id: str | None = None) -> bool:
     """Run the ontology pipeline as a background task, updating job status if provided."""
     try:
@@ -237,6 +235,9 @@ def run_ontology_background_task(config: dict, domain_prompt: str, job_id: str |
             )
         )
         logger.info(f"[job={job_id}] pipeline task completed successfully")
+
+        if output_dir:
+            _persist_config_yaml(config, str(output_dir))
 
         job_runs = None
         if output_dir:
