@@ -78,15 +78,10 @@ def download_content(config: IngestionConfig):
             logger.warning("%s %s — invalid URL (must use https)", progress, link)
             link_skipped_count += 1
             continue
-        if parsed.netloc != "www.gov.uk":
-            logger.warning("%s %s — invalid URL (must have www.gov.uk host)", progress, link)
-            link_skipped_count += 1
-            continue
-        if parsed.path.split("/")[-1] != "print":
-            logger.warning(
-                "%s %s — invalid URL (printable pages only: e.g. www.gov.uk/example/print)",
-                progress, link,
-            )
+
+        host = parsed.netloc
+        if not host.endswith(".gov.uk"):
+            logger.warning("%s %s — invalid URL (host must be *.gov.uk)", progress, link)
             link_skipped_count += 1
             continue
 

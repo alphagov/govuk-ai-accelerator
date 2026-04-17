@@ -130,7 +130,7 @@ def test_sidecar_excludes_invalid_links(monkeypatch):
             "https://www.gov.uk/foreign-travel-advice/print",
             "http://www.gov.uk/insecure/print",
             "https://example.com/wrong-host/print",
-            "https://www.gov.uk/missing-print-suffix",
+            "https://www.gov.uk/no-print-suffix",
         ],
     )
 
@@ -144,5 +144,6 @@ def test_sidecar_excludes_invalid_links(monkeypatch):
     with fs.open("/test-domain/input/sources.json", "r", encoding="utf-8") as f:
         sources = json.load(f)
     assert sources == {
-        "memory:///test-domain/input/foreign-travel-advice.md": "https://www.gov.uk/foreign-travel-advice/print"
+        "memory:///test-domain/input/foreign-travel-advice.md": "https://www.gov.uk/foreign-travel-advice/print",
+        "memory:///test-domain/input/no-print-suffix.md": "https://www.gov.uk/no-print-suffix",
     }

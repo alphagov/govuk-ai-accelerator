@@ -12,17 +12,23 @@ DEFAULT_S3_BUCKET = "govuk-ai-accelerator-data-integration"
 
 
 def slug_from_url(url: str) -> str:
-    """Convert a gov.uk /print URL into a flat, filesystem-safe slug.
+    """Convert a gov.uk URL into a flat, filesystem-safe slug.
 
     https://www.gov.uk/foreign-travel-advice/print       -> foreign-travel-advice
     https://www.gov.uk/government/publications/visa/print -> government-publications-visa
+    https://www.gov.uk/evisa                              -> evisa
+    https://www.report-error-evisa.homeoffice.gov.uk/     -> report-error-evisa.homeoffice.gov.uk
     """
-    path = urlparse(url).path.strip("/")
+    parsed = urlparse(url)
+    path = parsed.path.strip("/")
     if path.endswith("/print"):
         path = path[: -len("/print")]
     elif path == "print":
         path = ""
-    return path.replace("/", "-")
+    slug = path.replace("/", "-")
+    if not slug and parsed.netloc and parsed.netloc != "www.gov.uk":
+        slug = parsed.netloc.removeprefix("www.")
+    return slug
 
 
 @dataclass
