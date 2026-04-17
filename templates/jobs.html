@@ -23,6 +23,7 @@
                 <th>Job ID</th>
                 <th>Created</th>
                 <th>Status</th>
+                <th>Pipeline</th>
                 <th>Domain</th>
                 <th>TTL File</th>
                 <th>Output</th>
@@ -30,7 +31,7 @@
             </tr>
           </thead>
           <tbody id="jobs-tbody">
-            <tr><td colspan="7" class="center-align grey-text">Loading jobs...</td></tr>
+            <tr><td colspan="9" class="center-align grey-text">Loading jobs...</td></tr>
           </tbody>
         </table>
       </div>
@@ -54,7 +55,7 @@
         renderJobsTable(jobs);
       } catch (err) {
         console.error(err);
-        jobsTbody.innerHTML = `<tr><td colspan="7" class="center-align red-text">Error fetching jobs: ${err.message}</td></tr>`;
+        jobsTbody.innerHTML = `<tr><td colspan="9" class="center-align red-text">Error fetching jobs: ${err.message}</td></tr>`;
       } finally {
         refreshBtn.classList.remove('disabled');
       }
@@ -62,7 +63,7 @@
 
     function renderJobsTable(jobs) {
       if (!jobs || jobs.length === 0) {
-        jobsTbody.innerHTML = '<tr><td colspan="7" class="center-align grey-text">No jobs found.</td></tr>';
+        jobsTbody.innerHTML = '<tr><td colspan="9" class="center-align grey-text">No jobs found.</td></tr>';
         return;
       }
 
@@ -82,15 +83,23 @@
         }
 
         const domainStr = job.domain ? job.domain : '-';
+        const pipeline = job.pipeline || 'ontology';
+        const isIngestion = pipeline === 'ingestion';
+        const pipelineBadge = isIngestion
+          ? '<span class="new badge teal lighten-2" data-badge-caption="ingestion"></span>'
+          : '<span class="new badge indigo lighten-1" data-badge-caption="ontology"></span>';
+
         let ttlLink = 'N/A';
-        let outputLink = '';
+        let outputLink = 'N/A';
         let visualiserLink = 'N/A';
-        
-        const targetBucket = 'govuk-ai-accelerator-data-integration';
-        if (job.status.toLowerCase() === 'completed') {
-            outputLink = `<a href="/viewer/bucket/${targetBucket}/${domainStr}/${job.job_runs}/" class="btn-view">Browse Files</a>`;
-            ttlLink = `<a href="/viewer/bucket/download/buckets/${targetBucket}/${domainStr}/${job.job_runs}/output/ontology.ttl" class="blue-text" target="_blank">Download</a>`;
-            visualiserLink = `<a href="/visualizer/?run=${domainStr}/${job.job_runs}" class="btn-view">Visualise Graph</a>`;
+
+        if (!isIngestion) {
+          const targetBucket = 'govuk-ai-accelerator-data-integration';
+          if (job.status.toLowerCase() === 'completed' && job.job_runs) {
+              outputLink = `<a href="/viewer/bucket/${targetBucket}/${domainStr}/${job.job_runs}/" class="btn-view">Browse Files</a>`;
+              ttlLink = `<a href="/viewer/bucket/download/buckets/${targetBucket}/${domainStr}/${job.job_runs}/output/ontology.ttl" class="blue-text" target="_blank">Download</a>`;
+              visualiserLink = `<a href="/visualizer/?run=${domainStr}/${job.job_runs}" class="btn-view">Visualise Graph</a>`;
+          }
         }
 
         tr.innerHTML = `
@@ -98,6 +107,7 @@
           <td style="font-family: monospace; font-size: 0.9em;">${job.job_id}</td>
           <td>${new Date(job.created_at).toLocaleString('en-GB', { timeZone: 'UTC' })}</td>
           <td>${statusHtml}</td>
+          <td>${pipelineBadge}</td>
           <td>${domainStr}</td>
           <td>${ttlLink}</td>
           <td>${outputLink}</td>
