@@ -2,7 +2,7 @@ import json
 from urllib.parse import urlparse
 
 import fsspec
-import pypandoc
+import markdownify
 import requests
 from bs4 import BeautifulSoup
 
@@ -26,11 +26,13 @@ def _html_to_output(html_bytes: bytes, output_format: str) -> str | None:
         element = soup.find(id=candidate_id)
         if element is None:
             continue
+        for noise in element(["script", "style", "nav", "aside", "footer", "header", "button", "form"]):
+            noise.decompose()
         if output_format == "text":
             return element.get_text()
         raw_html = element.decode()
         if output_format == "markdown":
-            return pypandoc.convert_text(raw_html, format="html", to="gfm-raw_html")
+            return markdownify.markdownify(raw_html, heading_style="ATX", strip=["img"])
         return raw_html
     return None
 
