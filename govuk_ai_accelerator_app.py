@@ -17,7 +17,6 @@ from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse
 from scripts.pipeline.task_manager import start_task_manager
-from scripts.pipeline.ontology_generator import run_ontology_background_task
 from scripts.pipeline.utils import error_response, is_yaml_file, executor
 from scripts.pipeline.constants import APP_HOST, APP_PORT, BLUEPRINTS
 from scripts.ingestion.commands.utils import DEFAULT_S3_BUCKET
@@ -28,6 +27,8 @@ from flask import current_app
 
 from starlette.routing import Mount, Route
 from a2wsgi import ASGIMiddleware, WSGIMiddleware
+
+from src.web_browser.routing import get_domain_list
 
 try:
     from taxonomy_ontology_accelerator.web import app as visualizer_app
@@ -108,6 +109,10 @@ def create_blueprints():
 
         try:
             config_data = yaml.safe_load(yaml_file)
+
+            if request.form.get('domain') and request.form.get('domain') != 'config_file':
+                print(request.form.get('domain'))
+                config_data['domain_name'] = request.form.get('domain')
 
             if domain_prompt_file and domain_prompt_file.filename:
                 domain_prompt = domain_prompt_file.read().decode('utf-8')
@@ -244,6 +249,10 @@ def create_blueprints():
     @ontology_bp.route('/all_jobs', methods=['GET'])
     def all_jobs():
         return render_template('jobs.html', active_page='jobs')
+
+    @ontology_bp.route("/list_domains")
+    def list_domains():
+        return get_domain_list('govuk-ai-accelerator-data-integration')
 
     @viewer_bp.route("/bucket")
     def viewer_load():
