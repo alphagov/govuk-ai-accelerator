@@ -1,6 +1,8 @@
+from typing import Any
+
 import boto3
 import botocore
-from flask import Flask, render_template, request
+from flask import render_template, request
 
 from src.web_browser.s3 import parse_responses, list_objects
 
@@ -33,7 +35,29 @@ def get_bucket_tree_nodes(bucket_name: str, prefix: str) -> list[dict]:
         print(f"Error fetching tree nodes: {e}")
     return nodes
 
-def view_bucket(bucket_name: str, path: str,page:int):
+
+def get_domain_list(bucket_name: str, ) -> list[Any] | None:
+    s3_client = boto3.client("s3")
+    paginator = s3_client.get_paginator("list_objects_v2")
+
+    try:
+
+        page_iterator = paginator.paginate(Bucket=bucket_name, Delimiter="/")
+
+        top_level_dirs = []
+
+        for page in page_iterator:
+            if 'CommonPrefixes' in page:
+                for prefix_dict in page["CommonPrefixes"]:
+                    top_level_dirs.append(prefix_dict["Prefix"].rstrip('/'))
+
+        return top_level_dirs
+
+    except Exception as e:
+        print(f"Error fetching domain list: {e}")
+
+
+def view_bucket(bucket_name: str, path: str, page: int):
     items_per_page = 500
 
     s3_client = boto3.client("s3")
