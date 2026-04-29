@@ -1,13 +1,14 @@
 import json
 from uuid import UUID, uuid4
 
-from flask import Blueprint, request, url_for
+from flask import Blueprint, jsonify, request, url_for
 from pydantic import ValidationError
 
 from govuk_ai_accelerator_app import db
 from ontology_v2.errors import error_response, map_pydantic_error
 from ontology_v2.models import V2OntologyRun
 from ontology_v2.schemas import CreateRunRequest, RunResponse
+from ontology_v2.openapi import build_openapi_spec
 
 ontology_v2_bp = Blueprint("ontology_v2", __name__, url_prefix="/ontology-v2")
 
@@ -57,3 +58,7 @@ def get_run(run_id: str):
         return error_response("run_not_found", f"No run with id {parsed_id}", 404)
 
     return _serialize(run), 200
+
+@ontology_v2_bp.route("/openapi.json", methods=["GET"])
+def openapi_spec():
+    return jsonify(build_openapi_spec()), 200

@@ -110,3 +110,12 @@ def test_rejected_requests_do_not_save():
     from ontology_v2.models import V2OntologyRun
     with flask_app.app_context():
         assert app_module.db.session.query(V2OntologyRun).count() == 0
+
+def test_openapi_lists_both_endpoints():
+    spec = json.loads(_client().get("/ontology-v2/openapi.json").get_data())
+    assert "/ontology-v2/runs" in spec["paths"]
+    assert "/ontology-v2/runs/{run_id}" in spec["paths"]
+    schemas = spec["components"]["schemas"]
+    assert "CreateRunRequest" in schemas
+    assert "RunResponse" in schemas
+    assert "ErrorResponse" in schemas
