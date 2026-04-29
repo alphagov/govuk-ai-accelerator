@@ -8,6 +8,7 @@ EXECUTOR_MAX_WORKERS = 1
 BLUEPRINTS = {
     'healthcheck': {'prefix': '/healthcheck'},
     'ontology': {'prefix': '/ontology'},
+    'ontology_v2': {'prefix': '/ontology-v2'}
 }
 
 __all__ = [
