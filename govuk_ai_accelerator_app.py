@@ -30,8 +30,6 @@ from a2wsgi import ASGIMiddleware, WSGIMiddleware
 
 from src.web_browser.routing import get_domain_list
 
-from
-
 try:
     from taxonomy_ontology_accelerator.web import app as visualizer_app
     VISUALIZER_IMPORT_ERROR = None
