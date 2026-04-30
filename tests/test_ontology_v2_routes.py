@@ -119,3 +119,9 @@ def test_openapi_lists_both_endpoints():
     assert "CreateRunRequest" in schemas
     assert "RunResponse" in schemas
     assert "ErrorResponse" in schemas
+
+def test_scalar_docs_renders():
+    response = _client().get("/ontology-v2/docs")
+    assert response.status_code == 200
+    assert response.content_type.startswith("text/html")
+    assert b"@scalar/api-reference" in response.get_data()

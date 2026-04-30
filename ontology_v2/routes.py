@@ -12,6 +12,14 @@ from ontology_v2.openapi import build_openapi_spec
 
 ontology_v2_bp = Blueprint("ontology_v2", __name__, url_prefix="/ontology-v2")
 
+SCALAR_HTML = """<!doctype html>
+<html><head><title>Ontology v2 API</title><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" /></head>
+<body>
+<script id="api-reference" data-url="/ontology-v2/openapi.json"></script>
+<script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+</body></html>
+"""
 
 def _serialize(run: V2OntologyRun) -> dict:
     return RunResponse.model_validate(run, from_attributes=True).model_dump(mode="json")
@@ -62,3 +70,7 @@ def get_run(run_id: str):
 @ontology_v2_bp.route("/openapi.json", methods=["GET"])
 def openapi_spec():
     return jsonify(build_openapi_spec()), 200
+
+@ontology_v2_bp.route("/docs", methods=["GET"])
+def scalar_docs():
+    return SCALAR_HTML, 200, {"Content-Type": "text/html; charset=utf-8"}
