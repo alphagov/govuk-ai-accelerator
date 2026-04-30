@@ -338,6 +338,8 @@ def create_flask_app():
     app.register_blueprint(ontology_bp)
     app.register_blueprint(viewer_bp)
     app.register_blueprint(home_bp)
+
+    from ontology_v2.routes import ontology_v2_bp
     app.register_blueprint(ontology_v2_bp)
 
     with app.app_context():
