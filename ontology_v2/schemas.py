@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, field_validator
 
 ALLOWED_TASKS: frozenset[str] = frozenset()
 
-    class UnknownTaskError(ValueError):
+class UnknownTaskError(ValueError):
     def __init__(self, unknown: list[str]) -> None:
         self.unknown = unknown
         super().__init__(f"unknown tasks: {unknown}")
