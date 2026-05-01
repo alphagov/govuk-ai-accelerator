@@ -1,5 +1,5 @@
 """GOV.UK AI Accelerator Flask Application."""
-
+import enum
 import os
 import json
 import uvicorn
@@ -7,10 +7,12 @@ import yaml
 import boto3
 from uuid import uuid4
 from datetime import datetime, timezone
+
 from flask import Flask, request, jsonify, render_template, Blueprint, Response, redirect
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, upgrade
-from sqlalchemy import DateTime, Integer, String
+from sqlalchemy import DateTime, Integer, String, Text, text
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.exc import OperationalError
 from starlette.applications import Starlette
@@ -61,6 +63,19 @@ class ProcessingJob(db.Model):
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
     )
+
+class RunStatus(enum.Enum):
+    PENDING = 'pending'
+
+class V2OntologyRuns(db.Model):
+    """v2 Model to track the status of submitted jobs."""
+    __tablename__ = 'v2_ontology_runs'
+
+    run_id = db.Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()") , nullable=False)
+    status = db.Column(db.Enum(RunStatus) , nullable=False)
+    domain = db.Column(db.String(255), nullable=False)
+    tasks = db.Column(ARRAY(db.String(255)), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now(), nullable=False)
 
 
 def create_blueprints():
