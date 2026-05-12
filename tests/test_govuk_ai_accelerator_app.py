@@ -2,8 +2,10 @@ import builtins
 import importlib
 import os
 import sys
+from datetime import datetime, timedelta, timezone
 
 import pytest
+from flask import Flask
 from werkzeug.test import Client
 from werkzeug.wrappers import Response
 
@@ -75,3 +77,46 @@ def test_create_app_imports_without_visualizer_dependency(monkeypatch):
     assert ontology_response.status_code == 200
     assert visualizer_response.status_code == 503
     assert "Visualizer is unavailable" in visualizer_response.get_data(as_text=True)
+
+
+def test_serialize_job_datetime_marks_naive_datetimes_as_utc():
+    app_module = _app_module()
+
+    result = app_module._serialize_job_datetime(datetime(2026, 5, 11, 13, 18, 20))
+
+    assert result == "2026-05-11T13:18:20Z"
+
+
+def test_serialize_job_datetime_converts_aware_datetimes_to_utc():
+    app_module = _app_module()
+    bst = timezone(timedelta(hours=1))
+
+    result = app_module._serialize_job_datetime(datetime(2026, 5, 11, 14, 18, 20, tzinfo=bst))
+
+    assert result == "2026-05-11T13:18:20Z"
+
+
+def test_list_jobs_returns_created_at_with_explicit_utc_marker(tmp_path):
+    app_module = _app_module()
+    flask_app = Flask(__name__)
+    flask_app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{tmp_path / 'jobs.db'}"
+    app_module.db.init_app(flask_app)
+    _, ontology_bp, _, _ = app_module.create_blueprints()
+    flask_app.register_blueprint(ontology_bp)
+
+    with flask_app.app_context():
+        app_module.db.create_all()
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="created-at-job",
+                status="done",
+                domain="test-visa",
+                created_at=datetime(2026, 5, 11, 13, 18, 20),
+            )
+        )
+        app_module.db.session.commit()
+
+    response = flask_app.test_client().get("/ontology/jobs")
+
+    assert response.status_code == 200
+    assert response.get_json()[0]["created_at"] == "2026-05-11T13:18:20Z"

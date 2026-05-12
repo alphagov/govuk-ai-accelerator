@@ -63,6 +63,17 @@ class ProcessingJob(db.Model):
     )
 
 
+def _serialize_job_datetime(value: datetime | None) -> str | None:
+    """Return job datetimes as explicit UTC instants for browser parsing."""
+    if value is None:
+        return None
+    if value.tzinfo is None or value.utcoffset() is None:
+        value = value.replace(tzinfo=timezone.utc)
+    else:
+        value = value.astimezone(timezone.utc)
+    return value.isoformat().replace("+00:00", "Z")
+
+
 def create_blueprints():
     """Create and register blueprints."""
     healthcheck_bp = Blueprint('healthcheck', __name__, url_prefix=BLUEPRINTS['healthcheck']['prefix'])
@@ -206,7 +217,7 @@ def create_blueprints():
         job = db.session.get(ProcessingJob, job_id)
         if job is None:
             return error_response("Ingestion job not found", 404)
-        return jsonify({"job_id": job.id, "status": job.status, "error": job.error_message, "created_at": job.created_at.isoformat() if job.created_at else None})
+        return jsonify({"job_id": job.id, "status": job.status, "error": job.error_message, "created_at": _serialize_job_datetime(job.created_at)})
 
     @ontology_bp.route('/status/<job_id>', methods=['GET'])
     def job_status(job_id):
@@ -240,7 +251,7 @@ def create_blueprints():
                 "status": job.status,
                 "job_runs": job.job_runs,
                 "error": job.error_message,
-                "created_at": job.created_at.isoformat() if job.created_at else None,
+                "created_at": _serialize_job_datetime(job.created_at),
             }
             for job in jobs
         ]
