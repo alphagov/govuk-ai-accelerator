@@ -311,7 +311,7 @@
 
                     tr.innerHTML = `
           <td style="font-family: monospace; font-size: 0.9em;">${job.job_id}</td>
-          <td>${new Date(job.created_at).toLocaleString('en-GB', {timeZone: 'UTC'})}</td>
+          <td>${new Date(job.created_at).toLocaleString('en-GB', {timeZone: 'Europe/London'})}</td>
           <td>${statusHtml}</td>
           <td>${domainStr}</td>
           <td>${ttlLink}</td>
