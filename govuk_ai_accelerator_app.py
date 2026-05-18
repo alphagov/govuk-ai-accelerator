@@ -121,12 +121,9 @@ def create_blueprints():
         try:
             config_data = yaml.safe_load(yaml_file)
 
-            if request.form.get('domain') and request.form.get('domain') != 'config_file' and request.form.get('domain') is not None:
-                domain = request.form.get('domain')
-                config_data['domain_name'] = str(domain)
-                if request.form.get('filesystem.protocol') == "s3":
-                    config_data['input_path'] = f"s3://govuk-ai-accelerator-data-integration/{domain}/input"
-                    config_data['output_dir'] = f"s3://govuk-ai-accelerator-data-integration/{domain}"
+            if request.form.get('domain') and request.form.get('domain') != 'config_file':
+                print(request.form.get('domain'))
+                config_data['domain_name'] = request.form.get('domain')
 
             if domain_prompt_file and domain_prompt_file.filename:
                 domain_prompt = domain_prompt_file.read().decode('utf-8')
