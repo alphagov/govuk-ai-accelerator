@@ -24,7 +24,27 @@ on:
     types: [released]
 
 jobs:
+  resolve-ontology-harness-deployment-id:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'v')
+    name: Resolve ontology harness deployment id
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.gitRef || github.event.release.tag_name }}
+        fetch-depth: 0
+
+    - id: deployment
+      run: |
+        deployment_id="$(git describe --tags --exact-match 2>/dev/null || git rev-parse HEAD)"
+        echo "deployment_id=${deployment_id}" >> "$GITHUB_OUTPUT"
+
   build-and-publish-image:
+    needs: resolve-ontology-harness-deployment-id
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'v')
     name: Build and publish image
     permissions:
@@ -34,6 +54,9 @@ jobs:
     uses: alphagov/govuk-infrastructure/.github/workflows/build-and-push-multiarch-image.yml@main
     with:
       gitRef: ${{ inputs.gitRef || github.event.release.tag_name }}
+      buildArgs: |
+        ONTOLOGY_HARNESS_ENABLED=true
+        ONTOLOGY_HARNESS_DEPLOYMENT_ID=${{ needs.resolve-ontology-harness-deployment-id.outputs.deployment_id }}
     secrets:
       BUILD_SECRETS: |
         "GITHUB_TOKEN=${{ secrets.GOVUK_CI_GITHUB_API_TOKEN }}"

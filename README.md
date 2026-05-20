@@ -101,6 +101,52 @@ The app runs on **http://localhost:3000**.
 
 ---
 
+## Ontology Harness Baseline
+
+The post-deployment ontology harness runs the normal generator against a dedicated
+baseline domain and compares the candidate output against a promoted baseline run.
+It is disabled by default.
+
+Required environment:
+
+```bash
+export ONTOLOGY_HARNESS_ENABLED=true
+export ONTOLOGY_HARNESS_DEPLOYMENT_ID=<release-tag-or-git-sha>
+```
+
+Optional environment:
+
+```bash
+export ONTOLOGY_HARNESS_DOMAIN=ontology-harness-baseline
+export ONTOLOGY_HARNESS_CONFIG_URI=s3://<bucket>/ontology-harness-baseline/config.yaml
+export ONTOLOGY_HARNESS_BASELINE_MANIFEST_URI=s3://<bucket>/ontology-harness-baseline/baselines/accepted.json
+```
+
+The accepted baseline is a manifest that points to an immutable generator run:
+
+```json
+{
+  "baseline_run_id": "run-20260520-1",
+  "baseline_output_uri": "s3://bucket/ontology-harness-baseline/run-20260520-1/output",
+  "promoted_at": "2026-05-20T14:00:00Z",
+  "notes": "Accepted baseline after CSMD-339 metric changes"
+}
+```
+
+Each deployment queues one harness job using the key
+`ontology-harness-baseline:<deployment-id>`, so multiple pods do not run the same
+check independently. The deployment workflow bakes this into the Docker image as
+the matching release tag when available, otherwise the resolved commit SHA. The
+candidate output remains a normal run-numbered generator output. The harness
+writes `regression_report.json` to the candidate run output folder and the
+Historical Jobs page links to the run artifacts and report, including failed
+regression checks.
+
+To promote a new accepted baseline, update `baselines/accepted.json` to point to
+the chosen run. The run itself should not be moved or overwritten.
+
+---
+
 ## Docker
 
 Build and run using Docker (requires a GitHub token for the private package):

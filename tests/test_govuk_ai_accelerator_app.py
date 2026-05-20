@@ -1,8 +1,8 @@
 import builtins
 import importlib
-import os
 import sys
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 from flask import Flask
@@ -53,6 +53,19 @@ def test_create_app_still_serves_ontology_dashboard():
     response = _client().get("/ontology/")
 
     assert response.status_code == 200
+
+
+def test_create_flask_app_schedules_ontology_harness_before_task_manager(monkeypatch):
+    app_module = _app_module()
+    calls = []
+
+    monkeypatch.setattr(app_module, "schedule_ontology_harness", lambda app: calls.append("harness"))
+    monkeypatch.setattr(app_module, "start_task_manager", lambda app: calls.append("task-manager"))
+    app_module._cached_app = None
+
+    app_module.create_flask_app()
+
+    assert calls == ["harness", "task-manager"]
 
 
 def test_create_app_imports_without_visualizer_dependency(monkeypatch):
@@ -120,6 +133,15 @@ def test_list_jobs_returns_created_at_with_explicit_utc_marker(tmp_path):
 
     assert response.status_code == 200
     assert response.get_json()[0]["created_at"] == "2026-05-11T13:18:20Z"
+
+
+def test_jobs_template_exposes_ontology_harness_report_link():
+    template = Path(__file__).parents[1] / "templates" / "jobs.html"
+    html = template.read_text(encoding="utf-8")
+
+    assert "ontology-harness" in html
+    assert "regression_report.json" in html
+    assert "hasOutputArtifacts" in html
 
 
 def _jobs_test_app(tmp_path):
