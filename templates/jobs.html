@@ -28,10 +28,11 @@
                 <th>TTL File</th>
                 <th>Output</th>
                 <th>Visualise</th>
+                <th>Actions</th>
             </tr>
           </thead>
           <tbody id="jobs-tbody">
-            <tr><td colspan="9" class="center-align grey-text">Loading jobs...</td></tr>
+            <tr><td colspan="10" class="center-align grey-text">Loading jobs...</td></tr>
           </tbody>
         </table>
       </div>
@@ -55,7 +56,7 @@
         renderJobsTable(jobs);
       } catch (err) {
         console.error(err);
-        jobsTbody.innerHTML = `<tr><td colspan="9" class="center-align red-text">Error fetching jobs: ${err.message}</td></tr>`;
+        jobsTbody.innerHTML = `<tr><td colspan="10" class="center-align red-text">Error fetching jobs: ${err.message}</td></tr>`;
       } finally {
         refreshBtn.classList.remove('disabled');
       }
@@ -63,7 +64,7 @@
 
     function renderJobsTable(jobs) {
       if (!jobs || jobs.length === 0) {
-        jobsTbody.innerHTML = '<tr><td colspan="9" class="center-align grey-text">No jobs found.</td></tr>';
+        jobsTbody.innerHTML = '<tr><td colspan="10" class="center-align grey-text">No jobs found.</td></tr>';
         return;
       }
 
@@ -92,6 +93,7 @@
         let ttlLink = 'N/A';
         let outputLink = 'N/A';
         let visualiserLink = 'N/A';
+        let actionsHtml = 'N/A';
 
         if (!isIngestion) {
           const targetBucket = 'govuk-ai-accelerator-data-integration';
@@ -100,6 +102,10 @@
               ttlLink = `<a href="/viewer/bucket/download/buckets/${targetBucket}/${domainStr}/${job.job_runs}/output/ontology.ttl" class="blue-text" target="_blank">Download</a>`;
               visualiserLink = `<a href="/visualizer/?run=${domainStr}/${job.job_runs}" class="btn-view">Visualise Graph</a>`;
           }
+        }
+
+        if (['pending', 'running'].includes(job.status.toLowerCase())) {
+          actionsHtml = `<button type="button" class="btn-small red darken-1 stop-job-btn" data-job-id="${job.job_id}">Stop</button>`;
         }
 
         tr.innerHTML = `
@@ -112,11 +118,39 @@
           <td>${ttlLink}</td>
           <td>${outputLink}</td>
           <td>${visualiserLink}</td>
+          <td>${actionsHtml}</td>
         `;
         jobsTbody.appendChild(tr);
       });
       M.Tooltip.init(document.querySelectorAll('.tooltipped'));
     }
+
+    async function stopJob(jobId, button) {
+      if (!window.confirm(`Stop job ${jobId}?`)) return;
+
+      button.classList.add('disabled');
+      button.textContent = 'Stopping';
+
+      try {
+        const response = await fetch(`/ontology/jobs/${jobId}/stop`, { method: 'POST' });
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.error || 'Failed to stop job');
+        }
+        M.toast({ html: `Job ${jobId} stopped` });
+        fetchJobs();
+      } catch (err) {
+        M.toast({ html: `Could not stop job: ${err.message}` });
+        button.classList.remove('disabled');
+        button.textContent = 'Stop';
+      }
+    }
+
+    jobsTbody.addEventListener('click', (event) => {
+      const button = event.target.closest('.stop-job-btn');
+      if (!button) return;
+      stopJob(button.dataset.jobId, button);
+    });
 
     refreshBtn.addEventListener('click', fetchJobs);
     fetchJobs();

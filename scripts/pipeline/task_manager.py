@@ -3,6 +3,7 @@ import os
 import socket
 import threading
 import time
+from concurrent.futures import CancelledError
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import and_, or_, text
@@ -192,6 +193,22 @@ def requeue_claimed_job(db, job_model, job_id: str, error_message: str | None = 
     db.session.commit()
 
 
+def mark_job_failed_if_still_running(db, job_model, job_id: str, error_message: str) -> bool:
+    """Mark a job failed after worker failure, unless another path already finalized it."""
+    job = db.session.get(job_model, job_id)
+    if job is None or job.status != "running":
+        return False
+
+    logger.info(f"[job={job_id}] marking running job as failed after worker failure")
+    job.status = "failed"
+    job.error_message = error_message
+    job.claimed_by = None
+    job.claimed_at = None
+    job.heartbeat_at = None
+    db.session.commit()
+    return True
+
+
 def run_claimed_job(app, worker_id: str, claimed_job: dict):
     """Run a claimed job without a synthetic heartbeat thread."""
     from scripts.pipeline.ontology_generator import run_ontology_background_task
@@ -209,6 +226,37 @@ def run_claimed_job(app, worker_id: str, claimed_job: dict):
         f"[job={claimed_job['job_id']}] execution returned "
         f"worker={worker_id} domain={claimed_job['domain']}"
     )
+
+
+def handle_finished_job_future(app, worker_id: str, claimed_job: dict, future) -> None:
+    """Persist a terminal failure if the worker future failed before updating the job row."""
+    try:
+        exception = future.exception()
+    except CancelledError as exc:
+        exception = exc
+
+    if exception is None:
+        return
+
+    job_id = claimed_job["job_id"]
+    logger.error(
+        f"[job={job_id}] worker future failed worker={worker_id} "
+        f"domain={claimed_job['domain']} error={exception}"
+    )
+
+    with app.app_context():
+        from govuk_ai_accelerator_app import ProcessingJob, db
+
+        try:
+            mark_job_failed_if_still_running(
+                db=db,
+                job_model=ProcessingJob,
+                job_id=job_id,
+                error_message=f"Pipeline task failed: {exception}",
+            )
+        except Exception as exc:
+            db.session.rollback()
+            logger.error(f"[job={job_id}] failed to persist worker failure: {exc}")
 
 
 def _try_run_maintenance(app, db):
@@ -283,6 +331,7 @@ def start_task_manager(app):
                     raise
 
                 def _release_slot(_future):
+                    handle_finished_job_future(app, worker_id, claimed_job, _future)
                     logger.info(
                         f"[job={claimed_job['job_id']}] releasing worker slot on worker={worker_id}"
                     )
