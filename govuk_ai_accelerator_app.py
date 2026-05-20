@@ -349,6 +349,7 @@ def create_flask_app():
 
     database_uri = os.getenv("DATABASE_URL")
     allow_in_memory_db = os.getenv("ALLOW_IN_MEMORY_DB", "").lower() == "true"
+    disable_task_manager = os.getenv("DISABLE_TASK_MANAGER", "").lower() == "true"
 
     if database_uri:
         app.config["SQLALCHEMY_DATABASE_URI"] = database_uri
@@ -382,7 +383,8 @@ def create_flask_app():
             else:
                 raise
 
-    start_task_manager(app)
+    if not disable_task_manager:
+        start_task_manager(app)
 
     _cached_app = app
     return app

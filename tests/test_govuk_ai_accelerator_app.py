@@ -21,6 +21,7 @@ def _client():
 @pytest.fixture(autouse=True)
 def _allow_in_memory_db_for_app_tests(monkeypatch):
     monkeypatch.setenv("ALLOW_IN_MEMORY_DB", "true")
+    monkeypatch.setenv("DISABLE_TASK_MANAGER", "true")
     app_module = sys.modules.get("govuk_ai_accelerator_app")
     if app_module is not None:
         app_module._cached_app = None
@@ -53,6 +54,18 @@ def test_create_app_still_serves_ontology_dashboard():
     response = _client().get("/ontology/")
 
     assert response.status_code == 200
+
+
+def test_create_flask_app_can_disable_task_manager(monkeypatch):
+    app_module = _app_module()
+    calls = []
+
+    monkeypatch.setenv("DISABLE_TASK_MANAGER", "true")
+    monkeypatch.setattr(app_module, "start_task_manager", lambda app: calls.append(app))
+
+    app_module.create_flask_app()
+
+    assert calls == []
 
 
 def test_ontology_dashboard_includes_stop_job_action():
