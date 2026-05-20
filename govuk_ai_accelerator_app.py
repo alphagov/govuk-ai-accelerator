@@ -260,6 +260,25 @@ def create_blueprints():
         ]
         return jsonify(job_list)
 
+    @ontology_bp.route('/jobs/<job_id>/stop', methods=['POST'])
+    def stop_job(job_id):
+        """Manually stop a pending or running job and clear its worker lease."""
+        job = db.session.get(ProcessingJob, job_id)
+        if job is None:
+            return error_response("Job not found", 404)
+
+        if job.status not in {"pending", "running"}:
+            return error_response(f"Cannot stop job with status '{job.status}'", 409)
+
+        job.status = "failed"
+        job.error_message = "Manually stopped from Jobs UI"
+        job.claimed_by = None
+        job.claimed_at = None
+        job.heartbeat_at = None
+        db.session.commit()
+
+        return jsonify({"job_id": job.id, "status": job.status, "error": job.error_message})
+
     @ontology_bp.route('/all_jobs', methods=['GET'])
     def all_jobs():
         return render_template('jobs.html', active_page='jobs')
