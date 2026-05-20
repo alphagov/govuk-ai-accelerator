@@ -143,6 +143,10 @@ job key until the generator commit changes. The candidate output remains a norma
 run-numbered generator output. The harness writes `regression_report.json` to the
 candidate run output folder and the Historical Jobs page links to the run
 artifacts and report, including failed regression checks.
+It also summarises the result on the candidate row in
+`output/owl_ontology_metrics.csv` using the `Harness Result`,
+`Harness Baseline Run ID`, `Harness Deployment ID`, `Harness Failed Metrics`,
+and `Harness Report URI` columns.
 
 To promote a new accepted baseline, update `baselines/accepted.json` to point to
 the chosen run. The run itself should not be moved or overwritten.
