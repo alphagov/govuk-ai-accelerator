@@ -111,7 +111,7 @@ Required environment:
 
 ```bash
 export ONTOLOGY_HARNESS_ENABLED=true
-export ONTOLOGY_HARNESS_DEPLOYMENT_ID=<release-tag-or-git-sha>
+export ONTOLOGY_HARNESS_DEPLOYMENT_ID=tw-accelerator-<generator-git-sha>
 ```
 
 Optional environment:
@@ -135,12 +135,14 @@ The accepted baseline is a manifest that points to an immutable generator run:
 
 Each deployment queues one harness job using the key
 `ontology-harness-baseline:<deployment-id>`, so multiple pods do not run the same
-check independently. The deployment workflow bakes this into the Docker image as
-the matching release tag when available, otherwise the resolved commit SHA. The
-candidate output remains a normal run-numbered generator output. The harness
-writes `regression_report.json` to the candidate run output folder and the
-Historical Jobs page links to the run artifacts and report, including failed
-regression checks.
+check independently. The deployment workflow resolves the current
+`govuk-ai-accelerator-tw-accelerator` `main` commit SHA, pins the Docker image to
+install that generator revision, and uses `tw-accelerator-<generator-git-sha>` as
+the harness deployment ID. Workflow-only deploys therefore reuse the same harness
+job key until the generator commit changes. The candidate output remains a normal
+run-numbered generator output. The harness writes `regression_report.json` to the
+candidate run output folder and the Historical Jobs page links to the run
+artifacts and report, including failed regression checks.
 
 To promote a new accepted baseline, update `baselines/accepted.json` to point to
 the chosen run. The run itself should not be moved or overwritten.

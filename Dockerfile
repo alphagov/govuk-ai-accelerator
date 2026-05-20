@@ -3,6 +3,7 @@ FROM python:3.13-slim-bookworm AS base
 
 ARG ONTOLOGY_HARNESS_ENABLED=false
 ARG ONTOLOGY_HARNESS_DEPLOYMENT_ID=""
+ARG GENERATOR_GIT_REF=main
 
 ENV GOVUK_APP_NAME=GOVUK-AI-ACCELERATOR
 ENV UV_CACHE_DIR=/tmp/.uv_cache
@@ -34,7 +35,7 @@ RUN uv pip install --system -r requirements.txt
 RUN \
     --mount=type=secret,id=GITHUB_TOKEN,env=GITHUB_TOKEN \
     git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/" && \
-    uv pip install --system "git+https://github.com/alphagov/govuk-ai-accelerator-tw-accelerator" && \
+    uv pip install --system "git+https://github.com/alphagov/govuk-ai-accelerator-tw-accelerator@${GENERATOR_GIT_REF}" && \
     rm -rf /root/.cache/uv
 
 COPY . .
