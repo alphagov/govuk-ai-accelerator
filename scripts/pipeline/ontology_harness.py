@@ -30,14 +30,14 @@ REGRESSION_REPORT_FILENAME = "regression_report.json"
 @dataclass(frozen=True)
 class HarnessSettings:
     domain: str
-    deployment_commit_sha: str
+    deployment_id: str
     bucket_name: str
     config_uri: str
     baseline_manifest_uri: str
 
     @property
     def job_id(self) -> str:
-        return f"{self.domain}:{self.deployment_commit_sha}"
+        return f"{self.domain}:{self.deployment_id}"
 
 
 def _is_harness_enabled() -> bool:
@@ -51,11 +51,9 @@ def _is_harness_enabled() -> bool:
 
 def _build_harness_settings() -> HarnessSettings | None:
     domain = os.getenv("ONTOLOGY_HARNESS_DOMAIN", DEFAULT_HARNESS_DOMAIN)
-    deployment_commit_sha = os.getenv("ONTOLOGY_HARNESS_DEPLOYMENT_COMMIT_SHA", "").strip()
-    if not deployment_commit_sha:
-        logger.warning(
-            "[ontology-harness] enabled but ONTOLOGY_HARNESS_DEPLOYMENT_COMMIT_SHA is unset"
-        )
+    deployment_id = os.getenv("ONTOLOGY_HARNESS_DEPLOYMENT_ID", "").strip()
+    if not deployment_id:
+        logger.warning("[ontology-harness] enabled but ONTOLOGY_HARNESS_DEPLOYMENT_ID is unset")
         return None
 
     bucket_name = os.getenv("S3_BUCKET_NAME", DEFAULT_S3_BUCKET)
@@ -69,7 +67,7 @@ def _build_harness_settings() -> HarnessSettings | None:
     )
     return HarnessSettings(
         domain=domain,
-        deployment_commit_sha=deployment_commit_sha,
+        deployment_id=deployment_id,
         bucket_name=bucket_name,
         config_uri=config_uri,
         baseline_manifest_uri=baseline_manifest_uri,
@@ -107,7 +105,7 @@ def _prepare_harness_config(config: dict[str, Any], settings: HarnessSettings) -
     )
 
     harness_config = prepared.setdefault("harness", {})
-    harness_config["deployment_commit_sha"] = settings.deployment_commit_sha
+    harness_config["deployment_id"] = settings.deployment_id
     harness_config["baseline_manifest_uri"] = settings.baseline_manifest_uri
     return prepared
 
@@ -282,7 +280,7 @@ def run_ontology_harness_background_task(
             baseline_metrics,
             candidate_metrics,
             domain=config.get("domain_name", DEFAULT_HARNESS_DOMAIN),
-            deployment_version=harness_config.get("deployment_commit_sha", ""),
+            deployment_version=harness_config.get("deployment_id", ""),
             baseline_run_id=baseline_manifest["baseline_run_id"],
             baseline_output_uri=baseline_output_uri,
             baseline_uri=baseline_ontology_uri,

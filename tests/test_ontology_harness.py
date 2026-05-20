@@ -24,7 +24,7 @@ def test_schedule_ontology_harness_enqueues_once_per_domain_and_deployment(
 ):
     app = _harness_test_app(tmp_path)
     monkeypatch.setenv("ONTOLOGY_HARNESS_ENABLED", "true")
-    monkeypatch.setenv("ONTOLOGY_HARNESS_DEPLOYMENT_COMMIT_SHA", "abc1234")
+    monkeypatch.setenv("ONTOLOGY_HARNESS_DEPLOYMENT_ID", "v115")
     monkeypatch.setenv("S3_BUCKET_NAME", "test-bucket")
     monkeypatch.delenv("ONTOLOGY_HARNESS_DOMAIN", raising=False)
     monkeypatch.delenv("ONTOLOGY_HARNESS_BASELINE_OUTPUT_URI", raising=False)
@@ -48,7 +48,7 @@ def test_schedule_ontology_harness_enqueues_once_per_domain_and_deployment(
     assert len(jobs) == 1
     job = jobs[0]
     config_data = json.loads(job.config_data)
-    assert job.id == "ontology-harness-baseline:abc1234"
+    assert job.id == "ontology-harness-baseline:v115"
     assert job.status == "pending"
     assert job.pipeline == "ontology-harness"
     assert job.domain == "ontology-harness-baseline"
@@ -57,7 +57,8 @@ def test_schedule_ontology_harness_enqueues_once_per_domain_and_deployment(
         "s3://test-bucket/ontology-harness-baseline/input"
     )
     assert config_data["path"]["output_dir"] == "s3://test-bucket/ontology-harness-baseline"
-    assert config_data["harness"]["deployment_commit_sha"] == "abc1234"
+    assert config_data["harness"]["deployment_id"] == "v115"
+    assert "deployment_commit_sha" not in config_data["harness"]
     assert "deployment_version" not in config_data["harness"]
     assert config_data["harness"]["baseline_manifest_uri"] == (
         "s3://test-bucket/ontology-harness-baseline/baselines/accepted.json"
@@ -70,7 +71,7 @@ def test_schedule_ontology_harness_skips_when_disabled_or_version_missing(
 ):
     app = _harness_test_app(tmp_path)
     monkeypatch.delenv("ONTOLOGY_HARNESS_ENABLED", raising=False)
-    monkeypatch.delenv("ONTOLOGY_HARNESS_DEPLOYMENT_COMMIT_SHA", raising=False)
+    monkeypatch.delenv("ONTOLOGY_HARNESS_DEPLOYMENT_ID", raising=False)
 
     ontology_harness.schedule_ontology_harness(app)
 
@@ -178,7 +179,7 @@ def test_run_ontology_harness_writes_report_and_marks_failed_on_regression(
         {
             "domain_name": "ontology-harness-baseline",
             "harness": {
-                "deployment_commit_sha": "abc1234",
+                "deployment_id": "v115",
                 "baseline_manifest_uri": str(baseline_manifest),
             },
         },
@@ -195,7 +196,7 @@ def test_run_ontology_harness_writes_report_and_marks_failed_on_regression(
 
     assert result is False
     assert report["passed"] is False
-    assert report["deployment_version"] == "abc1234"
+    assert report["deployment_version"] == "v115"
     assert report["baseline"]["run_id"] == "run-20260519-1"
     assert report["baseline"]["output_uri"] == str(baseline_output)
     assert report["baseline"]["promoted_at"] == "2026-05-20T14:00:00Z"
