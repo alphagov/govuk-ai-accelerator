@@ -175,3 +175,103 @@ def test_recover_stale_running_jobs_requeues_only_jobs_without_recent_progress(t
 
     assert fresh_job.status == "running"
     assert fresh_job.claimed_by == "pod-b"
+
+
+def test_mark_job_failed_if_still_running_clears_lease(tmp_path):
+    app = _queue_test_app(tmp_path)
+    now = datetime.now(timezone.utc)
+
+    with app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="failed-future-job",
+                status="running",
+                domain="pip",
+                claimed_by="pod-a",
+                claimed_at=now - timedelta(minutes=1),
+                heartbeat_at=now - timedelta(seconds=30),
+                last_progress_at=now - timedelta(seconds=30),
+                created_at=now - timedelta(minutes=2),
+            )
+        )
+        app_module.db.session.commit()
+
+        updated = task_manager.mark_job_failed_if_still_running(
+            db=app_module.db,
+            job_model=app_module.ProcessingJob,
+            job_id="failed-future-job",
+            error_message="Pipeline task failed: boom",
+        )
+
+        job = app_module.db.session.get(app_module.ProcessingJob, "failed-future-job")
+
+    assert updated is True
+    assert job.status == "failed"
+    assert job.error_message == "Pipeline task failed: boom"
+    assert job.claimed_by is None
+    assert job.claimed_at is None
+    assert job.heartbeat_at is None
+
+
+def test_mark_job_failed_if_still_running_leaves_completed_job_alone(tmp_path):
+    app = _queue_test_app(tmp_path)
+
+    with app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="completed-job",
+                status="completed",
+                domain="pip",
+                job_runs="run-20260518-1",
+                created_at=datetime.now(timezone.utc),
+            )
+        )
+        app_module.db.session.commit()
+
+        updated = task_manager.mark_job_failed_if_still_running(
+            db=app_module.db,
+            job_model=app_module.ProcessingJob,
+            job_id="completed-job",
+            error_message="Pipeline task failed: late callback",
+        )
+
+        job = app_module.db.session.get(app_module.ProcessingJob, "completed-job")
+
+    assert updated is False
+    assert job.status == "completed"
+    assert job.error_message is None
+    assert job.job_runs == "run-20260518-1"
+
+
+def test_handle_finished_job_future_marks_running_job_failed(tmp_path):
+    app = _queue_test_app(tmp_path)
+
+    class FailedFuture:
+        def exception(self):
+            return RuntimeError("boom")
+
+    with app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="callback-job",
+                status="running",
+                domain="pip",
+                claimed_by="pod-a",
+                created_at=datetime.now(timezone.utc),
+            )
+        )
+        app_module.db.session.commit()
+
+    task_manager.handle_finished_job_future(
+        app=app,
+        worker_id="pod-a",
+        claimed_job={"job_id": "callback-job", "domain": "pip"},
+        future=FailedFuture(),
+    )
+
+    with app.app_context():
+        job = app_module.db.session.get(app_module.ProcessingJob, "callback-job")
+
+    assert job.status == "failed"
+    assert job.error_message == "Pipeline task failed: boom"
+    assert job.claimed_by is None

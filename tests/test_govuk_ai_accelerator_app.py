@@ -120,3 +120,82 @@ def test_list_jobs_returns_created_at_with_explicit_utc_marker(tmp_path):
 
     assert response.status_code == 200
     assert response.get_json()[0]["created_at"] == "2026-05-11T13:18:20Z"
+
+
+def _jobs_test_app(tmp_path):
+    app_module = _app_module()
+    flask_app = Flask(__name__)
+    flask_app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{tmp_path / 'jobs.db'}"
+    app_module.db.init_app(flask_app)
+    _, ontology_bp, _, _ = app_module.create_blueprints()
+    flask_app.register_blueprint(ontology_bp)
+    with flask_app.app_context():
+        app_module.db.drop_all()
+        app_module.db.create_all()
+    return app_module, flask_app
+
+
+def test_stop_job_marks_running_job_failed_and_clears_lease(tmp_path):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+    now = datetime.now(timezone.utc)
+
+    with flask_app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="running-job",
+                status="running",
+                domain="test-visa",
+                claimed_by="pod-a",
+                claimed_at=now,
+                heartbeat_at=now,
+                last_progress_at=now,
+                created_at=now,
+            )
+        )
+        app_module.db.session.commit()
+
+    response = flask_app.test_client().post("/ontology/jobs/running-job/stop")
+
+    with flask_app.app_context():
+        job = app_module.db.session.get(app_module.ProcessingJob, "running-job")
+
+    assert response.status_code == 200
+    assert response.get_json()["status"] == "failed"
+    assert job.status == "failed"
+    assert job.error_message == "Manually stopped from Jobs UI"
+    assert job.claimed_by is None
+    assert job.claimed_at is None
+    assert job.heartbeat_at is None
+
+
+def test_stop_job_rejects_completed_job(tmp_path):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+
+    with flask_app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="completed-job",
+                status="completed",
+                domain="test-visa",
+                job_runs="run-20260518-1",
+                created_at=datetime.now(timezone.utc),
+            )
+        )
+        app_module.db.session.commit()
+
+    response = flask_app.test_client().post("/ontology/jobs/completed-job/stop")
+
+    with flask_app.app_context():
+        job = app_module.db.session.get(app_module.ProcessingJob, "completed-job")
+
+    assert response.status_code == 409
+    assert job.status == "completed"
+    assert job.job_runs == "run-20260518-1"
+
+
+def test_stop_job_returns_404_for_unknown_job(tmp_path):
+    _, flask_app = _jobs_test_app(tmp_path)
+
+    response = flask_app.test_client().post("/ontology/jobs/missing-job/stop")
+
+    assert response.status_code == 404
