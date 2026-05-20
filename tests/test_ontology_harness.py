@@ -1,3 +1,4 @@
+import csv
 import json
 from datetime import datetime, timezone
 
@@ -92,10 +93,28 @@ def test_run_ontology_harness_writes_report_and_marks_failed_on_regression(
     app_module._cached_app = app
     baseline_output = tmp_path / "ontology-harness-baseline" / "run-20260519-1" / "output"
     candidate_output = tmp_path / "ontology-harness-baseline" / "run-20260520-1" / "output"
+    metrics_output = tmp_path / "ontology-harness-baseline" / "output"
     baseline_manifest = tmp_path / "ontology-harness-baseline" / "baselines" / "accepted.json"
     baseline_output.mkdir(parents=True)
+    metrics_output.mkdir(parents=True)
     baseline_manifest.parent.mkdir(parents=True)
     (baseline_output / "ontology.ttl").write_text("baseline ontology", encoding="utf-8")
+    (metrics_output / "owl_ontology_metrics.csv").write_text(
+        "\n".join(
+            [
+                (
+                    "Run ID,Class Count,Object Properties Count,Data Properties Count,"
+                    "Subclass Hierarchies,Property Domains,Property Ranges,Disjointness,"
+                    "Inverse Properties,Cardinality Restriction,Equivalent Classes,"
+                    "Relationships Density,Attribute Richness,Max Inheritance Depth"
+                ),
+                "run-20260519-1,10,1,2,3,10,10,0,0,0,0,0.1,0.2,1",
+                "run-20260520-1,8,1,2,3,4,10,0,0,0,0,0.1,0.2,1",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     baseline_manifest.write_text(
         json.dumps(
             {
@@ -193,6 +212,8 @@ def test_run_ontology_harness_writes_report_and_marks_failed_on_regression(
             "ontology-harness-baseline:v1",
         )
     report = json.loads((candidate_output / "regression_report.json").read_text())
+    with (metrics_output / "owl_ontology_metrics.csv").open(encoding="utf-8") as metrics_file:
+        metrics_rows = list(csv.DictReader(metrics_file))
 
     assert result is False
     assert report["passed"] is False
@@ -208,6 +229,15 @@ def test_run_ontology_harness_writes_report_and_marks_failed_on_regression(
     assert job.job_runs == "run-20260520-1"
     assert job.error_message == "Ontology harness regression failed: property_domain_count"
     assert job.claimed_by is None
+    assert metrics_rows[0]["Harness Result"] == ""
+    assert metrics_rows[1]["Run ID"] == "run-20260520-1"
+    assert metrics_rows[1]["Harness Result"] == "FAIL"
+    assert metrics_rows[1]["Harness Baseline Run ID"] == "run-20260519-1"
+    assert metrics_rows[1]["Harness Deployment ID"] == "v115"
+    assert metrics_rows[1]["Harness Failed Metrics"] == "property_domain_count"
+    assert metrics_rows[1]["Harness Report URI"] == str(
+        candidate_output / "regression_report.json"
+    )
 
 
 def test_load_baseline_manifest_requires_run_id_and_output_uri(tmp_path):

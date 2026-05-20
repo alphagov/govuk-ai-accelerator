@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import csv
+import io
 import json
 import os
 import re
@@ -24,7 +26,15 @@ from scripts.pipeline.ontology_generator import (
 
 HARNESS_PIPELINE = "ontology-harness"
 DEFAULT_HARNESS_DOMAIN = "ontology-harness-baseline"
+ONTOLOGY_METRICS_FILENAME = "owl_ontology_metrics.csv"
 REGRESSION_REPORT_FILENAME = "regression_report.json"
+HARNESS_METRICS_COLUMNS = [
+    "Harness Result",
+    "Harness Baseline Run ID",
+    "Harness Deployment ID",
+    "Harness Failed Metrics",
+    "Harness Report URI",
+]
 
 
 @dataclass(frozen=True)
@@ -173,6 +183,15 @@ def _write_json(uri: str, payload: dict[str, Any]) -> None:
         file_obj.write("\n")
 
 
+def _write_text(uri: str, content: str) -> None:
+    fs, path = fsspec.core.url_to_fs(uri)
+    parent = fs._parent(path)
+    if parent:
+        fs.makedirs(parent, exist_ok=True)
+    with fs.open(path, "w") as file_obj:
+        file_obj.write(content)
+
+
 def _load_baseline_manifest(uri: str) -> dict[str, Any]:
     manifest = json.loads(_read_text(uri))
     baseline_run_id = manifest.get("baseline_run_id")
@@ -242,6 +261,73 @@ def _output_file_uri(output_dir: str, filename: str) -> str:
     return f"{output_dir.rstrip('/')}/{filename}"
 
 
+def _ontology_metrics_csv_uri(candidate_output_uri: str) -> str:
+    candidate_output_uri = str(candidate_output_uri).rstrip("/")
+    if candidate_output_uri.endswith("/output"):
+        run_uri = candidate_output_uri.removesuffix("/output")
+        domain_uri = run_uri.rsplit("/", 1)[0]
+        return f"{domain_uri}/output/{ONTOLOGY_METRICS_FILENAME}"
+    return f"{candidate_output_uri}/{ONTOLOGY_METRICS_FILENAME}"
+
+
+def _write_harness_summary_to_metrics_csv(
+    candidate_output_uri: str,
+    report: dict[str, Any],
+    report_uri: str,
+) -> None:
+    metrics_csv_uri = _ontology_metrics_csv_uri(candidate_output_uri)
+    candidate_run_id = str(report.get("candidate", {}).get("run_id") or "")
+    if not candidate_run_id:
+        logger.warning("[ontology-harness] unable to update metrics CSV: missing candidate run id")
+        return
+
+    try:
+        existing_content = _read_text(metrics_csv_uri)
+        reader = csv.DictReader(io.StringIO(existing_content))
+        fieldnames = list(reader.fieldnames or [])
+        if not fieldnames:
+            logger.warning(f"[ontology-harness] metrics CSV has no header: {metrics_csv_uri}")
+            return
+
+        for column in HARNESS_METRICS_COLUMNS:
+            if column not in fieldnames:
+                fieldnames.append(column)
+
+        rows = list(reader)
+        summary = {
+            "Harness Result": "PASS" if report.get("passed") else "FAIL",
+            "Harness Baseline Run ID": str(report.get("baseline", {}).get("run_id") or ""),
+            "Harness Deployment ID": str(
+                report.get("deployment_id") or report.get("deployment_version") or ""
+            ),
+            "Harness Failed Metrics": ", ".join(report.get("failed_metrics") or []),
+            "Harness Report URI": report_uri,
+        }
+
+        updated = False
+        for row in rows:
+            if row.get("Run ID") == candidate_run_id:
+                row.update(summary)
+                updated = True
+                break
+
+        if not updated:
+            logger.warning(
+                "[ontology-harness] metrics CSV row not found "
+                f"run_id={candidate_run_id} uri={metrics_csv_uri}"
+            )
+            return
+
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+        _write_text(metrics_csv_uri, output.getvalue())
+        logger.info(f"[ontology-harness] updated metrics CSV uri={metrics_csv_uri}")
+    except Exception as exc:
+        logger.warning(f"[ontology-harness] unable to update metrics CSV: {exc}")
+
+
 def run_ontology_harness_background_task(
     config: dict[str, Any],
     domain_prompt: str | None,
@@ -290,10 +376,9 @@ def run_ontology_harness_background_task(
             candidate_output_uri=candidate_output_uri,
             candidate_uri=candidate_ontology_uri,
         )
-        _write_json(
-            _output_file_uri(str(output_dir), REGRESSION_REPORT_FILENAME),
-            report,
-        )
+        report_uri = _output_file_uri(str(output_dir), REGRESSION_REPORT_FILENAME)
+        _write_json(report_uri, report)
+        _write_harness_summary_to_metrics_csv(candidate_output_uri, report, report_uri)
 
         error_message = _regression_error_message(report)
         if job_id:
