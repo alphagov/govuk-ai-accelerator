@@ -16,6 +16,7 @@ from sqlalchemy.exc import OperationalError
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse
+from scripts.pipeline.ontology_harness import schedule_ontology_harness
 from scripts.pipeline.task_manager import start_task_manager
 from scripts.pipeline.utils import error_response, is_yaml_file, executor
 from scripts.pipeline.constants import APP_HOST, APP_PORT, BLUEPRINTS
@@ -102,7 +103,6 @@ def create_blueprints():
         except OperationalError as oe:
             from flask import current_app
             current_app.logger.warning("Database unavailable, proceeding without job tracking: %s", oe)
-            tracking = False
         return render_template('dashboard.html', active_page='dashboard')
 
     @ontology_bp.route('/submit', methods=['POST'])
@@ -385,6 +385,7 @@ def create_flask_app():
             else:
                 raise
 
+    schedule_ontology_harness(app)
     start_task_manager(app)
 
     _cached_app = app

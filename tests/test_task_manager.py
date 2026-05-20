@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta, timezone
+import sys
+from types import SimpleNamespace
 
 from flask import Flask
 
@@ -122,6 +124,7 @@ def test_claim_next_pending_job_sets_progress_fields(tmp_path):
 
     assert claimed_job == {
         "job_id": "pending-job",
+        "pipeline": "ontology",
         "domain": "pip",
         "config_data": {"domain_name": "pip"},
         "domain_prompt": "prompt",
@@ -133,6 +136,73 @@ def test_claim_next_pending_job_sets_progress_fields(tmp_path):
     assert job.claimed_at is not None
     assert job.last_progress_at is not None
     assert job.attempt_count == 1
+
+
+def test_claim_next_pending_job_returns_pipeline(tmp_path):
+    app = _queue_test_app(tmp_path)
+
+    with app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="pending-harness-job",
+                status="pending",
+                pipeline="ontology-harness",
+                domain="ontology-harness-baseline",
+                config_data='{"domain_name": "ontology-harness-baseline"}',
+                created_at=datetime.now(timezone.utc),
+            )
+        )
+        app_module.db.session.commit()
+
+        claimed_job = task_manager.claim_next_pending_job(
+            db=app_module.db,
+            job_model=app_module.ProcessingJob,
+            worker_id="pod-a",
+        )
+
+    assert claimed_job["pipeline"] == "ontology-harness"
+
+
+def test_run_claimed_job_dispatches_ontology_harness(monkeypatch):
+    calls = []
+
+    def record_ontology_call(config_data, domain_prompt, job_id):
+        calls.append(("ontology", config_data, domain_prompt, job_id))
+
+    def record_harness_call(config_data, domain_prompt, job_id):
+        calls.append(("harness", config_data, domain_prompt, job_id))
+
+    monkeypatch.setattr(
+        "scripts.pipeline.ontology_generator.run_ontology_background_task",
+        record_ontology_call,
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "scripts.pipeline.ontology_harness",
+        SimpleNamespace(run_ontology_harness_background_task=record_harness_call),
+    )
+
+    task_manager.run_claimed_job(
+        app=None,
+        worker_id="pod-a",
+        claimed_job={
+            "job_id": "ontology-harness-baseline:v1",
+            "pipeline": "ontology-harness",
+            "domain": "ontology-harness-baseline",
+            "config_data": {"domain_name": "ontology-harness-baseline"},
+            "domain_prompt": None,
+            "attempt_count": 1,
+        },
+    )
+
+    assert calls == [
+        (
+            "harness",
+            {"domain_name": "ontology-harness-baseline"},
+            None,
+            "ontology-harness-baseline:v1",
+        )
+    ]
 
 
 def test_recover_stale_running_jobs_requeues_only_jobs_without_recent_progress(tmp_path):
