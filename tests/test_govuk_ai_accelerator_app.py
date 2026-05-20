@@ -55,6 +55,26 @@ def test_create_app_still_serves_ontology_dashboard():
     assert response.status_code == 200
 
 
+def test_ontology_dashboard_includes_stop_job_action():
+    response = _client().get("/ontology/")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert '<th scope="col">Actions</th>' in html
+    assert "table-action-link stop-job-action" in html
+    assert "Stop<span class=\"govuk-visually-hidden\"> job" in html
+    assert "['pending', 'running'].includes(job.status.toLowerCase())" in html
+
+
+def test_historical_jobs_uses_link_styled_stop_job_action():
+    response = _client().get("/ontology/all_jobs")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "table-action-link stop-job-action" in html
+    assert "btn-small red darken-1 stop-job-btn" not in html
+
+
 def test_create_app_imports_without_visualizer_dependency(monkeypatch):
     original_import = builtins.__import__
 
