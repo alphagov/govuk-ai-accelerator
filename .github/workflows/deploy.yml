@@ -24,27 +24,33 @@ on:
     types: [released]
 
 jobs:
-  resolve-ontology-harness-deployment-id:
+  resolve-ontology-harness-generator:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'v')
-    name: Resolve ontology harness deployment id
+    name: Resolve ontology harness generator
     runs-on: ubuntu-latest
     permissions:
       contents: read
     outputs:
-      deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+      generator_sha: ${{ steps.generator.outputs.generator_sha }}
+      deployment_id: ${{ steps.generator.outputs.deployment_id }}
     steps:
     - uses: actions/checkout@v4
       with:
-        ref: ${{ inputs.gitRef || github.event.release.tag_name }}
+        repository: alphagov/govuk-ai-accelerator-tw-accelerator
+        ref: main
+        token: ${{ secrets.GOVUK_CI_GITHUB_API_TOKEN }}
+        path: generator
         fetch-depth: 0
 
-    - id: deployment
+    - id: generator
       run: |
-        deployment_id="$(git describe --tags --exact-match 2>/dev/null || git rev-parse HEAD)"
+        generator_sha="$(git -C generator rev-parse HEAD)"
+        deployment_id="tw-accelerator-${generator_sha}"
+        echo "generator_sha=${generator_sha}" >> "$GITHUB_OUTPUT"
         echo "deployment_id=${deployment_id}" >> "$GITHUB_OUTPUT"
 
   build-and-publish-image:
-    needs: resolve-ontology-harness-deployment-id
+    needs: resolve-ontology-harness-generator
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'v')
     name: Build and publish image
     permissions:
@@ -55,8 +61,9 @@ jobs:
     with:
       gitRef: ${{ inputs.gitRef || github.event.release.tag_name }}
       buildArgs: |
+        GENERATOR_GIT_REF=${{ needs.resolve-ontology-harness-generator.outputs.generator_sha }}
         ONTOLOGY_HARNESS_ENABLED=true
-        ONTOLOGY_HARNESS_DEPLOYMENT_ID=${{ needs.resolve-ontology-harness-deployment-id.outputs.deployment_id }}
+        ONTOLOGY_HARNESS_DEPLOYMENT_ID=${{ needs.resolve-ontology-harness-generator.outputs.deployment_id }}
     secrets:
       BUILD_SECRETS: |
         "GITHUB_TOKEN=${{ secrets.GOVUK_CI_GITHUB_API_TOKEN }}"
