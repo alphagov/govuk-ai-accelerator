@@ -29,11 +29,12 @@
                 <th scope="col">TTL File</th>
                 <th scope="col">Output</th>
                 <th scope="col">Visualise</th>
+                <th scope="col">Report</th>
                 <th scope="col">Actions</th>
             </tr>
           </thead>
           <tbody id="jobs-tbody">
-            <tr><td colspan="10" class="center-align grey-text">Loading jobs...</td></tr>
+            <tr><td colspan="11" class="center-align grey-text">Loading jobs...</td></tr>
           </tbody>
         </table>
       </div>
@@ -57,7 +58,7 @@
         renderJobsTable(jobs);
       } catch (err) {
         console.error(err);
-        jobsTbody.innerHTML = `<tr><td colspan="10" class="center-align red-text">Error fetching jobs: ${err.message}</td></tr>`;
+        jobsTbody.innerHTML = `<tr><td colspan="11" class="center-align red-text">Error fetching jobs: ${err.message}</td></tr>`;
       } finally {
         refreshBtn.classList.remove('disabled');
       }
@@ -65,7 +66,7 @@
 
     function renderJobsTable(jobs) {
       if (!jobs || jobs.length === 0) {
-        jobsTbody.innerHTML = '<tr><td colspan="10" class="center-align grey-text">No jobs found.</td></tr>';
+        jobsTbody.innerHTML = '<tr><td colspan="11" class="center-align grey-text">No jobs found.</td></tr>';
         return;
       }
 
@@ -87,21 +88,29 @@
         const domainStr = job.domain ? job.domain : '-';
         const pipeline = job.pipeline || 'ontology';
         const isIngestion = pipeline === 'ingestion';
+        const isHarness = pipeline === 'ontology-harness';
         const pipelineBadge = isIngestion
           ? '<span class="new badge teal lighten-2" data-badge-caption="ingestion"></span>'
-          : '<span class="new badge indigo lighten-1" data-badge-caption="ontology"></span>';
+          : isHarness
+            ? '<span class="new badge purple lighten-1" data-badge-caption="ontology-harness"></span>'
+            : '<span class="new badge indigo lighten-1" data-badge-caption="ontology"></span>';
 
         let ttlLink = 'N/A';
         let outputLink = 'N/A';
         let visualiserLink = 'N/A';
+        let reportLink = 'N/A';
         let actionsHtml = 'N/A';
 
         if (!isIngestion) {
           const targetBucket = 'govuk-ai-accelerator-data-integration';
-          if (job.status.toLowerCase() === 'completed' && job.job_runs) {
+          const hasOutputArtifacts = Boolean(job.job_runs);
+          if (hasOutputArtifacts) {
               outputLink = `<a href="/viewer/bucket/${targetBucket}/${domainStr}/${job.job_runs}/" class="btn-view">Browse Files</a>`;
               ttlLink = `<a href="/viewer/bucket/download/buckets/${targetBucket}/${domainStr}/${job.job_runs}/output/ontology.ttl" class="blue-text" target="_blank">Download</a>`;
               visualiserLink = `<a href="/visualizer/?run=${domainStr}/${job.job_runs}" class="btn-view">Visualise Graph</a>`;
+              if (isHarness) {
+                reportLink = `<a href="/viewer/bucket/download/buckets/${targetBucket}/${domainStr}/${job.job_runs}/output/regression_report.json" class="blue-text" target="_blank">Download</a>`;
+              }
           }
         }
 
@@ -119,6 +128,7 @@
           <td>${ttlLink}</td>
           <td>${outputLink}</td>
           <td>${visualiserLink}</td>
+          <td>${reportLink}</td>
           <td>${actionsHtml}</td>
         `;
         jobsTbody.appendChild(tr);

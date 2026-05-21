@@ -16,6 +16,7 @@ from sqlalchemy.exc import OperationalError
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse
+from scripts.pipeline.ontology_harness import schedule_ontology_harness
 from scripts.pipeline.task_manager import start_task_manager
 from scripts.pipeline.utils import error_response, is_yaml_file, executor
 from scripts.pipeline.constants import APP_HOST, APP_PORT, BLUEPRINTS
@@ -102,7 +103,6 @@ def create_blueprints():
         except OperationalError as oe:
             from flask import current_app
             current_app.logger.warning("Database unavailable, proceeding without job tracking: %s", oe)
-            tracking = False
         return render_template('dashboard.html', active_page='dashboard')
 
     @ontology_bp.route('/submit', methods=['POST'])
@@ -121,9 +121,12 @@ def create_blueprints():
         try:
             config_data = yaml.safe_load(yaml_file)
 
-            if request.form.get('domain') and request.form.get('domain') != 'config_file':
-                print(request.form.get('domain'))
-                config_data['domain_name'] = request.form.get('domain')
+            if request.form.get('domain') and request.form.get('domain') != 'config_file' and request.form.get('domain') is not None:
+                domain = request.form.get('domain')
+                config_data['domain_name'] = str(domain)
+                if config_data['filesystem']['protocol'] == "s3":
+                    config_data['input_path'] = f"s3://govuk-ai-accelerator-data-integration/{domain}/input"
+                    config_data['output_dir'] = f"s3://govuk-ai-accelerator-data-integration/{domain}"
 
             if domain_prompt_file and domain_prompt_file.filename:
                 domain_prompt = domain_prompt_file.read().decode('utf-8')
@@ -383,6 +386,7 @@ def create_flask_app():
             else:
                 raise
 
+    schedule_ontology_harness(app)
     if not disable_task_manager:
         start_task_manager(app)
 
