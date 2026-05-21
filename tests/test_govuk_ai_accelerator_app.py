@@ -78,6 +78,7 @@ def test_ontology_dashboard_includes_stop_job_action():
     assert "table-action-link stop-job-action" in html
     assert "Stop<span class=\"govuk-visually-hidden\"> job" in html
     assert "['pending', 'running'].includes(job.status.toLowerCase())" in html
+    assert "job.status.toLowerCase() === 'stopped'" in html
 
 
 def test_historical_jobs_uses_link_styled_stop_job_action():
@@ -87,6 +88,16 @@ def test_historical_jobs_uses_link_styled_stop_job_action():
     assert response.status_code == 200
     assert "table-action-link stop-job-action" in html
     assert "btn-small red darken-1 stop-job-btn" not in html
+
+
+def test_historical_jobs_labels_ontology_harness_pipeline_as_test():
+    response = _client().get("/ontology/all_jobs")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "purple lighten-1" in html
+    assert 'data-badge-caption="test"' in html
+    assert 'data-badge-caption="ontology-harness"' not in html
 
 
 def test_create_flask_app_schedules_ontology_harness_before_task_manager(monkeypatch):
@@ -192,7 +203,7 @@ def _jobs_test_app(tmp_path):
     return app_module, flask_app
 
 
-def test_stop_job_marks_running_job_failed_and_clears_lease(tmp_path):
+def test_stop_job_marks_running_job_stopped_and_clears_lease(tmp_path):
     app_module, flask_app = _jobs_test_app(tmp_path)
     now = datetime.now(timezone.utc)
 
@@ -217,12 +228,82 @@ def test_stop_job_marks_running_job_failed_and_clears_lease(tmp_path):
         job = app_module.db.session.get(app_module.ProcessingJob, "running-job")
 
     assert response.status_code == 200
-    assert response.get_json()["status"] == "failed"
-    assert job.status == "failed"
+    assert response.get_json()["status"] == "stopped"
+    assert job.status == "stopped"
     assert job.error_message == "Manually stopped from Jobs UI"
     assert job.claimed_by is None
     assert job.claimed_at is None
     assert job.heartbeat_at is None
+
+
+def test_completed_callback_does_not_overwrite_stopped_job(tmp_path):
+    from scripts.pipeline import ontology_generator
+
+    app_module, flask_app = _jobs_test_app(tmp_path)
+    app_module._cached_app = flask_app
+
+    with flask_app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="stopped-job",
+                status="stopped",
+                domain="test-visa",
+                error_message="Manually stopped from Jobs UI",
+                created_at=datetime.now(timezone.utc),
+            )
+        )
+        app_module.db.session.commit()
+
+    ontology_generator._update_job_status(
+        "stopped-job",
+        "completed",
+        job_runs="run-20260521-1",
+        clear_lease=True,
+    )
+
+    with flask_app.app_context():
+        job = app_module.db.session.get(app_module.ProcessingJob, "stopped-job")
+
+    assert job.status == "stopped"
+    assert job.error_message == "Manually stopped from Jobs UI"
+    assert job.job_runs is None
+
+
+def test_ontology_task_keeps_stopped_job_stopped_when_stop_detected(tmp_path, monkeypatch):
+    from scripts.pipeline import ontology_generator
+
+    app_module, flask_app = _jobs_test_app(tmp_path)
+    app_module._cached_app = flask_app
+
+    with flask_app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="stopping-job",
+                status="stopped",
+                domain="test-visa",
+                error_message="Manually stopped from Jobs UI",
+                created_at=datetime.now(timezone.utc),
+            )
+        )
+        app_module.db.session.commit()
+
+    async def fake_run_ontology_pipeline(*_args, **_kwargs):
+        raise ontology_generator.JobStoppedError("Job was manually stopped")
+
+    monkeypatch.setattr(ontology_generator, "run_ontology_pipeline", fake_run_ontology_pipeline)
+
+    result = ontology_generator.run_ontology_background_task(
+        {"domain_name": "test-visa"},
+        "prompt",
+        "stopping-job",
+    )
+
+    with flask_app.app_context():
+        job = app_module.db.session.get(app_module.ProcessingJob, "stopping-job")
+
+    assert result is False
+    assert job.status == "stopped"
+    assert job.error_message == "Manually stopped from Jobs UI"
 
 
 def test_stop_job_rejects_completed_job(tmp_path):
