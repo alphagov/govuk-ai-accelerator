@@ -1,10 +1,13 @@
 import builtins
+import io
 import importlib
+import json
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
+import yaml
 from flask import Flask
 from werkzeug.test import Client
 from werkzeug.wrappers import Response
@@ -177,6 +180,58 @@ def test_jobs_template_exposes_ontology_harness_report_link():
     assert "ontology-harness" in html
     assert "regression_report.json" in html
     assert "hasOutputArtifacts" in html
+
+
+def test_source_config_template_uses_ui_selected_domain():
+    template = Path(__file__).parents[1] / "static/assets/templates/config-template.yaml"
+    template_text = template.read_text(encoding="utf-8")
+    config = yaml.safe_load(template_text)
+
+    assert "<domain>" not in template_text
+    assert "domain_name" not in config
+    assert "<path-to-input>" not in template_text
+    assert "<path-to-output>" not in template_text
+
+
+def test_root_config_template_omits_manual_domain_and_path_placeholders():
+    template = Path(__file__).parents[1] / "config.yaml"
+    template_text = template.read_text(encoding="utf-8")
+    config = yaml.safe_load(template_text)
+
+    assert "<domain>" not in template_text
+    assert "<path-to-input>" not in template_text
+    assert "<path-to-output>" not in template_text
+    assert "domain_name" not in config
+    assert config.get("path", {}) == {}
+
+
+def test_submit_template_injects_selected_domain_paths(tmp_path):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+    template = Path(__file__).parents[1] / "static/assets/templates/config-template.yaml"
+    template_bytes = template.read_bytes()
+
+    response = flask_app.test_client().post(
+        "/ontology/submit",
+        data={
+            "domain": "visa",
+            "file": (io.BytesIO(template_bytes), "config.yaml"),
+        },
+        content_type="multipart/form-data",
+    )
+
+    with flask_app.app_context():
+        job = app_module.db.session.query(app_module.ProcessingJob).one()
+        config_data = json.loads(job.config_data)
+
+    assert response.status_code == 202
+    assert job.domain == "visa"
+    assert config_data["domain_name"] == "visa"
+    assert config_data["path"]["input_path"] == (
+        "s3://govuk-ai-accelerator-data-integration/visa/input"
+    )
+    assert config_data["path"]["output_dir"] == "s3://govuk-ai-accelerator-data-integration/visa"
+    assert "input_path" not in config_data
+    assert "output_dir" not in config_data
 
 
 def _jobs_test_app(tmp_path):
