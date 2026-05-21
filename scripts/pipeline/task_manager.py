@@ -170,6 +170,7 @@ def claim_next_pending_job(db, job_model, worker_id: str):
 
     return {
         "job_id": job.id,
+        "pipeline": job.pipeline or "ontology",
         "domain": job.domain,
         "config_data": json.loads(job.config_data) if job.config_data else {},
         "domain_prompt": job.domain_prompt,
@@ -211,13 +212,21 @@ def mark_job_failed_if_still_running(db, job_model, job_id: str, error_message: 
 
 def run_claimed_job(app, worker_id: str, claimed_job: dict):
     """Run a claimed job without a synthetic heartbeat thread."""
-    from scripts.pipeline.ontology_generator import run_ontology_background_task
-
     logger.info(
         f"[job={claimed_job['job_id']}] execution starting "
         f"worker={worker_id} domain={claimed_job['domain']} attempt={claimed_job['attempt_count']}"
     )
-    run_ontology_background_task(
+    pipeline = claimed_job.get("pipeline") or "ontology"
+    if pipeline == "ontology-harness":
+        from scripts.pipeline.ontology_harness import run_ontology_harness_background_task
+
+        run_task = run_ontology_harness_background_task
+    else:
+        from scripts.pipeline.ontology_generator import run_ontology_background_task
+
+        run_task = run_ontology_background_task
+
+    run_task(
         claimed_job["config_data"],
         claimed_job["domain_prompt"],
         claimed_job["job_id"],
