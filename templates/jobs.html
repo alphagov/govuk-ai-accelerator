@@ -17,19 +17,20 @@
         </p>
 
         <table class="striped highlight responsive-table" id="jobs-table">
+          <caption class="govuk-visually-hidden">Historical jobs</caption>
           <thead>
             <tr>
-                <th style="width: 50px;">#</th>
-                <th>Job ID</th>
-                <th>Created</th>
-                <th>Status</th>
-                <th>Pipeline</th>
-                <th>Domain</th>
-                <th>TTL File</th>
-                <th>Output</th>
-                <th>Visualise</th>
-                <th>Report</th>
-                <th>Actions</th>
+                <th scope="col" style="width: 50px;">#</th>
+                <th scope="col">Job ID</th>
+                <th scope="col">Created</th>
+                <th scope="col">Status</th>
+                <th scope="col">Pipeline</th>
+                <th scope="col">Domain</th>
+                <th scope="col">TTL File</th>
+                <th scope="col">Output</th>
+                <th scope="col">Visualise</th>
+                <th scope="col">Report</th>
+                <th scope="col">Actions</th>
             </tr>
           </thead>
           <tbody id="jobs-tbody">
@@ -114,7 +115,7 @@
         }
 
         if (['pending', 'running'].includes(job.status.toLowerCase())) {
-          actionsHtml = `<button type="button" class="btn-small red darken-1 stop-job-btn" data-job-id="${job.job_id}">Stop</button>`;
+          actionsHtml = `<button type="button" class="table-action-link stop-job-action" data-job-id="${job.job_id}">Stop<span class="govuk-visually-hidden"> job ${job.job_id}</span></button>`;
         }
 
         tr.innerHTML = `
@@ -138,8 +139,9 @@
     async function stopJob(jobId, button) {
       if (!window.confirm(`Stop job ${jobId}?`)) return;
 
-      button.classList.add('disabled');
-      button.textContent = 'Stopping';
+      button.disabled = true;
+      button.setAttribute('aria-disabled', 'true');
+      button.innerHTML = `Stopping<span class="govuk-visually-hidden"> job ${jobId}</span>`;
 
       try {
         const response = await fetch(`/ontology/jobs/${jobId}/stop`, { method: 'POST' });
@@ -151,13 +153,14 @@
         fetchJobs();
       } catch (err) {
         M.toast({ html: `Could not stop job: ${err.message}` });
-        button.classList.remove('disabled');
-        button.textContent = 'Stop';
+        button.disabled = false;
+        button.removeAttribute('aria-disabled');
+        button.innerHTML = `Stop<span class="govuk-visually-hidden"> job ${jobId}</span>`;
       }
     }
 
     jobsTbody.addEventListener('click', (event) => {
-      const button = event.target.closest('.stop-job-btn');
+      const button = event.target.closest('.stop-job-action');
       if (!button) return;
       stopJob(button.dataset.jobId, button);
     });

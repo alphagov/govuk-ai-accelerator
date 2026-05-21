@@ -19,6 +19,7 @@ def _client():
 @pytest.fixture(autouse=True)
 def _in_memory_db(monkeypatch):
     monkeypatch.setenv("ALLOW_IN_MEMORY_DB", "true")
+    monkeypatch.setenv("DISABLE_TASK_MANAGER", "true")
     app_module = sys.modules.get("govuk_ai_accelerator_app")
     if app_module is not None:
         app_module._cached_app = None

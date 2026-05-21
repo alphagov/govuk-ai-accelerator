@@ -106,6 +106,48 @@
       .full-width {
           width: 100%;
       }
+
+      .govuk-visually-hidden,
+      .visually-hidden {
+          position: absolute !important;
+          width: 1px !important;
+          height: 1px !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          overflow: hidden !important;
+          clip: rect(0 0 0 0) !important;
+          white-space: nowrap !important;
+          border: 0 !important;
+      }
+
+      .table-action-link {
+          background: none;
+          border: 0;
+          padding: 0;
+          color: #1d70b8;
+          cursor: pointer;
+          font: inherit;
+          text-decoration: underline;
+      }
+
+      .table-action-link:hover {
+          color: #003078;
+      }
+
+      .table-action-link:focus {
+          outline: 3px solid #ffdd00;
+          outline-offset: 0;
+          background-color: #ffdd00;
+          color: #0b0c0c;
+          box-shadow: 0 -2px #ffdd00, 0 4px #0b0c0c;
+          text-decoration: none;
+      }
+
+      .table-action-link:disabled,
+      .table-action-link[aria-disabled="true"] {
+          color: #505a5f;
+          cursor: not-allowed;
+      }
     </style>
   </head>
   <body>
