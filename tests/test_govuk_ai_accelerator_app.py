@@ -21,6 +21,7 @@ def _client():
 @pytest.fixture(autouse=True)
 def _allow_in_memory_db_for_app_tests(monkeypatch):
     monkeypatch.setenv("ALLOW_IN_MEMORY_DB", "true")
+    monkeypatch.setenv("DISABLE_TASK_MANAGER", "true")
     app_module = sys.modules.get("govuk_ai_accelerator_app")
     if app_module is not None:
         app_module._cached_app = None
@@ -55,10 +56,44 @@ def test_create_app_still_serves_ontology_dashboard():
     assert response.status_code == 200
 
 
+def test_create_flask_app_can_disable_task_manager(monkeypatch):
+    app_module = _app_module()
+    calls = []
+
+    monkeypatch.setenv("DISABLE_TASK_MANAGER", "true")
+    monkeypatch.setattr(app_module, "schedule_ontology_harness", lambda app: None)
+    monkeypatch.setattr(app_module, "start_task_manager", lambda app: calls.append(app))
+
+    app_module.create_flask_app()
+
+    assert calls == []
+
+
+def test_ontology_dashboard_includes_stop_job_action():
+    response = _client().get("/ontology/")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert '<th scope="col">Actions</th>' in html
+    assert "table-action-link stop-job-action" in html
+    assert "Stop<span class=\"govuk-visually-hidden\"> job" in html
+    assert "['pending', 'running'].includes(job.status.toLowerCase())" in html
+
+
+def test_historical_jobs_uses_link_styled_stop_job_action():
+    response = _client().get("/ontology/all_jobs")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "table-action-link stop-job-action" in html
+    assert "btn-small red darken-1 stop-job-btn" not in html
+
+
 def test_create_flask_app_schedules_ontology_harness_before_task_manager(monkeypatch):
     app_module = _app_module()
     calls = []
 
+    monkeypatch.setenv("DISABLE_TASK_MANAGER", "false")
     monkeypatch.setattr(app_module, "schedule_ontology_harness", lambda app: calls.append("harness"))
     monkeypatch.setattr(app_module, "start_task_manager", lambda app: calls.append("task-manager"))
     app_module._cached_app = None
