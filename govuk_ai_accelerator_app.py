@@ -75,6 +75,26 @@ def _serialize_job_datetime(value: datetime | None) -> str | None:
     return value.isoformat().replace("+00:00", "Z")
 
 
+def _apply_selected_domain_to_config(config_data: dict, selected_domain: str | None) -> dict:
+    """Apply the UI-selected domain and its default S3 paths to uploaded config."""
+    if not selected_domain or selected_domain == "config_file":
+        return config_data
+
+    domain = str(selected_domain)
+    config_data["domain_name"] = domain
+
+    filesystem = config_data.get("filesystem") or {}
+    if filesystem.get("protocol") == "s3":
+        bucket_name = os.getenv("S3_BUCKET_NAME", DEFAULT_S3_BUCKET)
+        path = config_data.setdefault("path", {})
+        path["input_path"] = f"s3://{bucket_name}/{domain}/input"
+        path["output_dir"] = f"s3://{bucket_name}/{domain}"
+        config_data.pop("input_path", None)
+        config_data.pop("output_dir", None)
+
+    return config_data
+
+
 def create_blueprints():
     """Create and register blueprints."""
     healthcheck_bp = Blueprint('healthcheck', __name__, url_prefix=BLUEPRINTS['healthcheck']['prefix'])
@@ -121,12 +141,13 @@ def create_blueprints():
         try:
             config_data = yaml.safe_load(yaml_file)
 
-            if request.form.get('domain') and request.form.get('domain') != 'config_file' and request.form.get('domain') is not None:
-                domain = request.form.get('domain')
-                config_data['domain_name'] = str(domain)
-                if config_data['filesystem']['protocol'] == "s3":
-                    config_data['input_path'] = f"s3://govuk-ai-accelerator-data-integration/{domain}/input"
-                    config_data['output_dir'] = f"s3://govuk-ai-accelerator-data-integration/{domain}"
+            if not isinstance(config_data, dict):
+                return error_response("Configuration file must contain a YAML mapping.", 400)
+
+            config_data = _apply_selected_domain_to_config(
+                config_data,
+                request.form.get('domain'),
+            )
 
             if domain_prompt_file and domain_prompt_file.filename:
                 domain_prompt = domain_prompt_file.read().decode('utf-8')
