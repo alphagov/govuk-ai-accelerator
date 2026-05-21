@@ -20,6 +20,14 @@ if TYPE_CHECKING:
     from taxonomy_ontology_accelerator.ontology_engine.pipeline_builder import OntologyPipelineBuilder
 
 
+STOPPED_JOB_STATUS = "stopped"
+STOPPED_JOB_MESSAGE = "Manually stopped from Jobs UI"
+
+
+class JobStoppedError(RuntimeError):
+    """Raised when a running ontology job has been manually stopped."""
+
+
 def _with_job_output_path(config_data: dict | None, job_id: str | None) -> dict | None:
     """Pass config through unchanged — the library allocates run-specific output dirs."""
     if config_data is None:
@@ -48,6 +56,27 @@ def _mark_job_progress(job_id: str | None, stage: str) -> None:
         logger.exception(f"[job={job_id}] error recording progress stage={stage}: {exc}")
 
 
+def _raise_if_job_stopped(job_id: str | None) -> None:
+    """Stop cooperatively between ontology pipeline stages."""
+    if not job_id:
+        return
+
+    try:
+        from govuk_ai_accelerator_app import ProcessingJob, create_flask_app, db
+
+        app = create_flask_app()
+        with app.app_context():
+            job = db.session.get(ProcessingJob, job_id)
+            if job and job.status == STOPPED_JOB_STATUS:
+                raise JobStoppedError(f"Job {job_id} was manually stopped")
+    except JobStoppedError:
+        raise
+    except OperationalError as exc:
+        logger.warning(f"[job={job_id}] unable to check stop status: {exc}")
+    except Exception as exc:
+        logger.exception(f"[job={job_id}] error checking stop status: {exc}")
+
+
 async def run_ontology_pipeline(
     config_data: dict | None = None,
     domain_prompt: str | None = None,
@@ -61,6 +90,7 @@ async def run_ontology_pipeline(
 
     ontology_config, pipeline_config = load_config_for_domain(config=config_data)
     _mark_job_progress(job_id, "config-loaded")
+    _raise_if_job_stopped(job_id)
 
     logger.info(
         f"[job={job_id}] starting ontology pipeline domain={pipeline_config.domain_name}"
@@ -79,18 +109,23 @@ async def run_ontology_pipeline(
 
     pipeline = _setup_pipeline(pipeline, pipeline_config)
     _mark_job_progress(job_id, "pipeline-setup")
+    _raise_if_job_stopped(job_id)
 
     pipeline = await _extract_ontology(pipeline)
     _mark_job_progress(job_id, "ontology-extracted")
+    _raise_if_job_stopped(job_id)
 
     pipeline = await _process_ontology(pipeline)
     _mark_job_progress(job_id, "ontology-processed")
+    _raise_if_job_stopped(job_id)
 
     pipeline = await _create_ontology_graph(pipeline)
     _mark_job_progress(job_id, "graph-created")
+    _raise_if_job_stopped(job_id)
 
     await _save_pipeline_output(pipeline, pipeline_config, fs)
     _mark_job_progress(job_id, "artifacts-saved")
+    _raise_if_job_stopped(job_id)
 
     logger.info(
         f"[job={job_id}] ontology pipeline completed domain={pipeline_config.domain_name}"
@@ -188,6 +223,11 @@ def _update_job_status(
         with app.app_context():
             job = db.session.get(ProcessingJob, job_id)
             if job:
+                if job.status == STOPPED_JOB_STATUS and status != STOPPED_JOB_STATUS:
+                    logger.info(
+                        f"[job={job_id}] preserving stopped status; ignoring status={status}"
+                    )
+                    return
                 job.status = status
                 if error_message is not None:
                     job.error_message = error_message
@@ -254,6 +294,16 @@ def run_ontology_background_task(config: dict, domain_prompt: str, job_id: str |
         if job_id:
             _update_job_status(job_id, "completed", job_runs=job_runs, clear_lease=True)
         return True
+    except JobStoppedError as exc:
+        logger.info(f"[job={job_id}] pipeline task stopped: {exc}")
+        if job_id:
+            _update_job_status(
+                job_id,
+                STOPPED_JOB_STATUS,
+                error_message=STOPPED_JOB_MESSAGE,
+                clear_lease=True,
+            )
+        return False
     except Exception as e:
         logger.error(f"[job={job_id}] pipeline task failed error={str(e)}")
         if job_id:

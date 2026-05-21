@@ -18,6 +18,9 @@ from sqlalchemy.exc import IntegrityError
 from scripts.ingestion.commands.utils import DEFAULT_S3_BUCKET
 from scripts.pipeline.logging_config import logger
 from scripts.pipeline.ontology_generator import (
+    JobStoppedError,
+    STOPPED_JOB_MESSAGE,
+    STOPPED_JOB_STATUS,
     _persist_config_yaml,
     _update_job_status,
     run_ontology_pipeline,
@@ -390,6 +393,16 @@ def run_ontology_harness_background_task(
                 clear_lease=True,
             )
         return bool(report.get("passed"))
+    except JobStoppedError as exc:
+        logger.info(f"[job={job_id}] ontology harness stopped: {exc}")
+        if job_id:
+            _update_job_status(
+                job_id,
+                STOPPED_JOB_STATUS,
+                error_message=STOPPED_JOB_MESSAGE,
+                clear_lease=True,
+            )
+        return False
     except Exception as exc:
         logger.error(f"[job={job_id}] ontology harness failed error={exc}")
         if job_id:
