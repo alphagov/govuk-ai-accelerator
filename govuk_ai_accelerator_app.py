@@ -5,6 +5,7 @@ import json
 import uvicorn
 import yaml
 import boto3
+from pathlib import Path
 from uuid import uuid4
 from datetime import datetime, timezone
 from flask import Flask, request, jsonify, render_template, Blueprint, Response, redirect
@@ -40,6 +41,14 @@ except ModuleNotFoundError as exc:
 
 db = SQLAlchemy()
 migrate = Migrate()
+DEFAULT_DOMAIN_PROMPT = "#"
+DEFAULT_CONFIG_TEMPLATE_PATH = (
+    Path(__file__).resolve().parent
+    / "static"
+    / "assets"
+    / "templates"
+    / "config-template.yaml"
+)
 
 
 class ProcessingJob(db.Model):
@@ -75,6 +84,35 @@ def _serialize_job_datetime(value: datetime | None) -> str | None:
     return value.isoformat().replace("+00:00", "Z")
 
 
+def _apply_selected_domain_to_config(config_data: dict, selected_domain: str | None) -> dict:
+    """Apply the UI-selected domain and its default S3 paths to uploaded config."""
+    if not selected_domain or selected_domain == "config_file":
+        return config_data
+
+    domain = str(selected_domain)
+    config_data["domain_name"] = domain
+
+    filesystem = config_data.get("filesystem") or {}
+    if filesystem.get("protocol") == "s3":
+        bucket_name = os.getenv("S3_BUCKET_NAME", DEFAULT_S3_BUCKET)
+        path = config_data.setdefault("path", {})
+        path["input_path"] = f"s3://{bucket_name}/{domain}/input"
+        path["output_dir"] = f"s3://{bucket_name}/{domain}"
+        config_data.pop("input_path", None)
+        config_data.pop("output_dir", None)
+
+    return config_data
+
+
+def _load_default_config_template() -> dict:
+    """Load the downloadable source configuration template as the default run config."""
+    with DEFAULT_CONFIG_TEMPLATE_PATH.open(encoding="utf-8") as template_file:
+        config_data = yaml.safe_load(template_file) or {}
+    if not isinstance(config_data, dict):
+        raise ValueError("Default source configuration template must contain a YAML mapping.")
+    return config_data
+
+
 def create_blueprints():
     """Create and register blueprints."""
     healthcheck_bp = Blueprint('healthcheck', __name__, url_prefix=BLUEPRINTS['healthcheck']['prefix'])
@@ -107,26 +145,27 @@ def create_blueprints():
 
     @ontology_bp.route('/submit', methods=['POST'])
     def upload_file():
-        if 'file' not in request.files:
-            return error_response("Configuration file is missing")
-
-        yaml_file = request.files['file']
-
-        if not yaml_file.filename or not is_yaml_file(yaml_file.filename):
+        yaml_file = request.files.get('file')
+        has_config_file = bool(yaml_file and yaml_file.filename)
+        if has_config_file and not is_yaml_file(yaml_file.filename):
             return error_response("Invalid YAML file. Please upload a .yaml or .yml file.")
 
-        domain_prompt = None
+        domain_prompt = DEFAULT_DOMAIN_PROMPT
         domain_prompt_file = request.files.get('text_file')
 
         try:
-            config_data = yaml.safe_load(yaml_file)
+            if has_config_file:
+                config_data = yaml.safe_load(yaml_file)
+            else:
+                config_data = _load_default_config_template()
 
-            if request.form.get('domain') and request.form.get('domain') != 'config_file' and request.form.get('domain') is not None:
-                domain = request.form.get('domain')
-                config_data['domain_name'] = str(domain)
-                if config_data['filesystem']['protocol'] == "s3":
-                    config_data['input_path'] = f"s3://govuk-ai-accelerator-data-integration/{domain}/input"
-                    config_data['output_dir'] = f"s3://govuk-ai-accelerator-data-integration/{domain}"
+            if not isinstance(config_data, dict):
+                return error_response("Configuration file must contain a YAML mapping.", 400)
+
+            config_data = _apply_selected_domain_to_config(
+                config_data,
+                request.form.get('domain'),
+            )
 
             if domain_prompt_file and domain_prompt_file.filename:
                 domain_prompt = domain_prompt_file.read().decode('utf-8')

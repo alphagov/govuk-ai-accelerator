@@ -1,10 +1,13 @@
 import builtins
+import io
 import importlib
+import json
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
+import yaml
 from flask import Flask
 from werkzeug.test import Client
 from werkzeug.wrappers import Response
@@ -79,6 +82,17 @@ def test_ontology_dashboard_includes_stop_job_action():
     assert "Stop<span class=\"govuk-visually-hidden\"> job" in html
     assert "['pending', 'running'].includes(job.status.toLowerCase())" in html
     assert "job.status.toLowerCase() === 'stopped'" in html
+
+
+def test_ontology_dashboard_describes_default_config_flow():
+    response = _client().get("/ontology/")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert 'id="file" name="file" accept=".yaml,.yml" style="display: none;"' in html
+    assert "Please select a YAML configuration file." not in html
+    assert "Default source configuration" in html
+    assert "Default domain prompt" in html
 
 
 def test_historical_jobs_uses_link_styled_stop_job_action():
@@ -188,6 +202,120 @@ def test_jobs_template_exposes_ontology_harness_report_link():
     assert "ontology-harness" in html
     assert "regression_report.json" in html
     assert "hasOutputArtifacts" in html
+
+
+def test_source_config_template_uses_ui_selected_domain():
+    template = Path(__file__).parents[1] / "static/assets/templates/config-template.yaml"
+    template_text = template.read_text(encoding="utf-8")
+    config = yaml.safe_load(template_text)
+
+    assert "<domain>" not in template_text
+    assert "domain_name" not in config
+    assert "<path-to-input>" not in template_text
+    assert "<path-to-output>" not in template_text
+
+
+def test_root_config_template_omits_manual_domain_and_path_placeholders():
+    template = Path(__file__).parents[1] / "config.yaml"
+    template_text = template.read_text(encoding="utf-8")
+    config = yaml.safe_load(template_text)
+
+    assert "<domain>" not in template_text
+    assert "<path-to-input>" not in template_text
+    assert "<path-to-output>" not in template_text
+    assert "domain_name" not in config
+    assert config.get("path", {}) == {}
+
+
+def test_submit_template_injects_selected_domain_paths(tmp_path):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+    template = Path(__file__).parents[1] / "static/assets/templates/config-template.yaml"
+    template_bytes = template.read_bytes()
+
+    response = flask_app.test_client().post(
+        "/ontology/submit",
+        data={
+            "domain": "visa",
+            "file": (io.BytesIO(template_bytes), "config.yaml"),
+        },
+        content_type="multipart/form-data",
+    )
+
+    with flask_app.app_context():
+        job = app_module.db.session.query(app_module.ProcessingJob).one()
+        config_data = json.loads(job.config_data)
+
+    assert response.status_code == 202
+    assert job.domain == "visa"
+    assert config_data["domain_name"] == "visa"
+    assert config_data["path"]["input_path"] == (
+        "s3://govuk-ai-accelerator-data-integration/visa/input"
+    )
+    assert config_data["path"]["output_dir"] == "s3://govuk-ai-accelerator-data-integration/visa"
+    assert "input_path" not in config_data
+    assert "output_dir" not in config_data
+
+
+def test_submit_uses_default_config_and_prompt_when_files_are_omitted(tmp_path):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+
+    response = flask_app.test_client().post(
+        "/ontology/submit",
+        data={"domain": "visa"},
+    )
+
+    with flask_app.app_context():
+        job = app_module.db.session.query(app_module.ProcessingJob).one()
+        config_data = json.loads(job.config_data)
+
+    assert response.status_code == 202
+    assert job.domain == "visa"
+    assert job.domain_prompt == "#"
+    assert config_data["domain_name"] == "visa"
+    assert config_data["path"]["input_path"] == (
+        "s3://govuk-ai-accelerator-data-integration/visa/input"
+    )
+    assert config_data["path"]["output_dir"] == "s3://govuk-ai-accelerator-data-integration/visa"
+    assert config_data["version"]["number"] == "0.1.2"
+
+
+def test_submit_uses_default_prompt_when_prompt_file_is_omitted(tmp_path):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+    template = Path(__file__).parents[1] / "static/assets/templates/config-template.yaml"
+
+    response = flask_app.test_client().post(
+        "/ontology/submit",
+        data={
+            "domain": "visa",
+            "file": (io.BytesIO(template.read_bytes()), "config.yaml"),
+        },
+        content_type="multipart/form-data",
+    )
+
+    with flask_app.app_context():
+        job = app_module.db.session.query(app_module.ProcessingJob).one()
+
+    assert response.status_code == 202
+    assert job.domain_prompt == "#"
+
+
+def test_submit_uses_uploaded_prompt_when_supplied(tmp_path):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+
+    response = flask_app.test_client().post(
+        "/ontology/submit",
+        data={
+            "domain": "visa",
+            "text_file": (io.BytesIO(b"custom prompt"), "prompt.txt"),
+        },
+        content_type="multipart/form-data",
+    )
+
+    with flask_app.app_context():
+        job = app_module.db.session.query(app_module.ProcessingJob).one()
+
+    assert response.status_code == 202
+    assert job.domain_prompt == "custom prompt"
 
 
 def _jobs_test_app(tmp_path):
