@@ -290,6 +290,8 @@
                     let statusHtml = '';
                     if (job.status.toLowerCase() === 'completed') {
                         statusHtml = '<span class="new badge green" data-badge-caption="done"></span>';
+                    } else if (job.status.toLowerCase() === 'stopped') {
+                        statusHtml = '<span class="new badge grey" data-badge-caption="stopped"></span>';
                     } else if (job.status.toLowerCase() === 'failed') {
                         statusHtml = `<span class="new badge red" data-badge-caption="failed"></span> <i class="material-icons tiny grey-text tooltipped" data-position="bottom" data-tooltip="${job.error || 'Unknown error'}">info_outline</i>`;
                     } else if (job.status.toLowerCase() === 'running') {

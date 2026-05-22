@@ -270,7 +270,7 @@ def create_blueprints():
         if job.status not in {"pending", "running"}:
             return error_response(f"Cannot stop job with status '{job.status}'", 409)
 
-        job.status = "failed"
+        job.status = "stopped"
         job.error_message = "Manually stopped from Jobs UI"
         job.claimed_by = None
         job.claimed_at = None
