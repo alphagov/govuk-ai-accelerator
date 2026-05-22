@@ -58,7 +58,6 @@ deduplication:
   min_label_similarity: 0.75
   semantic_threshold: 0.88
 domain:   # Domain-specific configuration (input/prompt path overrides)
-domain_name: <domain> # Domain identifier (set automatically by load_for_domain)
 embeddings:
   # Supports multiple providers via PydanticAI (uses KnownEmbeddingModelName):
   # - OpenAI: openai:* (requires OPENAI_API_KEY)

@@ -37,13 +37,8 @@ version:
   number: 0.1.2
   notes: |
     testing this notes functionality
-path:
-  # input_path: domains/travel/input/
-  # prompt_path: domains/travel/prompts/prompt.txt
-  # output_dir: output/
-  input_path: "<path-to-input>" 
-  # prompt_path: <path-to-prompt>
-  output_dir: "<path-to-output>" 
+# The web UI fills path.input_path and path.output_dir from the selected domain.
+path: {}
 batching:
   # Batching multiple chunks in a single LLM call improves throughput and reduces API costs.
   # Batch sizes are dynamically adjusted based on:
@@ -98,7 +93,6 @@ deduplication:
   min_label_similarity: 0.75
   semantic_threshold: 0.88
 domain:   # Domain-specific configuration (input/prompt path overrides)
-domain_name: visa # Domain identifier (set automatically by load_for_domain)
 embeddings:
   # Supports multiple providers via PydanticAI (uses KnownEmbeddingModelName):
   # - OpenAI: openai:* (requires OPENAI_API_KEY)
@@ -351,4 +345,3 @@ text_processing:
 
 parallel_files: 20
 batch_api_enabled: false
-

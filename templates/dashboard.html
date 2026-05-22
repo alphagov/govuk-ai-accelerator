@@ -7,19 +7,18 @@
                 <div class="card-content">
                     <span class="card-title" style="font-weight: bold; color: #1d70b8;">Run Pipeline</span>
 
-                    <p><b>Step 1</b> - Create the domain prompt. Download the <a
-                            href="{{ url_for('static', filename='assets/templates/example-prompt-template.txt') }}"
-                            download>📄domain prompt template</a> or create your own text file from scratch</p>
-                    <p><b>Step 2</b> - Download and complete the <a
-                            href="{{ url_for('static', filename='assets/templates/config-template.yaml') }}" download>📄source
-                        configuration template</a></p>
-                    <p><b>Step 3</b> - Select the domain from the dropdown. Note that this will override the domain from
-                        the config file</p>
-                    <p><b>Step 4</b> - Upload the completed source configuration and domain prompt and click "UPLOAD &
-                        START"</p>
+                    <p><b>Step 1</b> - Select the domain from the dropdown.</p>
+                    <p><b>Step 2</b> - Optionally upload a source configuration or domain prompt to override the defaults.
+                        The <a href="{{ url_for('static', filename='assets/templates/config-template.yaml') }}"
+                               download>📄source configuration template</a> is the Default source configuration used when
+                        no YAML file is supplied. The <a
+                                href="{{ url_for('static', filename='assets/templates/example-prompt-template.txt') }}"
+                                download>📄domain prompt template</a> can be used when you want to override the
+                        Default domain prompt.</p>
+                    <p><b>Step 3</b> - Click "UPLOAD & START".</p>
 
-                    <p class="grey-text text-darken-1" style="margin-bottom: 20px;">Upload your source configuration and
-                        domain prompt.</p>
+                    <p class="grey-text text-darken-1" style="margin-bottom: 20px;">You can start with only a selected
+                        domain. The default domain prompt is <code>#</code>.</p>
 
 
                     <form id="upload-form" enctype="multipart/form-data">
@@ -28,14 +27,13 @@
                              style="border: 2px dashed var(--gov-border); border-radius: 8px; padding: 2rem; text-align: center; margin-bottom: 1.5rem; transition: background-color 0.2s; cursor: pointer;">
                             <i class="material-icons" style="font-size: 3rem; color: #1d70b8;">cloud_upload</i>
                             <h6 style="margin: 10px 0; font-weight: bold;">Drag & Drop files here</h6>
-                            <p class="grey-text text-darken-2" style="margin-bottom: 5px;">Required: <strong>.yaml /
+                            <p class="grey-text text-darken-2" style="margin-bottom: 5px;">Optional: <strong>.yaml /
                                 .yml</strong> (Configuration)</p>
                             <p class="grey-text text-darken-2" style="margin-top: 5px;">Optional: <strong>.txt</strong>
                                 (Domain Prompt)</p>
                             <p class="grey-text" style="font-size: 0.9em; margin-top: 15px;">or click to browse</p>
 
-                            <input type="file" id="file" name="file" accept=".yaml,.yml" style="display: none;"
-                                   required>
+                            <input type="file" id="file" name="file" accept=".yaml,.yml" style="display: none;">
                             <input type="file" id="text_file" name="text_file" accept=".txt" style="display: none;">
                         </div>
 
@@ -205,11 +203,6 @@
                 e.preventDefault();
 
                 if (submitBtn.disabled) return;
-
-                if (!fileInput.files.length) {
-                    showStatus('Please select a YAML configuration file.', 'red');
-                    return;
-                }
 
                 submitBtn.disabled = true;
                 submitBtn.style.display = 'none';
