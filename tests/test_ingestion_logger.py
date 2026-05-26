@@ -42,3 +42,16 @@ def test_plain_get_logger_after_stream_setup_keeps_writing_to_stream():
     inner_logger.info("during-run message")
 
     assert "during-run message" in buf.getvalue()
+
+
+def test_get_logger_reenables_logger_after_external_logging_config_disables_it():
+    """Alembic fileConfig disables existing loggers; ingestion logging must recover."""
+    logger = logging.getLogger("ontology-ingestion")
+    logger.disabled = True
+
+    buf = io.StringIO()
+    recovered_logger = get_logger(stream=buf)
+    recovered_logger.info("recovered message")
+
+    assert recovered_logger.disabled is False
+    assert "recovered message" in buf.getvalue()
