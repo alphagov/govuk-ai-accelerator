@@ -1,8 +1,8 @@
-import io
+import logging
 
 import boto3
 
-from scripts.ingestion.commands.utils import get_logger
+logger = logging.getLogger(__name__)
 
 
 def create_bucket_folder(bucket, folder):
@@ -11,16 +11,10 @@ def create_bucket_folder(bucket, folder):
     S3 has no real folders; writing the placeholder is idempotent, so we skip
     the existence check and always PUT.
     """
-    try:
-        log_buffer = io.StringIO()
-        logger = get_logger(stream=log_buffer)
-        boto3.client('s3').put_object(
-            Bucket=bucket,
-            Key=f"{folder}/.keep",
-            Body=b'',
-            ContentType='text/plain',
-        )
-        logger.info(f"Ensured folder '{folder}' in bucket '{bucket}'")
-    except Exception as e:
-        from flask import current_app
-        current_app.logger.error(f"Error creating S3 folder: {str(e)}")
+    boto3.client('s3').put_object(
+        Bucket=bucket,
+        Key=f"{folder}/.keep",
+        Body=b'',
+        ContentType='text/plain',
+    )
+    logger.info("Ensured folder '%s' in bucket '%s'", folder, bucket)

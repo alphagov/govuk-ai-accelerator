@@ -130,6 +130,7 @@ def get_logger(log_path: str = None, stream: TextIO = None) -> logging.Logger:
     """
     logger = logging.getLogger("ontology-ingestion")
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logger.disabled = False
 
     if stream is not None or log_path is not None:
         for handler in logger.handlers[:]:
