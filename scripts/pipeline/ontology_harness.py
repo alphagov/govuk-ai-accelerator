@@ -1,5 +1,3 @@
-"""Post-deployment ontology regression harness."""
-
 from __future__ import annotations
 
 import asyncio
@@ -19,8 +17,10 @@ from scripts.ingestion.commands.utils import DEFAULT_S3_BUCKET
 from scripts.pipeline.logging_config import logger
 from scripts.pipeline.ontology_generator import (
     JobStoppedError,
+    JobSupersededError,
     STOPPED_JOB_MESSAGE,
     STOPPED_JOB_STATUS,
+    _finalize_job_status,
     _persist_config_yaml,
     _update_job_status,
     run_ontology_pipeline,
@@ -124,7 +124,6 @@ def _prepare_harness_config(config: dict[str, Any], settings: HarnessSettings) -
 
 
 def schedule_ontology_harness(app) -> str | None:
-    """Enqueue the post-deployment ontology harness once for the deployed version."""
     if not _is_harness_enabled():
         logger.info("[ontology-harness] disabled")
         return None
@@ -335,14 +334,17 @@ def run_ontology_harness_background_task(
     config: dict[str, Any],
     domain_prompt: str | None,
     job_id: str | None = None,
+    attempt_count: int | None = None,
+    worker_id: str | None = None,
 ) -> bool:
-    """Run ontology generation and compare the candidate output against the baseline."""
     try:
         output_dir = asyncio.run(
             run_ontology_pipeline(
                 config_data=config,
                 domain_prompt=domain_prompt,
                 job_id=job_id,
+                attempt_count=attempt_count,
+                worker_id=worker_id,
             )
         )
         logger.info(f"[job={job_id}] ontology harness generation completed")
@@ -384,15 +386,18 @@ def run_ontology_harness_background_task(
         _write_harness_summary_to_metrics_csv(candidate_output_uri, report, report_uri)
 
         error_message = _regression_error_message(report)
-        if job_id:
-            _update_job_status(
-                job_id,
-                "completed" if report.get("passed") else "failed",
-                error_message=error_message,
-                job_runs=job_runs,
-                clear_lease=True,
-            )
+        _finalize_job_status(
+            job_id,
+            "completed" if report.get("passed") else "failed",
+            attempt_count,
+            worker_id,
+            error_message=error_message,
+            job_runs=job_runs,
+        )
         return bool(report.get("passed"))
+    except JobSupersededError as exc:
+        logger.warning(f"[job={job_id}] ontology harness superseded; abandoning: {exc}")
+        return False
     except JobStoppedError as exc:
         logger.info(f"[job={job_id}] ontology harness stopped: {exc}")
         if job_id:
@@ -405,6 +410,5 @@ def run_ontology_harness_background_task(
         return False
     except Exception as exc:
         logger.error(f"[job={job_id}] ontology harness failed error={exc}")
-        if job_id:
-            _update_job_status(job_id, "failed", error_message=str(exc), clear_lease=True)
+        _finalize_job_status(job_id, "failed", attempt_count, worker_id, error_message=str(exc))
         raise

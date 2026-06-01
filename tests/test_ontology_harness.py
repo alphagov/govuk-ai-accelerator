@@ -127,7 +127,9 @@ def test_run_ontology_harness_writes_report_and_marks_failed_on_regression(
         encoding="utf-8",
     )
 
-    async def fake_run_ontology_pipeline(config_data, domain_prompt, job_id):
+    async def fake_run_ontology_pipeline(
+        config_data, domain_prompt, job_id, attempt_count=None, worker_id=None
+    ):
         candidate_output.mkdir(parents=True)
         (candidate_output / "ontology.ttl").write_text("candidate ontology", encoding="utf-8")
         return str(candidate_output)

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-"""Ontology generation pipeline module."""
 
 import asyncio
 import json
@@ -11,6 +10,7 @@ from uuid import uuid4
 
 from fsspec import AbstractFileSystem
 import fsspec
+from sqlalchemy import update
 from sqlalchemy.exc import OperationalError
 
 from scripts.pipeline.logging_config import logger
@@ -25,18 +25,20 @@ STOPPED_JOB_MESSAGE = "Manually stopped from Jobs UI"
 
 
 class JobStoppedError(RuntimeError):
-    """Raised when a running ontology job has been manually stopped."""
+    pass
+
+
+class JobSupersededError(RuntimeError):
+    pass
 
 
 def _with_job_output_path(config_data: dict | None, job_id: str | None) -> dict | None:
-    """Pass config through unchanged — the library allocates run-specific output dirs."""
     if config_data is None:
         return None
     return json.loads(json.dumps(config_data))
 
 
 def _mark_job_progress(job_id: str | None, stage: str) -> None:
-    """Record real pipeline progress so stale detection reflects actual work."""
     if not job_id:
         return
 
@@ -57,7 +59,6 @@ def _mark_job_progress(job_id: str | None, stage: str) -> None:
 
 
 def _raise_if_job_stopped(job_id: str | None) -> None:
-    """Stop cooperatively between ontology pipeline stages."""
     if not job_id:
         return
 
@@ -77,13 +78,41 @@ def _raise_if_job_stopped(job_id: str | None) -> None:
         logger.exception(f"[job={job_id}] error checking stop status: {exc}")
 
 
+def _raise_if_superseded(
+    job_id: str | None,
+    attempt_count: int | None,
+    worker_id: str | None = None,
+) -> None:
+    if not job_id or attempt_count is None:
+        return
+
+    try:
+        from govuk_ai_accelerator_app import ProcessingJob, create_flask_app, db
+
+        app = create_flask_app()
+        with app.app_context():
+            job = db.session.get(ProcessingJob, job_id)
+            if job is not None and (job.attempt_count or 0) != attempt_count:
+                raise JobSupersededError(
+                    f"Job {job_id} superseded: db attempt={job.attempt_count} "
+                    f"claimed_by={job.claimed_by}; mine attempt={attempt_count} worker={worker_id}"
+                )
+    except JobSupersededError:
+        raise
+    except OperationalError as exc:
+        logger.warning(f"[job={job_id}] unable to check supersede status: {exc}")
+    except Exception as exc:
+        logger.exception(f"[job={job_id}] error checking supersede status: {exc}")
+
+
 async def run_ontology_pipeline(
     config_data: dict | None = None,
     domain_prompt: str | None = None,
     incremental: bool = False,
     job_id: str | None = None,
+    attempt_count: int | None = None,
+    worker_id: str | None = None,
 ) -> str:
-    """Run the ontology generation pipeline asynchronously."""
     from taxonomy_ontology_accelerator.ontology_engine.pipeline_builder import (
         OntologyPipelineBuilder,
     )
@@ -91,6 +120,7 @@ async def run_ontology_pipeline(
     ontology_config, pipeline_config = load_config_for_domain(config=config_data)
     _mark_job_progress(job_id, "config-loaded")
     _raise_if_job_stopped(job_id)
+    _raise_if_superseded(job_id, attempt_count, worker_id)
 
     logger.info(
         f"[job={job_id}] starting ontology pipeline domain={pipeline_config.domain_name}"
@@ -110,22 +140,27 @@ async def run_ontology_pipeline(
     pipeline = _setup_pipeline(pipeline, pipeline_config)
     _mark_job_progress(job_id, "pipeline-setup")
     _raise_if_job_stopped(job_id)
+    _raise_if_superseded(job_id, attempt_count, worker_id)
 
     pipeline = await _extract_ontology(pipeline)
     _mark_job_progress(job_id, "ontology-extracted")
     _raise_if_job_stopped(job_id)
+    _raise_if_superseded(job_id, attempt_count, worker_id)
 
     pipeline = await _process_ontology(pipeline)
     _mark_job_progress(job_id, "ontology-processed")
     _raise_if_job_stopped(job_id)
+    _raise_if_superseded(job_id, attempt_count, worker_id)
 
     pipeline = await _create_ontology_graph(pipeline)
     _mark_job_progress(job_id, "graph-created")
     _raise_if_job_stopped(job_id)
+    _raise_if_superseded(job_id, attempt_count, worker_id)
 
     await _save_pipeline_output(pipeline, pipeline_config, fs)
     _mark_job_progress(job_id, "artifacts-saved")
     _raise_if_job_stopped(job_id)
+    _raise_if_superseded(job_id, attempt_count, worker_id)
 
     logger.info(
         f"[job={job_id}] ontology pipeline completed domain={pipeline_config.domain_name}"
@@ -137,7 +172,6 @@ def _setup_pipeline(
     pipeline: OntologyPipelineBuilder,
     config: PipelineConfig,
 ) -> OntologyPipelineBuilder:
-    """Setup the ontology pipeline with configuration and load existing data."""
     logger.info("Setting up ontology pipeline")
     pipeline = pipeline.setup_pipeline(
         input_path=config.input_path,
@@ -150,13 +184,11 @@ def _setup_pipeline(
 
 
 async def _extract_ontology(pipeline: OntologyPipelineBuilder) -> OntologyPipelineBuilder:
-    """Extract ontology data from input sources."""
     logger.info("Extracting ontology data")
     return await pipeline.extract_async()
 
 
 async def _process_ontology(pipeline: OntologyPipelineBuilder) -> OntologyPipelineBuilder:
-    """Process extracted ontology data."""
     logger.info("Processing ontology data")
     pipeline = await pipeline.deduplicate()
     pipeline = await pipeline.build_relations()
@@ -165,7 +197,6 @@ async def _process_ontology(pipeline: OntologyPipelineBuilder) -> OntologyPipeli
 
 
 async def _create_ontology_graph(pipeline: OntologyPipelineBuilder) -> OntologyPipelineBuilder:
-    """Create and validate the ontology graph."""
     logger.info("Creating ontology graph")
     if pipeline.state.incremental:
         pipeline = await pipeline.merge()
@@ -177,14 +208,12 @@ async def _save_pipeline_output(
     config: PipelineConfig,
     fs: AbstractFileSystem,
 ) -> None:
-    """Save pipeline output and version information."""
     logger.info("Saving pipeline output")
     await pipeline.finalize()
     await _save_version_info(config, pipeline.state.output_dir, fs)
 
 
 def _resolve_run_root(output_dir: str | Path | None, fallback_output_dir: str | None) -> str | Path:
-    """Resolve the run root directory from a finalized output path."""
     if output_dir is not None:
         if isinstance(output_dir, Path):
             return output_dir.parent if output_dir.name == "output" else output_dir
@@ -203,7 +232,6 @@ async def _save_version_info(
     output_dir: str | Path | None,
     fs: AbstractFileSystem,
 ) -> None:
-    """Save version metadata to the output directory."""
     run_root = _resolve_run_root(output_dir, config.output_dir)
     _ = (run_root, fs)
 
@@ -215,7 +243,6 @@ def _update_job_status(
     job_runs: str | None = None,
     clear_lease: bool = False,
 ) -> None:
-    """Update the processing job status in the database."""
     try:
         from govuk_ai_accelerator_app import ProcessingJob, create_flask_app, db
 
@@ -245,8 +272,87 @@ def _update_job_status(
         logger.exception(f"[job={job_id}] error updating job status={status}: {exc}")
 
 
+def _finalize_job_status_if_owner(
+    job_id: str,
+    status: str,
+    attempt_count: int,
+    worker_id: str | None = None,
+    error_message: str | None = None,
+    job_runs: str | None = None,
+) -> bool:
+    try:
+        from govuk_ai_accelerator_app import ProcessingJob, create_flask_app, db
+
+        app = create_flask_app()
+        with app.app_context():
+            values = {
+                "status": status,
+                "claimed_by": None,
+                "claimed_at": None,
+                "heartbeat_at": None,
+            }
+            if error_message is not None:
+                values["error_message"] = error_message
+            if job_runs is not None:
+                values["job_runs"] = job_runs
+
+            result = db.session.execute(
+                update(ProcessingJob)
+                .where(
+                    ProcessingJob.id == job_id,
+                    ProcessingJob.attempt_count == attempt_count,
+                    ProcessingJob.status != STOPPED_JOB_STATUS,
+                )
+                .values(**values)
+            )
+            db.session.commit()
+            applied = (result.rowcount or 0) == 1
+
+        if applied:
+            logger.info(
+                f"[job={job_id}] status finalized status={status} "
+                f"attempt={attempt_count} job_runs={job_runs}"
+            )
+        else:
+            logger.info(
+                f"[job={job_id}] finalize skipped (superseded/stopped) "
+                f"status={status} attempt={attempt_count} worker={worker_id}"
+            )
+        return applied
+    except OperationalError as exc:
+        logger.warning(f"[job={job_id}] unable to finalize status={status}: {exc}")
+        return False
+    except Exception as exc:
+        logger.exception(f"[job={job_id}] error finalizing status={status}: {exc}")
+        return False
+
+
+def _finalize_job_status(
+    job_id: str | None,
+    status: str,
+    attempt_count: int | None = None,
+    worker_id: str | None = None,
+    error_message: str | None = None,
+    job_runs: str | None = None,
+) -> None:
+    if not job_id:
+        return
+    if attempt_count is None:
+        _update_job_status(
+            job_id, status, error_message=error_message, job_runs=job_runs, clear_lease=True
+        )
+        return
+    _finalize_job_status_if_owner(
+        job_id,
+        status,
+        attempt_count,
+        worker_id=worker_id,
+        error_message=error_message,
+        job_runs=job_runs,
+    )
+
+
 def _persist_config_yaml(config: dict, output_dir: str) -> None:
-    """Save the config YAML alongside the run output for auditability."""
     run_root = _resolve_run_root(output_dir, None)
     config_url = f"{run_root}/config.yaml"
     try:
@@ -262,8 +368,13 @@ def _persist_config_yaml(config: dict, output_dir: str) -> None:
         logger.warning(f"Could not persist config.yaml: {exc}")
 
 
-def run_ontology_background_task(config: dict, domain_prompt: str, job_id: str | None = None) -> bool:
-    """Run the ontology pipeline as a background task, updating job status if provided."""
+def run_ontology_background_task(
+    config: dict,
+    domain_prompt: str,
+    job_id: str | None = None,
+    attempt_count: int | None = None,
+    worker_id: str | None = None,
+) -> bool:
     try:
         job_config = _with_job_output_path(config, job_id)
         _mark_job_progress(job_id, "execution-started")
@@ -272,6 +383,8 @@ def run_ontology_background_task(config: dict, domain_prompt: str, job_id: str |
                 config_data=job_config,
                 domain_prompt=domain_prompt,
                 job_id=job_id,
+                attempt_count=attempt_count,
+                worker_id=worker_id,
             )
         )
         logger.info(f"[job={job_id}] pipeline task completed successfully")
@@ -291,9 +404,11 @@ def run_ontology_background_task(config: dict, domain_prompt: str, job_id: str |
             elif job_id:
                 job_runs = job_id
 
-        if job_id:
-            _update_job_status(job_id, "completed", job_runs=job_runs, clear_lease=True)
+        _finalize_job_status(job_id, "completed", attempt_count, worker_id, job_runs=job_runs)
         return True
+    except JobSupersededError as exc:
+        logger.warning(f"[job={job_id}] superseded; abandoning without status write: {exc}")
+        return False
     except JobStoppedError as exc:
         logger.info(f"[job={job_id}] pipeline task stopped: {exc}")
         if job_id:
@@ -306,6 +421,5 @@ def run_ontology_background_task(config: dict, domain_prompt: str, job_id: str |
         return False
     except Exception as e:
         logger.error(f"[job={job_id}] pipeline task failed error={str(e)}")
-        if job_id:
-            _update_job_status(job_id, "failed", error_message=str(e), clear_lease=True)
+        _finalize_job_status(job_id, "failed", attempt_count, worker_id, error_message=str(e))
         raise

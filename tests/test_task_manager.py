@@ -28,8 +28,8 @@ def test_sqlite_is_treated_as_single_leader_mode(tmp_path):
     assert leader_connection is True
 
 
-def test_maintenance_runs_under_advisory_lock_in_sqlite(tmp_path):
-    """In SQLite mode, _try_run_maintenance should run cleanup without errors."""
+def test_maintenance_runs_under_advisory_lock_in_sqlite(tmp_path, monkeypatch):
+    monkeypatch.setattr(task_manager, "PROGRESS_TIMEOUT", timedelta(minutes=10))
     app = _queue_test_app(tmp_path)
     now = datetime.now(timezone.utc)
 
@@ -56,7 +56,6 @@ def test_maintenance_runs_under_advisory_lock_in_sqlite(tmp_path):
 
 
 def test_two_pods_claim_different_jobs(tmp_path):
-    """Two callers using claim_next_pending_job get different jobs."""
     app = _queue_test_app(tmp_path)
     now = datetime.now(timezone.utc)
 
@@ -166,11 +165,11 @@ def test_claim_next_pending_job_returns_pipeline(tmp_path):
 def test_run_claimed_job_dispatches_ontology_harness(monkeypatch):
     calls = []
 
-    def record_ontology_call(config_data, domain_prompt, job_id):
-        calls.append(("ontology", config_data, domain_prompt, job_id))
+    def record_ontology_call(config_data, domain_prompt, job_id, attempt_count=None, worker_id=None):
+        calls.append(("ontology", config_data, domain_prompt, job_id, attempt_count, worker_id))
 
-    def record_harness_call(config_data, domain_prompt, job_id):
-        calls.append(("harness", config_data, domain_prompt, job_id))
+    def record_harness_call(config_data, domain_prompt, job_id, attempt_count=None, worker_id=None):
+        calls.append(("harness", config_data, domain_prompt, job_id, attempt_count, worker_id))
 
     monkeypatch.setattr(
         "scripts.pipeline.ontology_generator.run_ontology_background_task",
@@ -201,11 +200,14 @@ def test_run_claimed_job_dispatches_ontology_harness(monkeypatch):
             {"domain_name": "ontology-harness-baseline"},
             None,
             "ontology-harness-baseline:v1",
+            1,
+            "pod-a",
         )
     ]
 
 
-def test_recover_stale_running_jobs_requeues_only_jobs_without_recent_progress(tmp_path):
+def test_recover_stale_running_jobs_requeues_only_jobs_without_recent_progress(tmp_path, monkeypatch):
+    monkeypatch.setattr(task_manager, "PROGRESS_TIMEOUT", timedelta(minutes=10))
     app = _queue_test_app(tmp_path)
     now = datetime.now(timezone.utc)
 
@@ -345,3 +347,84 @@ def test_handle_finished_job_future_marks_running_job_failed(tmp_path):
     assert job.status == "failed"
     assert job.error_message == "Pipeline task failed: boom"
     assert job.claimed_by is None
+
+
+def test_recover_stale_marks_failed_at_max_attempts(tmp_path, monkeypatch):
+    app = _queue_test_app(tmp_path)
+    monkeypatch.setattr(task_manager, "PROGRESS_TIMEOUT", timedelta(minutes=10))
+    monkeypatch.setattr(task_manager, "MAX_JOB_ATTEMPTS", 2)
+    now = datetime.now(timezone.utc)
+
+    with app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="exhausted-job",
+                status="running",
+                domain="pip",
+                claimed_by="pod-a",
+                attempt_count=2,
+                claimed_at=now - timedelta(minutes=20),
+                last_progress_at=now - timedelta(minutes=20),
+                created_at=now - timedelta(minutes=21),
+            )
+        )
+        app_module.db.session.commit()
+
+        task_manager.recover_stale_running_jobs(app)
+
+        job = app_module.db.session.get(app_module.ProcessingJob, "exhausted-job")
+
+    assert job.status == "failed"
+    assert job.claimed_by is None
+    assert "attempts" in (job.error_message or "")
+
+
+def test_recover_stale_requeues_below_max_attempts(tmp_path, monkeypatch):
+    app = _queue_test_app(tmp_path)
+    monkeypatch.setattr(task_manager, "PROGRESS_TIMEOUT", timedelta(minutes=10))
+    monkeypatch.setattr(task_manager, "MAX_JOB_ATTEMPTS", 2)
+    now = datetime.now(timezone.utc)
+
+    with app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="retry-job",
+                status="running",
+                domain="pip",
+                claimed_by="pod-a",
+                attempt_count=1,
+                claimed_at=now - timedelta(minutes=20),
+                last_progress_at=now - timedelta(minutes=20),
+                created_at=now - timedelta(minutes=21),
+            )
+        )
+        app_module.db.session.commit()
+
+        task_manager.recover_stale_running_jobs(app)
+
+        job = app_module.db.session.get(app_module.ProcessingJob, "retry-job")
+
+    assert job.status == "pending"
+    assert job.claimed_by is None
+
+
+def test_progress_timeout_env_parsing(monkeypatch):
+    monkeypatch.setenv("PROGRESS_TIMEOUT_MINUTES", "30")
+    assert task_manager._progress_timeout() == timedelta(minutes=30)
+
+    monkeypatch.setenv("PROGRESS_TIMEOUT_MINUTES", "not-a-number")
+    assert task_manager._progress_timeout() == timedelta(minutes=45)
+
+    monkeypatch.delenv("PROGRESS_TIMEOUT_MINUTES", raising=False)
+    assert task_manager._progress_timeout() == timedelta(minutes=45)
+
+
+def test_max_job_attempts_env_parsing(monkeypatch):
+    monkeypatch.setenv("MAX_JOB_ATTEMPTS", "5")
+    assert task_manager._max_job_attempts() == 5
+
+    monkeypatch.setenv("MAX_JOB_ATTEMPTS", "bad")
+    assert task_manager._max_job_attempts() == 2
+
+    monkeypatch.delenv("MAX_JOB_ATTEMPTS", raising=False)
+    assert task_manager._max_job_attempts() == 2
