@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-"""Ontology generation pipeline module."""
 
 import asyncio
 import json
@@ -26,7 +25,7 @@ STOPPED_JOB_MESSAGE = "Manually stopped from Jobs UI"
 
 
 class JobStoppedError(RuntimeError):
-    """Raised when a running ontology job has been manually stopped."""
+    pass
 
 
 class JobSupersededError(RuntimeError):
@@ -34,14 +33,12 @@ class JobSupersededError(RuntimeError):
 
 
 def _with_job_output_path(config_data: dict | None, job_id: str | None) -> dict | None:
-    """Pass config through unchanged — the library allocates run-specific output dirs."""
     if config_data is None:
         return None
     return json.loads(json.dumps(config_data))
 
 
 def _mark_job_progress(job_id: str | None, stage: str) -> None:
-    """Record real pipeline progress so stale detection reflects actual work."""
     if not job_id:
         return
 
@@ -62,7 +59,6 @@ def _mark_job_progress(job_id: str | None, stage: str) -> None:
 
 
 def _raise_if_job_stopped(job_id: str | None) -> None:
-    """Stop cooperatively between ontology pipeline stages."""
     if not job_id:
         return
 
@@ -117,7 +113,6 @@ async def run_ontology_pipeline(
     attempt_count: int | None = None,
     worker_id: str | None = None,
 ) -> str:
-    """Run the ontology generation pipeline asynchronously."""
     from taxonomy_ontology_accelerator.ontology_engine.pipeline_builder import (
         OntologyPipelineBuilder,
     )
@@ -177,7 +172,6 @@ def _setup_pipeline(
     pipeline: OntologyPipelineBuilder,
     config: PipelineConfig,
 ) -> OntologyPipelineBuilder:
-    """Setup the ontology pipeline with configuration and load existing data."""
     logger.info("Setting up ontology pipeline")
     pipeline = pipeline.setup_pipeline(
         input_path=config.input_path,
@@ -190,13 +184,11 @@ def _setup_pipeline(
 
 
 async def _extract_ontology(pipeline: OntologyPipelineBuilder) -> OntologyPipelineBuilder:
-    """Extract ontology data from input sources."""
     logger.info("Extracting ontology data")
     return await pipeline.extract_async()
 
 
 async def _process_ontology(pipeline: OntologyPipelineBuilder) -> OntologyPipelineBuilder:
-    """Process extracted ontology data."""
     logger.info("Processing ontology data")
     pipeline = await pipeline.deduplicate()
     pipeline = await pipeline.build_relations()
@@ -205,7 +197,6 @@ async def _process_ontology(pipeline: OntologyPipelineBuilder) -> OntologyPipeli
 
 
 async def _create_ontology_graph(pipeline: OntologyPipelineBuilder) -> OntologyPipelineBuilder:
-    """Create and validate the ontology graph."""
     logger.info("Creating ontology graph")
     if pipeline.state.incremental:
         pipeline = await pipeline.merge()
@@ -217,14 +208,12 @@ async def _save_pipeline_output(
     config: PipelineConfig,
     fs: AbstractFileSystem,
 ) -> None:
-    """Save pipeline output and version information."""
     logger.info("Saving pipeline output")
     await pipeline.finalize()
     await _save_version_info(config, pipeline.state.output_dir, fs)
 
 
 def _resolve_run_root(output_dir: str | Path | None, fallback_output_dir: str | None) -> str | Path:
-    """Resolve the run root directory from a finalized output path."""
     if output_dir is not None:
         if isinstance(output_dir, Path):
             return output_dir.parent if output_dir.name == "output" else output_dir
@@ -243,7 +232,6 @@ async def _save_version_info(
     output_dir: str | Path | None,
     fs: AbstractFileSystem,
 ) -> None:
-    """Save version metadata to the output directory."""
     run_root = _resolve_run_root(output_dir, config.output_dir)
     _ = (run_root, fs)
 
@@ -255,7 +243,6 @@ def _update_job_status(
     job_runs: str | None = None,
     clear_lease: bool = False,
 ) -> None:
-    """Update the processing job status in the database."""
     try:
         from govuk_ai_accelerator_app import ProcessingJob, create_flask_app, db
 
@@ -366,7 +353,6 @@ def _finalize_job_status(
 
 
 def _persist_config_yaml(config: dict, output_dir: str) -> None:
-    """Save the config YAML alongside the run output for auditability."""
     run_root = _resolve_run_root(output_dir, None)
     config_url = f"{run_root}/config.yaml"
     try:
@@ -389,7 +375,6 @@ def run_ontology_background_task(
     attempt_count: int | None = None,
     worker_id: str | None = None,
 ) -> bool:
-    """Run the ontology pipeline as a background task, updating job status if provided."""
     try:
         job_config = _with_job_output_path(config, job_id)
         _mark_job_progress(job_id, "execution-started")

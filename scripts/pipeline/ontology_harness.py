@@ -1,5 +1,3 @@
-"""Post-deployment ontology regression harness."""
-
 from __future__ import annotations
 
 import asyncio
@@ -126,7 +124,6 @@ def _prepare_harness_config(config: dict[str, Any], settings: HarnessSettings) -
 
 
 def schedule_ontology_harness(app) -> str | None:
-    """Enqueue the post-deployment ontology harness once for the deployed version."""
     if not _is_harness_enabled():
         logger.info("[ontology-harness] disabled")
         return None
@@ -340,7 +337,6 @@ def run_ontology_harness_background_task(
     attempt_count: int | None = None,
     worker_id: str | None = None,
 ) -> bool:
-    """Run ontology generation and compare the candidate output against the baseline."""
     try:
         output_dir = asyncio.run(
             run_ontology_pipeline(
