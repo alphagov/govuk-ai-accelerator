@@ -13,7 +13,27 @@ from scripts.pipeline.constants import EXECUTOR_MAX_WORKERS
 from scripts.pipeline.logging_config import logger
 
 
-PROGRESS_TIMEOUT = timedelta(minutes=10)
+def _progress_timeout() -> timedelta:
+    """Stale-job threshold; long LLM stages need more than the original 10 minutes."""
+    raw = os.getenv("PROGRESS_TIMEOUT_MINUTES", "45")
+    try:
+        minutes = int(raw)
+    except (TypeError, ValueError):
+        minutes = 45
+    return timedelta(minutes=max(minutes, 1))
+
+
+def _max_job_attempts() -> int:
+    """How many times the reaper requeues a job before giving up and failing it."""
+    raw = os.getenv("MAX_JOB_ATTEMPTS", "2")
+    try:
+        return max(int(raw), 1)
+    except (TypeError, ValueError):
+        return 2
+
+
+PROGRESS_TIMEOUT = _progress_timeout()
+MAX_JOB_ATTEMPTS = _max_job_attempts()
 IDLE_POLL_INTERVAL_SECONDS = 5
 LEADER_LOCK_ID = 420021
 
@@ -121,17 +141,28 @@ def recover_stale_running_jobs(app):
             ).all()
 
             for job in stale_jobs:
-                logger.info(
-                    f"[job={job.id}] requeueing stale job "
-                    f"domain={job.domain} worker={job.claimed_by} "
-                    f"claimed_at={job.claimed_at} last_progress_at={job.last_progress_at} "
-                    f"attempt={job.attempt_count}"
-                )
-                job.status = "pending"
+                if (job.attempt_count or 0) >= MAX_JOB_ATTEMPTS:
+                    logger.warning(
+                        f"[job={job.id}] exceeded max attempts={job.attempt_count}; marking failed "
+                        f"domain={job.domain} worker={job.claimed_by} "
+                        f"last_progress_at={job.last_progress_at}"
+                    )
+                    job.status = "failed"
+                    job.error_message = (
+                        f"Job exceeded {MAX_JOB_ATTEMPTS} attempts without completing; not requeued."
+                    )
+                else:
+                    logger.info(
+                        f"[job={job.id}] requeueing stale job "
+                        f"domain={job.domain} worker={job.claimed_by} "
+                        f"claimed_at={job.claimed_at} last_progress_at={job.last_progress_at} "
+                        f"attempt={job.attempt_count}"
+                    )
+                    job.status = "pending"
+                    job.error_message = "Job progress timed out; requeued."
                 job.claimed_by = None
                 job.claimed_at = None
                 job.heartbeat_at = None
-                job.error_message = "Job progress timed out; requeued."
 
             if stale_jobs:
                 db.session.commit()
@@ -230,6 +261,8 @@ def run_claimed_job(app, worker_id: str, claimed_job: dict):
         claimed_job["config_data"],
         claimed_job["domain_prompt"],
         claimed_job["job_id"],
+        attempt_count=claimed_job.get("attempt_count"),
+        worker_id=worker_id,
     )
     logger.info(
         f"[job={claimed_job['job_id']}] execution returned "
