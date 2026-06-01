@@ -14,7 +14,6 @@ from scripts.pipeline.logging_config import logger
 
 
 def _progress_timeout() -> timedelta:
-    """Stale-job threshold; long LLM stages need more than the original 10 minutes."""
     raw = os.getenv("PROGRESS_TIMEOUT_MINUTES", "45")
     try:
         minutes = int(raw)
@@ -24,7 +23,6 @@ def _progress_timeout() -> timedelta:
 
 
 def _max_job_attempts() -> int:
-    """How many times the reaper requeues a job before giving up and failing it."""
     raw = os.getenv("MAX_JOB_ATTEMPTS", "2")
     try:
         return max(int(raw), 1)

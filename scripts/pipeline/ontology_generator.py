@@ -30,7 +30,7 @@ class JobStoppedError(RuntimeError):
 
 
 class JobSupersededError(RuntimeError):
-    """Raised when a newer attempt has claimed this job (lease fencing)."""
+    pass
 
 
 def _with_job_output_path(config_data: dict | None, job_id: str | None) -> dict | None:
@@ -87,13 +87,6 @@ def _raise_if_superseded(
     attempt_count: int | None,
     worker_id: str | None = None,
 ) -> None:
-    """Abort cooperatively if a newer attempt has taken over this job (lease fencing).
-
-    The claim path increments ``attempt_count`` on every claim, so a value that no
-    longer matches the row means another worker re-claimed the job (e.g. after the
-    stale-job reaper requeued it). The losing execution must stop before allocating a
-    run directory or writing status.
-    """
     if not job_id or attempt_count is None:
         return
 
@@ -300,12 +293,6 @@ def _finalize_job_status_if_owner(
     error_message: str | None = None,
     job_runs: str | None = None,
 ) -> bool:
-    """Compare-and-swap terminal status: write only if this worker still owns the lease.
-
-    Uses ``attempt_count`` as a fencing token. Returns True if the update was applied,
-    False if the job was superseded by a newer attempt, already stopped, or missing.
-    A 'stopped' row is never overwritten, preserving a manual stop.
-    """
     try:
         from govuk_ai_accelerator_app import ProcessingJob, create_flask_app, db
 
@@ -361,12 +348,6 @@ def _finalize_job_status(
     error_message: str | None = None,
     job_runs: str | None = None,
 ) -> None:
-    """Finalize a job's terminal status, fenced when the lease token is known.
-
-    Jobs that came through the queue carry an ``attempt_count``; their terminal write
-    is a compare-and-swap so a superseded execution cannot clobber a newer attempt.
-    Direct callers without a lease (e.g. ingestion, tests) keep the legacy behaviour.
-    """
     if not job_id:
         return
     if attempt_count is None:

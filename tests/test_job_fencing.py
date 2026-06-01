@@ -1,5 +1,3 @@
-"""Lease-fencing tests: a superseded execution must not clobber a newer attempt."""
-
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -17,7 +15,6 @@ def _fencing_test_app(tmp_path):
     with app.app_context():
         app_module.db.drop_all()
         app_module.db.create_all()
-    # Helpers under test resolve their DB through create_flask_app(); pin it here.
     app_module._cached_app = app
     return app
 
@@ -33,9 +30,6 @@ def _add_job(app, **kwargs):
 def _get_job(app, job_id):
     with app.app_context():
         return app_module.db.session.get(app_module.ProcessingJob, job_id)
-
-
-# --- Gate B: fenced compare-and-swap finalize -------------------------------------
 
 
 def test_finalize_applies_when_attempt_matches(tmp_path):
@@ -57,7 +51,6 @@ def test_finalize_skipped_when_attempt_superseded(tmp_path):
     app = _fencing_test_app(tmp_path)
     _add_job(app, id="job-x", attempt_count=2, claimed_by="pod-b")
 
-    # The orphan (attempt 1) tries to finalize after pod-b (attempt 2) took over.
     applied = ontology_generator._finalize_job_status_if_owner(
         "job-x", "completed", 1, worker_id="pod-a", job_runs="run-orphan"
     )
@@ -82,9 +75,6 @@ def test_finalize_preserves_stopped(tmp_path):
     assert job.status == "stopped"
 
 
-# --- Gate A: cooperative supersede check ------------------------------------------
-
-
 def test_raise_if_superseded_raises_when_attempt_bumped(tmp_path):
     app = _fencing_test_app(tmp_path)
     _add_job(app, id="job-x", attempt_count=2, claimed_by="pod-b")
@@ -97,7 +87,6 @@ def test_raise_if_superseded_noop_when_attempt_matches(tmp_path):
     app = _fencing_test_app(tmp_path)
     _add_job(app, id="job-x", attempt_count=2, claimed_by="pod-b")
 
-    # Same attempt -> still the owner -> no raise.
     ontology_generator._raise_if_superseded("job-x", 2, "pod-b")
 
 
@@ -105,11 +94,7 @@ def test_raise_if_superseded_noop_without_token(tmp_path):
     app = _fencing_test_app(tmp_path)
     _add_job(app, id="job-x", attempt_count=2)
 
-    # Non-queue callers pass attempt_count=None and must never be fenced.
     ontology_generator._raise_if_superseded("job-x", None, None)
-
-
-# --- Background task honours the fence ---------------------------------------------
 
 
 def test_superseded_background_task_writes_no_status(tmp_path, monkeypatch):
@@ -119,7 +104,6 @@ def test_superseded_background_task_writes_no_status(tmp_path, monkeypatch):
     async def fake_pipeline(
         config_data=None, domain_prompt=None, job_id=None, attempt_count=None, worker_id=None
     ):
-        # Mimics the real pipeline reaching its first checkpoint and discovering it lost the lease.
         ontology_generator._raise_if_superseded(job_id, attempt_count, worker_id)
         return "run-should-not-exist"
 
@@ -140,7 +124,6 @@ def test_finalize_without_attempt_uses_legacy_write(tmp_path):
     app = _fencing_test_app(tmp_path)
     _add_job(app, id="legacy-job", attempt_count=1, claimed_by="pod-a")
 
-    # No lease token (e.g. ingestion / direct callers) -> legacy unconditional finalize.
     ontology_generator._finalize_job_status(
         "legacy-job", "completed", attempt_count=None, job_runs="run-legacy"
     )
@@ -149,9 +132,6 @@ def test_finalize_without_attempt_uses_legacy_write(tmp_path):
     assert job.status == "completed"
     assert job.job_runs == "run-legacy"
     assert job.claimed_by is None
-
-
-# --- End-to-end: reaper requeue + concurrent re-claim is fenced --------------------
 
 
 def test_reaper_requeue_then_reclaim_fences_original(tmp_path, monkeypatch):
@@ -176,13 +156,11 @@ def test_reaper_requeue_then_reclaim_fences_original(tmp_path, monkeypatch):
         claim_a = task_manager.claim_next_pending_job(
             db=app_module.db, job_model=app_module.ProcessingJob, worker_id="pod-a"
         )
-        # Back-date pod-a's progress so the reaper treats it as stale.
         job = app_module.db.session.get(app_module.ProcessingJob, "job-x")
         job.last_progress_at = now - timedelta(minutes=20)
         job.claimed_at = now - timedelta(minutes=20)
         app_module.db.session.commit()
 
-    # Reaper requeues the still-running job (attempt 1 < cap) without cancelling pod-a.
     task_manager.recover_stale_running_jobs(app)
 
     with app.app_context():
@@ -193,11 +171,9 @@ def test_reaper_requeue_then_reclaim_fences_original(tmp_path, monkeypatch):
     assert claim_a["attempt_count"] == 1
     assert claim_b["attempt_count"] == 2
 
-    # Orphan (pod-a) is fenced: it aborts at its next checkpoint...
     with pytest.raises(ontology_generator.JobSupersededError):
         ontology_generator._raise_if_superseded("job-x", claim_a["attempt_count"], "pod-a")
 
-    # ...and cannot finalize.
     assert (
         ontology_generator._finalize_job_status_if_owner(
             "job-x", "completed", claim_a["attempt_count"], worker_id="pod-a", job_runs="run-orphan"
@@ -205,7 +181,6 @@ def test_reaper_requeue_then_reclaim_fences_original(tmp_path, monkeypatch):
         is False
     )
 
-    # The current owner (pod-b) finalizes successfully.
     assert (
         ontology_generator._finalize_job_status_if_owner(
             "job-x", "completed", claim_b["attempt_count"], worker_id="pod-b", job_runs="run-owner"
