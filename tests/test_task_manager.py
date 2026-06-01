@@ -29,7 +29,6 @@ def test_sqlite_is_treated_as_single_leader_mode(tmp_path):
 
 
 def test_maintenance_runs_under_advisory_lock_in_sqlite(tmp_path, monkeypatch):
-    """In SQLite mode, _try_run_maintenance should run cleanup without errors."""
     monkeypatch.setattr(task_manager, "PROGRESS_TIMEOUT", timedelta(minutes=10))
     app = _queue_test_app(tmp_path)
     now = datetime.now(timezone.utc)
@@ -57,7 +56,6 @@ def test_maintenance_runs_under_advisory_lock_in_sqlite(tmp_path, monkeypatch):
 
 
 def test_two_pods_claim_different_jobs(tmp_path):
-    """Two callers using claim_next_pending_job get different jobs."""
     app = _queue_test_app(tmp_path)
     now = datetime.now(timezone.utc)
 

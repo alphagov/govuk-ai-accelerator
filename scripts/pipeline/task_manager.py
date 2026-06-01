@@ -45,7 +45,6 @@ def _uses_postgres(db) -> bool:
 
 
 def _try_acquire_leader_connection(db):
-    """Acquire a dedicated Postgres advisory lock connection for the queue leader."""
     if not _uses_postgres(db):
         logger.info("[queue] sqlite mode detected; treating this pod as leader")
         return True
@@ -66,7 +65,6 @@ def _try_acquire_leader_connection(db):
 
 
 def _release_leader_connection(connection):
-    """Release the dedicated advisory lock connection."""
     if connection is None or connection is True:
         return
 
@@ -82,9 +80,7 @@ def _release_leader_connection(connection):
         connection.close()
 
 
-
 def cleanup_stale_jobs(app):
-    """Mark jobs older than 24 hours as failed if they are still in non-terminal states."""
     with app.app_context():
         from govuk_ai_accelerator_app import ProcessingJob, db
 
@@ -116,7 +112,6 @@ def cleanup_stale_jobs(app):
 
 
 def recover_stale_running_jobs(app):
-    """Requeue running jobs whose last real progress has expired."""
     with app.app_context():
         from govuk_ai_accelerator_app import ProcessingJob, db
 
@@ -171,7 +166,6 @@ def recover_stale_running_jobs(app):
 
 
 def claim_next_pending_job(db, job_model, worker_id: str):
-    """Claim the oldest pending job using a DB-backed lease."""
     job = (
         db.session.query(job_model)
         .filter_by(status="pending")
@@ -208,7 +202,6 @@ def claim_next_pending_job(db, job_model, worker_id: str):
 
 
 def requeue_claimed_job(db, job_model, job_id: str, error_message: str | None = None):
-    """Return a claimed job to pending if submission fails before execution starts."""
     job = db.session.get(job_model, job_id)
     if job is None:
         return
@@ -224,7 +217,6 @@ def requeue_claimed_job(db, job_model, job_id: str, error_message: str | None = 
 
 
 def mark_job_failed_if_still_running(db, job_model, job_id: str, error_message: str) -> bool:
-    """Mark a job failed after worker failure, unless another path already finalized it."""
     job = db.session.get(job_model, job_id)
     if job is None or job.status != "running":
         return False
@@ -240,7 +232,6 @@ def mark_job_failed_if_still_running(db, job_model, job_id: str, error_message: 
 
 
 def run_claimed_job(app, worker_id: str, claimed_job: dict):
-    """Run a claimed job without a synthetic heartbeat thread."""
     logger.info(
         f"[job={claimed_job['job_id']}] execution starting "
         f"worker={worker_id} domain={claimed_job['domain']} attempt={claimed_job['attempt_count']}"
@@ -269,7 +260,6 @@ def run_claimed_job(app, worker_id: str, claimed_job: dict):
 
 
 def handle_finished_job_future(app, worker_id: str, claimed_job: dict, future) -> None:
-    """Persist a terminal failure if the worker future failed before updating the job row."""
     try:
         exception = future.exception()
     except CancelledError as exc:
@@ -300,7 +290,6 @@ def handle_finished_job_future(app, worker_id: str, claimed_job: dict, future) -
 
 
 def _try_run_maintenance(app, db):
-    """Run stale-job recovery and cleanup if this pod can acquire the advisory lock."""
     connection = _try_acquire_leader_connection(db)
     if connection is None:
         return
@@ -313,7 +302,6 @@ def _try_run_maintenance(app, db):
 
 
 def start_task_manager(app):
-    """Start a background daemon thread that polls the database for pending jobs."""
 
     def worker():
         from scripts.pipeline.utils import executor
