@@ -13,7 +13,25 @@ from scripts.pipeline.constants import EXECUTOR_MAX_WORKERS
 from scripts.pipeline.logging_config import logger
 
 
-PROGRESS_TIMEOUT = timedelta(minutes=10)
+def _progress_timeout() -> timedelta:
+    raw = os.getenv("PROGRESS_TIMEOUT_MINUTES", "45")
+    try:
+        minutes = int(raw)
+    except (TypeError, ValueError):
+        minutes = 45
+    return timedelta(minutes=max(minutes, 1))
+
+
+def _max_job_attempts() -> int:
+    raw = os.getenv("MAX_JOB_ATTEMPTS", "2")
+    try:
+        return max(int(raw), 1)
+    except (TypeError, ValueError):
+        return 2
+
+
+PROGRESS_TIMEOUT = _progress_timeout()
+MAX_JOB_ATTEMPTS = _max_job_attempts()
 IDLE_POLL_INTERVAL_SECONDS = 5
 LEADER_LOCK_ID = 420021
 
@@ -27,7 +45,6 @@ def _uses_postgres(db) -> bool:
 
 
 def _try_acquire_leader_connection(db):
-    """Acquire a dedicated Postgres advisory lock connection for the queue leader."""
     if not _uses_postgres(db):
         logger.info("[queue] sqlite mode detected; treating this pod as leader")
         return True
@@ -48,7 +65,6 @@ def _try_acquire_leader_connection(db):
 
 
 def _release_leader_connection(connection):
-    """Release the dedicated advisory lock connection."""
     if connection is None or connection is True:
         return
 
@@ -64,9 +80,7 @@ def _release_leader_connection(connection):
         connection.close()
 
 
-
 def cleanup_stale_jobs(app):
-    """Mark jobs older than 24 hours as failed if they are still in non-terminal states."""
     with app.app_context():
         from govuk_ai_accelerator_app import ProcessingJob, db
 
@@ -98,7 +112,6 @@ def cleanup_stale_jobs(app):
 
 
 def recover_stale_running_jobs(app):
-    """Requeue running jobs whose last real progress has expired."""
     with app.app_context():
         from govuk_ai_accelerator_app import ProcessingJob, db
 
@@ -121,17 +134,28 @@ def recover_stale_running_jobs(app):
             ).all()
 
             for job in stale_jobs:
-                logger.info(
-                    f"[job={job.id}] requeueing stale job "
-                    f"domain={job.domain} worker={job.claimed_by} "
-                    f"claimed_at={job.claimed_at} last_progress_at={job.last_progress_at} "
-                    f"attempt={job.attempt_count}"
-                )
-                job.status = "pending"
+                if (job.attempt_count or 0) >= MAX_JOB_ATTEMPTS:
+                    logger.warning(
+                        f"[job={job.id}] exceeded max attempts={job.attempt_count}; marking failed "
+                        f"domain={job.domain} worker={job.claimed_by} "
+                        f"last_progress_at={job.last_progress_at}"
+                    )
+                    job.status = "failed"
+                    job.error_message = (
+                        f"Job exceeded {MAX_JOB_ATTEMPTS} attempts without completing; not requeued."
+                    )
+                else:
+                    logger.info(
+                        f"[job={job.id}] requeueing stale job "
+                        f"domain={job.domain} worker={job.claimed_by} "
+                        f"claimed_at={job.claimed_at} last_progress_at={job.last_progress_at} "
+                        f"attempt={job.attempt_count}"
+                    )
+                    job.status = "pending"
+                    job.error_message = "Job progress timed out; requeued."
                 job.claimed_by = None
                 job.claimed_at = None
                 job.heartbeat_at = None
-                job.error_message = "Job progress timed out; requeued."
 
             if stale_jobs:
                 db.session.commit()
@@ -142,7 +166,6 @@ def recover_stale_running_jobs(app):
 
 
 def claim_next_pending_job(db, job_model, worker_id: str):
-    """Claim the oldest pending job using a DB-backed lease."""
     job = (
         db.session.query(job_model)
         .filter_by(status="pending")
@@ -179,7 +202,6 @@ def claim_next_pending_job(db, job_model, worker_id: str):
 
 
 def requeue_claimed_job(db, job_model, job_id: str, error_message: str | None = None):
-    """Return a claimed job to pending if submission fails before execution starts."""
     job = db.session.get(job_model, job_id)
     if job is None:
         return
@@ -195,7 +217,6 @@ def requeue_claimed_job(db, job_model, job_id: str, error_message: str | None = 
 
 
 def mark_job_failed_if_still_running(db, job_model, job_id: str, error_message: str) -> bool:
-    """Mark a job failed after worker failure, unless another path already finalized it."""
     job = db.session.get(job_model, job_id)
     if job is None or job.status != "running":
         return False
@@ -211,7 +232,6 @@ def mark_job_failed_if_still_running(db, job_model, job_id: str, error_message: 
 
 
 def run_claimed_job(app, worker_id: str, claimed_job: dict):
-    """Run a claimed job without a synthetic heartbeat thread."""
     logger.info(
         f"[job={claimed_job['job_id']}] execution starting "
         f"worker={worker_id} domain={claimed_job['domain']} attempt={claimed_job['attempt_count']}"
@@ -230,6 +250,8 @@ def run_claimed_job(app, worker_id: str, claimed_job: dict):
         claimed_job["config_data"],
         claimed_job["domain_prompt"],
         claimed_job["job_id"],
+        attempt_count=claimed_job.get("attempt_count"),
+        worker_id=worker_id,
     )
     logger.info(
         f"[job={claimed_job['job_id']}] execution returned "
@@ -238,7 +260,6 @@ def run_claimed_job(app, worker_id: str, claimed_job: dict):
 
 
 def handle_finished_job_future(app, worker_id: str, claimed_job: dict, future) -> None:
-    """Persist a terminal failure if the worker future failed before updating the job row."""
     try:
         exception = future.exception()
     except CancelledError as exc:
@@ -269,7 +290,6 @@ def handle_finished_job_future(app, worker_id: str, claimed_job: dict, future) -
 
 
 def _try_run_maintenance(app, db):
-    """Run stale-job recovery and cleanup if this pod can acquire the advisory lock."""
     connection = _try_acquire_leader_connection(db)
     if connection is None:
         return
@@ -282,7 +302,6 @@ def _try_run_maintenance(app, db):
 
 
 def start_task_manager(app):
-    """Start a background daemon thread that polls the database for pending jobs."""
 
     def worker():
         from scripts.pipeline.utils import executor
