@@ -80,6 +80,18 @@ def _release_leader_connection(connection):
         connection.close()
 
 
+def log_worker_slot_state(*, saturated, was_saturated, worker_id, max_workers) -> bool:
+    became_full = saturated and not was_saturated
+    freed_up = was_saturated and not saturated
+    if became_full:
+        logger.info(f"[queue] worker pool full ({max_workers} busy) worker={worker_id}")
+    elif freed_up:
+        logger.info(f"[queue] worker slot free worker={worker_id}")
+    elif saturated:
+        logger.debug(f"[queue] worker pool still full worker={worker_id}")
+    return saturated
+
+
 def cleanup_stale_jobs(app):
     with app.app_context():
         from govuk_ai_accelerator_app import ProcessingJob, db
@@ -310,6 +322,7 @@ def start_task_manager(app):
         slots = threading.BoundedSemaphore(EXECUTOR_MAX_WORKERS)
         last_cleanup = 0.0
         cleanup_interval = 60
+        was_saturated = False
 
         logger.info(
             f"[queue] task manager thread started worker={worker_id} max_workers={EXECUTOR_MAX_WORKERS}"
@@ -324,8 +337,14 @@ def start_task_manager(app):
                         _try_run_maintenance(app, db)
                     last_cleanup = time.time()
 
-                if not slots.acquire(blocking=False):
-                    logger.info(f"[queue] no free worker slots on worker={worker_id}")
+                acquired = slots.acquire(blocking=False)
+                was_saturated = log_worker_slot_state(
+                    saturated=not acquired,
+                    was_saturated=was_saturated,
+                    worker_id=worker_id,
+                    max_workers=EXECUTOR_MAX_WORKERS,
+                )
+                if not acquired:
                     time.sleep(1)
                     continue
 

@@ -488,3 +488,40 @@ def test_postgres_not_acquired_line_is_debug(monkeypatch, caplog):
     assert result is None
     messages = [(r.levelno, r.getMessage()) for r in caplog.records]
     assert any("not acquired" in msg and level == logging.DEBUG for level, msg in messages)
+
+
+def test_log_worker_slot_state_becomes_full(caplog):
+    with caplog.at_level(logging.INFO, logger="govuk-ai-accelerator"):
+        result = task_manager.log_worker_slot_state(
+            saturated=True, was_saturated=False, worker_id="W1", max_workers=1
+        )
+    assert result is True
+    info = [r for r in caplog.records if r.levelno == logging.INFO]
+    assert len(info) == 1 and "worker pool full" in info[0].getMessage()
+
+
+def test_log_worker_slot_state_stays_full_is_quiet(caplog):
+    with caplog.at_level(logging.INFO, logger="govuk-ai-accelerator"):
+        task_manager.log_worker_slot_state(
+            saturated=True, was_saturated=True, worker_id="W1", max_workers=1
+        )
+    assert not [r for r in caplog.records if r.levelno == logging.INFO]
+
+
+def test_log_worker_slot_state_frees_up(caplog):
+    with caplog.at_level(logging.INFO, logger="govuk-ai-accelerator"):
+        result = task_manager.log_worker_slot_state(
+            saturated=False, was_saturated=True, worker_id="W1", max_workers=1
+        )
+    assert result is False
+    info = [r for r in caplog.records if r.levelno == logging.INFO]
+    assert len(info) == 1 and "worker slot free" in info[0].getMessage()
+
+
+def test_log_worker_slot_state_stays_free_is_silent(caplog):
+    with caplog.at_level(logging.DEBUG, logger="govuk-ai-accelerator"):
+        result = task_manager.log_worker_slot_state(
+            saturated=False, was_saturated=False, worker_id="W1", max_workers=1
+        )
+    assert result is False
+    assert not caplog.records
