@@ -525,3 +525,40 @@ def test_log_worker_slot_state_stays_free_is_silent(caplog):
         )
     assert result is False
     assert not caplog.records
+
+
+def _seed_running_job(app, job_id="JID-5", domain="visa", worker="W1"):
+    with app.app_context():
+        job = app_module.ProcessingJob(
+            id=job_id, status="running", domain=domain, claimed_by=worker
+        )
+        app_module.db.session.add(job)
+        app_module.db.session.commit()
+    return job_id
+
+
+def test_requeue_log_includes_domain_and_worker(tmp_path, caplog):
+    app = _queue_test_app(tmp_path)
+    job_id = _seed_running_job(app)
+    with app.app_context():
+        with caplog.at_level(logging.INFO, logger="govuk-ai-accelerator"):
+            task_manager.requeue_claimed_job(
+                db=app_module.db, job_model=app_module.ProcessingJob, job_id=job_id
+            )
+    msg = " ".join(r.getMessage() for r in caplog.records)
+    assert f"job={job_id}" in msg and "domain=visa" in msg and "worker=W1" in msg
+
+
+def test_mark_failed_log_includes_domain_and_worker(tmp_path, caplog):
+    app = _queue_test_app(tmp_path)
+    job_id = _seed_running_job(app)
+    with app.app_context():
+        with caplog.at_level(logging.INFO, logger="govuk-ai-accelerator"):
+            task_manager.mark_job_failed_if_still_running(
+                db=app_module.db,
+                job_model=app_module.ProcessingJob,
+                job_id=job_id,
+                error_message="boom",
+            )
+    msg = " ".join(r.getMessage() for r in caplog.records)
+    assert f"job={job_id}" in msg and "domain=visa" in msg and "worker=W1" in msg

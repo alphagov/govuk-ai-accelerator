@@ -218,7 +218,10 @@ def requeue_claimed_job(db, job_model, job_id: str, error_message: str | None = 
     if job is None:
         return
 
-    logger.info(f"[job={job_id}] requeueing after executor submission failure")
+    logger.info(
+        f"[job={job_id}] requeueing after executor submission failure "
+        f"domain={job.domain} worker={job.claimed_by}"
+    )
     job.status = "pending"
     job.claimed_by = None
     job.claimed_at = None
@@ -233,7 +236,10 @@ def mark_job_failed_if_still_running(db, job_model, job_id: str, error_message: 
     if job is None or job.status != "running":
         return False
 
-    logger.info(f"[job={job_id}] marking running job as failed after worker failure")
+    logger.info(
+        f"[job={job_id}] marking running job as failed after worker failure "
+        f"domain={job.domain} worker={job.claimed_by}"
+    )
     job.status = "failed"
     job.error_message = error_message
     job.claimed_by = None
@@ -244,7 +250,7 @@ def mark_job_failed_if_still_running(db, job_model, job_id: str, error_message: 
 
 
 def run_claimed_job(app, worker_id: str, claimed_job: dict):
-    logger.info(
+    logger.debug(
         f"[job={claimed_job['job_id']}] execution starting "
         f"worker={worker_id} domain={claimed_job['domain']} attempt={claimed_job['attempt_count']}"
     )
@@ -265,7 +271,7 @@ def run_claimed_job(app, worker_id: str, claimed_job: dict):
         attempt_count=claimed_job.get("attempt_count"),
         worker_id=worker_id,
     )
-    logger.info(
+    logger.debug(
         f"[job={claimed_job['job_id']}] execution returned "
         f"worker={worker_id} domain={claimed_job['domain']}"
     )
@@ -379,7 +385,7 @@ def start_task_manager(app):
 
                 def _release_slot(_future):
                     handle_finished_job_future(app, worker_id, claimed_job, _future)
-                    logger.info(
+                    logger.debug(
                         f"[job={claimed_job['job_id']}] releasing worker slot on worker={worker_id}"
                     )
                     slots.release()
