@@ -3,6 +3,7 @@ import types
 
 from scripts.pipeline import ontology_generator as og
 from scripts.pipeline import ontology_harness as oh
+from scripts.ingestion import ingestion_pipeline as ing
 
 
 class _FakeState:
@@ -119,3 +120,33 @@ def test_harness_failure_log_includes_job_and_domain(monkeypatch, caplog):
 
     errors = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
     assert any("job=JID-7" in m and "domain=visa" in m for m in errors)
+
+
+def test_ingestion_logs_lifecycle_through_shared_logger(tmp_path, monkeypatch, caplog, capsys):
+    import govuk_ai_accelerator_app as app_module
+    from flask import Flask
+
+    app = Flask(__name__)
+    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{tmp_path / 'ing.db'}"
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app_module.db.init_app(app)
+    with app.app_context():
+        app_module.db.create_all()
+        app_module.db.session.add(
+            app_module.ProcessingJob(id="ING-1", status="pending", pipeline="ingestion", domain="visa")
+        )
+        app_module.db.session.commit()
+
+    monkeypatch.setattr(app_module, "create_flask_app", lambda: app)
+    monkeypatch.setattr(ing, "load_config", lambda **kwargs: types.SimpleNamespace(final_log_url=None))
+    monkeypatch.setattr(ing, "download_content", lambda config: None)
+    monkeypatch.setattr(ing, "clean_content", lambda config: None)
+
+    with caplog.at_level(logging.INFO, logger="govuk-ai-accelerator"):
+        ing.run_ingestion_background_task(job_id="ING-1", domain="visa")
+
+    messages = [r.getMessage() for r in caplog.records]
+    assert any("Running ingestion pipeline" in m and "job=ING-1" in m and "domain=visa" in m for m in messages)
+    assert any("Successfully ran ingestion pipeline" in m and "job=ING-1" in m for m in messages)
+    assert not any("🚀" in m or "✅" in m or "❌" in m for m in messages)
+    assert "DEBUG: Starting ingestion job" not in capsys.readouterr().out
