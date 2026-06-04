@@ -46,7 +46,7 @@ def _uses_postgres(db) -> bool:
 
 def _try_acquire_leader_connection(db):
     if not _uses_postgres(db):
-        logger.info("[queue] sqlite mode detected; treating this pod as leader")
+        logger.debug("[queue] sqlite mode detected; treating this pod as leader")
         return True
 
     connection = db.engine.connect()
@@ -56,11 +56,11 @@ def _try_acquire_leader_connection(db):
     ).scalar()
 
     if acquired:
-        logger.info(f"[queue] advisory lock {LEADER_LOCK_ID} acquired")
+        logger.debug(f"[queue] advisory lock {LEADER_LOCK_ID} acquired")
         return connection
 
     connection.close()
-    logger.info(f"[queue] advisory lock {LEADER_LOCK_ID} not acquired")
+    logger.debug(f"[queue] advisory lock {LEADER_LOCK_ID} not acquired")
     return None
 
 
@@ -73,7 +73,7 @@ def _release_leader_connection(connection):
             text("SELECT pg_advisory_unlock(:lock_id)"),
             {"lock_id": LEADER_LOCK_ID},
         )
-        logger.info(f"[queue] advisory lock {LEADER_LOCK_ID} released")
+        logger.debug(f"[queue] advisory lock {LEADER_LOCK_ID} released")
     except Exception:
         pass
     finally:

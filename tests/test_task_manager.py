@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import logging
 import sys
 from types import SimpleNamespace
 
@@ -428,3 +429,62 @@ def test_max_job_attempts_env_parsing(monkeypatch):
 
     monkeypatch.delenv("MAX_JOB_ATTEMPTS", raising=False)
     assert task_manager._max_job_attempts() == 2
+
+
+def test_sqlite_leader_line_is_debug_not_info(tmp_path, caplog):
+    app = _queue_test_app(tmp_path)
+    with app.app_context():
+        with caplog.at_level(logging.INFO, logger="govuk-ai-accelerator"):
+            task_manager._try_acquire_leader_connection(app_module.db)
+        assert not any("sqlite mode" in r.getMessage() for r in caplog.records)
+        caplog.clear()
+        with caplog.at_level(logging.DEBUG, logger="govuk-ai-accelerator"):
+            task_manager._try_acquire_leader_connection(app_module.db)
+        assert any(
+            "sqlite mode" in r.getMessage() and r.levelno == logging.DEBUG
+            for r in caplog.records
+        )
+
+
+class _FakeScalarResult:
+    def __init__(self, value):
+        self._value = value
+
+    def scalar(self):
+        return self._value
+
+
+class _FakeConnection:
+    def __init__(self, acquired):
+        self._acquired = acquired
+        self.closed = False
+
+    def execute(self, *args, **kwargs):
+        return _FakeScalarResult(self._acquired)
+
+    def close(self):
+        self.closed = True
+
+
+def test_postgres_advisory_lines_are_debug(monkeypatch, caplog):
+    monkeypatch.setattr(task_manager, "_uses_postgres", lambda db: True)
+    fake_conn = _FakeConnection(acquired=True)
+    fake_db = type("DB", (), {"engine": type("E", (), {"connect": lambda self: fake_conn})()})()
+    with caplog.at_level(logging.DEBUG, logger="govuk-ai-accelerator"):
+        conn = task_manager._try_acquire_leader_connection(fake_db)
+        task_manager._release_leader_connection(conn)
+    messages = [(r.levelno, r.getMessage()) for r in caplog.records]
+    assert all(level == logging.DEBUG for level, msg in messages if "advisory lock" in msg)
+    assert any("acquired" in msg for _, msg in messages)
+    assert any("released" in msg for _, msg in messages)
+
+
+def test_postgres_not_acquired_line_is_debug(monkeypatch, caplog):
+    monkeypatch.setattr(task_manager, "_uses_postgres", lambda db: True)
+    fake_conn = _FakeConnection(acquired=False)
+    fake_db = type("DB", (), {"engine": type("E", (), {"connect": lambda self: fake_conn})()})()
+    with caplog.at_level(logging.DEBUG, logger="govuk-ai-accelerator"):
+        result = task_manager._try_acquire_leader_connection(fake_db)
+    assert result is None
+    messages = [(r.levelno, r.getMessage()) for r in caplog.records]
+    assert any("not acquired" in msg and level == logging.DEBUG for level, msg in messages)
