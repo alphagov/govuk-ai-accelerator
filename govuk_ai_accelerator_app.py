@@ -19,6 +19,7 @@ from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse
 from scripts.pipeline.ontology_harness import schedule_ontology_harness
 from scripts.pipeline.task_manager import start_task_manager
+from scripts.pipeline.logging_config import configure_logging
 from scripts.pipeline.utils import error_response, is_yaml_file, executor
 from scripts.pipeline.constants import APP_HOST, APP_PORT, BLUEPRINTS
 from scripts.ingestion.commands.utils import DEFAULT_S3_BUCKET
@@ -384,6 +385,7 @@ _cached_app = None
 
 def create_flask_app():
     global _cached_app
+    configure_logging()
     if _cached_app:
         return _cached_app
 
