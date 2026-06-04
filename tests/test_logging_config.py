@@ -85,3 +85,16 @@ def test_log_step_failure_logs_error_and_reraises(caplog):
 def test_format_context_orders_job_first_and_skips_when_empty():
     assert logging_config._format_context({}) == ""
     assert logging_config._format_context({"job": "J", "domain": "d"}) == " job=J domain=d"
+
+
+def test_logger_stays_enabled_after_app_creation_runs_migrations(monkeypatch, caplog):
+    monkeypatch.setenv("ALLOW_IN_MEMORY_DB", "true")
+    monkeypatch.setenv("DISABLE_TASK_MANAGER", "true")
+    import govuk_ai_accelerator_app as app_module
+
+    monkeypatch.setattr(app_module, "_cached_app", None)
+    app_module.create_flask_app()
+
+    with caplog.at_level(logging.INFO, logger="govuk-ai-accelerator"):
+        logging_config.logger.info("post-migration-line")
+    assert any("post-migration-line" in r.getMessage() for r in caplog.records)
