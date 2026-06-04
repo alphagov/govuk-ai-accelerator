@@ -1,6 +1,8 @@
 import logging
 import os
 import sys
+import time
+from contextlib import contextmanager
 from datetime import datetime, timezone
 
 _HANDLER_NAME = "govuk-ai-accelerator-stdout"
@@ -33,4 +35,25 @@ def configure_logging() -> None:
 
 logger = logging.getLogger("govuk-ai-accelerator")
 
-__all__ = ["logger", "configure_logging", "UtcIsoFormatter"]
+
+def _format_context(context: dict) -> str:
+    if not context:
+        return ""
+    return " " + " ".join(f"{key}={value}" for key, value in context.items())
+
+
+@contextmanager
+def log_step(starting: str, completed: str, **context):
+    ctx = _format_context(context)
+    logger.debug(f"{starting}…{ctx}")
+    start = time.monotonic()
+    try:
+        yield
+    except Exception as exc:
+        logger.error(f"Error {starting[0].lower() + starting[1:]}{ctx}: {exc}")
+        raise
+    elapsed = time.monotonic() - start
+    logger.info(f"Successfully {completed} in {elapsed:.1f}s{ctx}")
+
+
+__all__ = ["logger", "configure_logging", "UtcIsoFormatter", "log_step"]

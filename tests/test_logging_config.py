@@ -1,6 +1,8 @@
 import logging
 import re
 
+import pytest
+
 from scripts.pipeline import logging_config
 
 
@@ -51,3 +53,35 @@ def test_configure_logging_falls_back_to_info_on_bad_level(monkeypatch):
     monkeypatch.setenv("LOG_LEVEL", "NONSENSE")
     logging_config.configure_logging()
     assert root.level == logging.INFO
+
+
+def test_log_step_success_logs_start_debug_and_success_info(monkeypatch, caplog):
+    times = iter([100.0, 102.5])
+    monkeypatch.setattr(logging_config.time, "monotonic", lambda: next(times))
+    with caplog.at_level(logging.DEBUG, logger="govuk-ai-accelerator"):
+        with logging_config.log_step(
+            "Extracting ontology data", "extracted ontology data", job="JID", domain="visa"
+        ):
+            pass
+    debug = [r for r in caplog.records if r.levelno == logging.DEBUG]
+    info = [r for r in caplog.records if r.levelno == logging.INFO]
+    assert any("Extracting ontology data" in r.getMessage() for r in debug)
+    assert len(info) == 1
+    msg = info[0].getMessage()
+    assert "Successfully extracted ontology data in 2.5s" in msg
+    assert "job=JID" in msg and "domain=visa" in msg
+
+
+def test_log_step_failure_logs_error_and_reraises(caplog):
+    with caplog.at_level(logging.DEBUG, logger="govuk-ai-accelerator"):
+        with pytest.raises(ValueError, match="boom"):
+            with logging_config.log_step("Creating ontology graph", "created ontology graph", job="JID"):
+                raise ValueError("boom")
+    errors = [r for r in caplog.records if r.levelno == logging.ERROR]
+    assert len(errors) == 1
+    assert "Error creating ontology graph job=JID: boom" in errors[0].getMessage()
+
+
+def test_format_context_orders_job_first_and_skips_when_empty():
+    assert logging_config._format_context({}) == ""
+    assert logging_config._format_context({"job": "J", "domain": "d"}) == " job=J domain=d"
