@@ -2,6 +2,7 @@ import logging
 import types
 
 from scripts.pipeline import ontology_generator as og
+from scripts.pipeline import ontology_harness as oh
 
 
 class _FakeState:
@@ -95,3 +96,26 @@ def test_pipeline_logs_three_phase_per_step(monkeypatch, caplog):
     assert any("Successfully set up ontology pipeline in" in m and "job=JID-1" in m for m in messages)
     assert any("Successfully processed ontology data in" in m and "job=JID-1" in m for m in messages)
     assert any("Successfully saved pipeline output in" in m and "job=JID-1" in m for m in messages)
+
+
+def test_harness_failure_log_includes_job_and_domain(monkeypatch, caplog):
+    def _boom(*args, **kwargs):
+        raise RuntimeError("kaboom")
+
+    monkeypatch.setattr(oh.asyncio, "run", _boom)
+    monkeypatch.setattr(oh, "_finalize_job_status", lambda *a, **k: None)
+
+    with caplog.at_level(logging.ERROR, logger="govuk-ai-accelerator"):
+        try:
+            oh.run_ontology_harness_background_task(
+                config={"domain_name": "visa"},
+                domain_prompt="",
+                job_id="JID-7",
+                attempt_count=1,
+                worker_id="W1",
+            )
+        except RuntimeError:
+            pass
+
+    errors = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
+    assert any("job=JID-7" in m and "domain=visa" in m for m in errors)
