@@ -205,7 +205,7 @@
                     <!-- LLM Model Selection -->
                     <div class="input-field" style="margin-bottom: 1.5rem;">
                         <select id="model-selector">
-                            <option value="bedrock:eu.anthropic.claude-sonnet-4-6" selected>Claude 3.5 Sonnet (Bedrock)</option>
+                            <option value="bedrock:eu.anthropic.claude-sonnet-4-6" selected>Claude 3.5 Sonnet (bedrock:eu.anthropic.claude-sonnet-4-6)</option>
                             <option value="google-vertex:gemini-1.5-pro">Gemini 1.5 Pro (Vertex)</option>
                             <option value="google-vertex:gemini-1.5-flash">Gemini 1.5 Flash (Vertex)</option>
                             <option value="bedrock:eu.anthropic.claude-3-5-haiku-20241022-v1:0">Claude 3.5 Haiku (Bedrock)</option>
@@ -221,12 +221,18 @@
                     </div>
 
                     <!-- Temperature Slider -->
-                    <div class="range-field" style="margin-bottom: 2rem;">
+                    <div class="range-field" style="margin-bottom: 1.5rem;">
                         <label for="temp-slider" style="font-size: 0.95rem; color: #0b0c0c; font-weight: bold;">
                             Temperature: <span id="temp-val" style="color: #1d70b8; margin-left: 5px; font-weight: 800;">0.00</span>
                             <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Controls LLM response randomness. Lower values are more deterministic and focused.">info_outline</i>
                         </label>
                         <input type="range" id="temp-slider" min="0.0" max="1.0" step="0.05" value="0.00" style="margin-top: 8px; border: none;">
+                    </div>
+
+                    <!-- Extraction Prompt File Path -->
+                    <div class="input-field" style="margin-bottom: 2rem;">
+                        <input type="text" id="config-extraction-prompt-file" placeholder="e.g. domains/travel/prompts/custom_extraction.txt" class="validate">
+                        <label for="config-extraction-prompt-file" class="active">Custom Prompt File Path <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Optional path to custom extraction prompt file (relative or absolute).">info_outline</i></label>
                     </div>
 
                     <!-- Advanced Toggle Switch -->
@@ -340,12 +346,39 @@
                                         <input type="text" id="config-export-uri" class="validate">
                                         <label for="config-export-uri" class="active">Base Ontology URI <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="The base URI for the generated OWL ontology metadata.">info_outline</i></label>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 5px 0;">
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
                                         <select id="config-export-format">
                                             <option value="turtle">Turtle (.ttl)</option>
                                             <option value="rdfxml">RDF/XML (.rdf)</option>
                                         </select>
                                         <label style="position: static; font-size: 0.9rem;">Export Format <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="File format for the exported ontology (Turtle or RDF/XML).">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <select id="config-spelling-variant">
+                                            <option value="US">US Spelling</option>
+                                            <option value="UK">UK Spelling</option>
+                                            <option value="preserve">Preserve Original</option>
+                                        </select>
+                                        <label style="position: static; font-size: 0.9rem;">Spelling Variant <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Standard spelling convention for generated terms (US or UK).">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <select id="config-label-casing">
+                                            <option value="UpperCamelCase">UpperCamelCase</option>
+                                            <option value="lowerCamelCase">lowerCamelCase</option>
+                                            <option value="snake_case">snake_case</option>
+                                            <option value="preserve">Preserve Original</option>
+                                        </select>
+                                        <label style="position: static; font-size: 0.9rem;">Entity Casing Style <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Casing format applied to generated ontology entity labels.">info_outline</i></label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 5px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span style="display: inline-flex; align-items: center; gap: 4px;">
+                                                Type-Aware Canonical Keys
+                                                <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Prefix canonical keys with type to prevent cross-type identity collisions." style="margin-top: -2px;">info_outline</i>
+                                            </span>
+                                            <input type="checkbox" id="config-type-aware-keys">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
                                     </div>
                                 </div>
                             </li>
@@ -368,13 +401,40 @@
                                             <span class="lever" style="margin-right: 0;"></span>
                                         </label>
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 5px 0;">
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
                                         <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
                                             <span style="display: inline-flex; align-items: center; gap: 4px;">
                                                 Term Extraction Enabled
                                                 <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Perform initial terminology extraction before relationship generation." style="margin-top: -2px;">info_outline</i>
                                             </span>
                                             <input type="checkbox" id="config-term-extraction">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 5px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span style="display: inline-flex; align-items: center; gap: 4px;">
+                                                Auto-Resume Checkpoint
+                                                <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Automatically resume from checkpoint if available, instead of starting fresh." style="margin-top: -2px;">info_outline</i>
+                                            </span>
+                                            <input type="checkbox" id="config-auto-resume">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </li>
+
+                            <!-- Section 6: Relationships -->
+                            <li>
+                                <div class="collapsible-header"><i class="material-icons">share</i>Relationships<i class="material-icons chevron-icon">expand_more</i></div>
+                                <div class="collapsible-body">
+                                    <div class="switch" style="margin: 5px 0 5px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span style="display: inline-flex; align-items: center; gap: 4px;">
+                                                Auto-Create Entities
+                                                <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Automatically create missing entities referenced in relationships." style="margin-top: -2px;">info_outline</i>
+                                            </span>
+                                            <input type="checkbox" id="config-auto-create-entities">
                                             <span class="lever" style="margin-right: 0;"></span>
                                         </label>
                                     </div>
@@ -441,6 +501,9 @@
             document.getElementById('temp-slider').value = tempVal;
             document.getElementById('temp-val').textContent = parseFloat(tempVal).toFixed(2);
 
+            // Custom prompt file
+            document.getElementById('config-extraction-prompt-file').value = config.llm?.extraction_prompt_file || '';
+
             // Paths & Outputs
             document.getElementById('config-entity-prefix').value = config.output?.entity_id_prefix || 'entity_';
             document.getElementById('config-rel-prefix').value = config.output?.relationship_id_prefix || 'rel_';
@@ -468,14 +531,21 @@
             document.getElementById('config-export-enabled').checked = config.output?.export?.enabled !== false;
             document.getElementById('config-export-uri').value = config.output?.export?.base_uri || 'http://example.org/ontology';
             document.getElementById('config-export-format').value = config.output?.export?.format || 'turtle';
+            document.getElementById('config-spelling-variant').value = config.naming_conventions?.spelling_variant || 'US';
+            document.getElementById('config-label-casing').value = config.naming_conventions?.entity_label_casing || 'UpperCamelCase';
+            document.getElementById('config-type-aware-keys').checked = config.output?.type_aware_canonical_keys !== false;
 
             // Pipeline & Performance
             document.getElementById('config-parallel-files').value = config.parallel_files !== undefined ? config.parallel_files : 20;
             document.getElementById('config-batch-api').checked = !!config.batch_api_enabled;
             document.getElementById('config-term-extraction').checked = config.term_extraction?.enabled !== false;
+            document.getElementById('config-auto-resume').checked = config.checkpointing?.auto_resume !== false;
+
+            // Relationships
+            document.getElementById('config-auto-create-entities').checked = config.relationship_processing?.auto_create_missing_entities !== false;
 
             // Re-initialize select elements
-            M.FormSelect.init(document.querySelectorAll('#model-selector, #config-conflict-strat, #config-export-format'));
+            M.FormSelect.init(document.querySelectorAll('#model-selector, #config-conflict-strat, #config-export-format, #config-spelling-variant, #config-label-casing'));
             M.updateTextFields();
         }
 
@@ -490,6 +560,9 @@
 
             // Temperature
             config.llm.temperature = parseFloat(document.getElementById('temp-slider').value);
+
+            // Prompt file
+            config.llm.extraction_prompt_file = document.getElementById('config-extraction-prompt-file').value.trim() || null;
 
             // Paths & Outputs
             if (!config.output) config.output = {};
@@ -518,12 +591,22 @@
             config.output.export.enabled = document.getElementById('config-export-enabled').checked;
             config.output.export.base_uri = document.getElementById('config-export-uri').value;
             config.output.export.format = document.getElementById('config-export-format').value;
+            if (!config.naming_conventions) config.naming_conventions = {};
+            config.naming_conventions.spelling_variant = document.getElementById('config-spelling-variant').value;
+            config.naming_conventions.entity_label_casing = document.getElementById('config-label-casing').value;
+            config.output.type_aware_canonical_keys = document.getElementById('config-type-aware-keys').checked;
 
             // Pipeline & Performance
             config.parallel_files = parseInt(document.getElementById('config-parallel-files').value) || 20;
             config.batch_api_enabled = document.getElementById('config-batch-api').checked;
             if (!config.term_extraction) config.term_extraction = {};
             config.term_extraction.enabled = document.getElementById('config-term-extraction').checked;
+            if (!config.checkpointing) config.checkpointing = {};
+            config.checkpointing.auto_resume = document.getElementById('config-auto-resume').checked;
+
+            // Relationships
+            if (!config.relationship_processing) config.relationship_processing = {};
+            config.relationship_processing.auto_create_missing_entities = document.getElementById('config-auto-create-entities').checked;
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -533,7 +616,7 @@
             const fileList = document.getElementById('file-list');
 
             // Initialize Materialize select, collapsible, and tooltip elements
-            M.FormSelect.init(document.querySelectorAll('#model-selector, #config-conflict-strat, #config-export-format'));
+            M.FormSelect.init(document.querySelectorAll('#model-selector, #config-conflict-strat, #config-export-format, #config-spelling-variant, #config-label-casing'));
             M.Collapsible.init(document.querySelectorAll('#advanced-collapsible'));
             M.Tooltip.init(document.querySelectorAll('.tooltipped'));
             M.Modal.init(document.getElementById('notes-modal'), { dismissible: true });
