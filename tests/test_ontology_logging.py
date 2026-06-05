@@ -1,4 +1,5 @@
 import logging
+import sys
 import types
 
 from scripts.pipeline import ontology_generator as og
@@ -71,9 +72,17 @@ def test_pipeline_logs_three_phase_per_step(monkeypatch, caplog):
     monkeypatch.setattr(og, "_raise_if_job_stopped", lambda *a, **k: None)
     monkeypatch.setattr(og, "_raise_if_superseded", lambda *a, **k: None)
 
-    import taxonomy_ontology_accelerator.ontology_engine.pipeline_builder as pb
-
-    monkeypatch.setattr(pb, "OntologyPipelineBuilder", lambda **kwargs: _FakePipeline())
+    pipeline_builder = types.ModuleType("taxonomy_ontology_accelerator.ontology_engine.pipeline_builder")
+    pipeline_builder.OntologyPipelineBuilder = lambda **kwargs: _FakePipeline()
+    ontology_engine = types.ModuleType("taxonomy_ontology_accelerator.ontology_engine")
+    ontology_engine.pipeline_builder = pipeline_builder
+    taxonomy_root = types.ModuleType("taxonomy_ontology_accelerator")
+    taxonomy_root.ontology_engine = ontology_engine
+    monkeypatch.setitem(sys.modules, "taxonomy_ontology_accelerator", taxonomy_root)
+    monkeypatch.setitem(sys.modules, "taxonomy_ontology_accelerator.ontology_engine", ontology_engine)
+    monkeypatch.setitem(
+        sys.modules, "taxonomy_ontology_accelerator.ontology_engine.pipeline_builder", pipeline_builder
+    )
 
     with caplog.at_level(logging.INFO, logger="govuk-ai-accelerator"):
         result = og.run_ontology_background_task(
