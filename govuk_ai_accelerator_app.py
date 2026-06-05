@@ -131,7 +131,12 @@ def create_blueprints():
 
     @ontology_bp.route("/", methods=['GET'])
     def index():
-        return render_template('dashboard.html', active_page='dashboard')
+        try:
+            default_config = _load_default_config_template()
+        except Exception as e:
+            current_app.logger.error("Failed to load default config template: %s", e)
+            default_config = {}
+        return render_template('dashboard.html', active_page='dashboard', default_config=default_config)
 
     @ontology_bp.route('/test_data')
     def test_data():
@@ -146,16 +151,19 @@ def create_blueprints():
 
     @ontology_bp.route('/submit', methods=['POST'])
     def upload_file():
+        config_json = request.form.get('config_json')
         yaml_file = request.files.get('file')
         has_config_file = bool(yaml_file and yaml_file.filename)
-        if has_config_file and not is_yaml_file(yaml_file.filename):
+        if not config_json and has_config_file and not is_yaml_file(yaml_file.filename):
             return error_response("Invalid YAML file. Please upload a .yaml or .yml file.")
 
         domain_prompt = DEFAULT_DOMAIN_PROMPT
         domain_prompt_file = request.files.get('text_file')
 
         try:
-            if has_config_file:
+            if config_json:
+                config_data = json.loads(config_json)
+            elif has_config_file:
                 config_data = yaml.safe_load(yaml_file)
             else:
                 config_data = _load_default_config_template()
@@ -318,6 +326,64 @@ def create_blueprints():
         db.session.commit()
 
         return jsonify({"job_id": job.id, "status": job.status, "error": job.error_message})
+
+    @ontology_bp.route('/jobs/<job_id>/notes', methods=['GET'])
+    def get_job_notes(job_id):
+        job = db.session.get(ProcessingJob, job_id)
+        if job is None:
+            return error_response("Job not found", 404)
+
+        bucket_name = 'govuk-ai-accelerator-data-integration'
+        if job.job_runs and job.domain:
+            key = f"{job.domain}/{job.job_runs}/notes.json"
+        elif job.domain:
+            key = f"{job.domain}/pending-notes/{job.id}.json"
+        else:
+            return jsonify([])
+
+        s3_client = boto3.client("s3")
+        try:
+            response = s3_client.get_object(Bucket=bucket_name, Key=key)
+            notes_data = response['Body'].read().decode('utf-8')
+            return Response(notes_data, mimetype='application/json')
+        except s3_client.exceptions.NoSuchKey:
+            return jsonify([])
+        except Exception as e:
+            current_app.logger.error("Error reading notes from S3: %s", e)
+            return jsonify([])
+
+    @ontology_bp.route('/jobs/<job_id>/notes', methods=['POST'])
+    def save_job_notes(job_id):
+        job = db.session.get(ProcessingJob, job_id)
+        if job is None:
+            return error_response("Job not found", 404)
+
+        bucket_name = 'govuk-ai-accelerator-data-integration'
+        if job.job_runs and job.domain:
+            key = f"{job.domain}/{job.job_runs}/notes.json"
+        elif job.domain:
+            key = f"{job.domain}/pending-notes/{job.id}.json"
+        else:
+            return error_response("Domain not specified for job", 400)
+
+        notes_json = request.get_data(as_text=True)
+        try:
+            json.loads(notes_json)
+        except json.JSONDecodeError:
+            return error_response("Invalid JSON payload", 400)
+
+        s3_client = boto3.client("s3")
+        try:
+            s3_client.put_object(
+                Bucket=bucket_name,
+                Key=key,
+                Body=notes_json.encode('utf-8'),
+                ContentType='application/json'
+            )
+            return jsonify({"status": "success", "key": key})
+        except Exception as e:
+            current_app.logger.error("Error saving notes to S3: %s", e)
+            return error_response(f"Failed to save notes to S3: {str(e)}", 500)
 
     @ontology_bp.route('/all_jobs', methods=['GET'])
     def all_jobs():

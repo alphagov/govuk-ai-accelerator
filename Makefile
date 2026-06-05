@@ -22,16 +22,23 @@ run:
 ## Start a local Postgres container
 db-start:
 	@docker network inspect $(NETWORK_NAME) > /dev/null 2>&1 || docker network create $(NETWORK_NAME)
-	@docker inspect $(DB_NAME) > /dev/null 2>&1 \
-	  && echo "$(DB_NAME) already running" \
-	  || docker run -d \
+	@if [ $$(docker ps -q -f name=$(DB_NAME) | wc -l) -gt 0 ]; then \
+	  echo "$(DB_NAME) already running"; \
+	elif [ $$(docker ps -aq -f name=$(DB_NAME) | wc -l) -gt 0 ]; then \
+	  echo "Starting stopped container $(DB_NAME)..."; \
+	  docker start $(DB_NAME); \
+	  docker network connect $(NETWORK_NAME) $(DB_NAME) 2>/dev/null || true; \
+	else \
+	  echo "Creating and starting new container $(DB_NAME)..."; \
+	  docker run -d \
 	       --name $(DB_NAME) \
 	       --network $(NETWORK_NAME) \
 	       -e POSTGRES_USER=govuk_ai_accelerator_user \
 	       -e POSTGRES_DB=govuk_ai_accelerator \
 	       -e POSTGRES_HOST_AUTH_METHOD=trust \
 	       -p 5432:5432 \
-	       postgres:15
+	       postgres:15; \
+	fi
 
 ## Stop and remove the local Postgres container
 db-stop:

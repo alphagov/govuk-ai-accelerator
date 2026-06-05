@@ -1,44 +1,119 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <div class="row">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <div class="card full-width">
+    <style>
+        /* Refined Configuration Accordion Styling */
+        #advanced-collapsible {
+            border: 1px solid #b1b4b6 !important;
+            box-shadow: none !important;
+            border-radius: 6px !important;
+            overflow: hidden;
+            margin: 0;
+        }
+        #advanced-collapsible .collapsible-header {
+            background-color: #f3f2f1 !important;
+            border-bottom: 1px solid #b1b4b6 !important;
+            padding: 12px 16px !important;
+            font-weight: bold;
+            color: #0b0c0c !important;
+            display: flex;
+            align-items: center;
+            transition: background-color 0.2s ease;
+            cursor: pointer;
+        }
+        #advanced-collapsible .collapsible-header:hover {
+            background-color: #e5e5e5 !important;
+        }
+        #advanced-collapsible .collapsible-header i.material-icons:first-child {
+            margin-right: 8px;
+            font-size: 1.2rem;
+            color: #1d70b8;
+        }
+        #advanced-collapsible .collapsible-header .chevron-icon {
+            margin-left: auto;
+            margin-right: 0;
+            transition: transform 0.2s ease;
+            color: #505a5f;
+            font-size: 1.2rem;
+        }
+        #advanced-collapsible li.active .collapsible-header {
+            border-left: 4px solid #1d70b8;
+            padding-left: 12px !important;
+            background-color: #ffffff !important;
+        }
+        #advanced-collapsible li.active .collapsible-header .chevron-icon {
+            transform: rotate(180deg);
+            color: #1d70b8;
+        }
+        #advanced-collapsible .collapsible-body {
+            border-bottom: 1px solid #b1b4b6 !important;
+            background-color: #fafafa !important;
+            padding: 20px !important;
+        }
+
+        /* Tooltip & Help Icons */
+        .help-icon {
+            font-size: 0.95rem !important;
+            vertical-align: middle;
+            color: #505a5f;
+            cursor: help;
+            margin-left: 4px;
+            transition: color 0.2s ease;
+        }
+        .help-icon:hover {
+            color: #1d70b8;
+        }
+
+        /* Toggle configuration button adjustments */
+        #toggle-config-btn:hover {
+            background-color: rgba(29, 112, 184, 0.05) !important;
+        }
+        #toggle-config-btn.active-config {
+            background-color: #1d70b8 !important;
+            color: white !important;
+            border-color: #1d70b8 !important;
+        }
+        #toggle-config-btn.active-config:hover {
+            background-color: #003078 !important;
+            color: white !important;
+        }
+    </style>
+    <div class="row" style="margin-top: 10px;">
+        <!-- Left Column: Core Run Controller and Job History -->
+        <div class="col s12 l8" id="left-column">
+            <div class="card" style="box-shadow: 0 4px 10px rgba(0,0,0,0.08); border-radius: 6px;">
                 <div class="card-content">
-                    <span class="card-title" style="font-weight: bold; color: #1d70b8;">Run Pipeline</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+                        <span class="card-title" style="font-weight: bold; color: #1d70b8; margin: 0;">Run Pipeline</span>
+                        <button type="button" id="toggle-config-btn" class="btn-flat waves-effect" style="border: 1px solid #1d70b8; border-radius: 4px; display: inline-flex; align-items: center; gap: 6px; font-weight: bold; height: 36px; padding: 0 12px; color: #1d70b8; transition: all 0.2s ease-in-out; background-color: transparent;">
+                            <i class="material-icons" style="font-size: 1.2rem; margin: 0;">settings</i>
+                            <span id="toggle-config-text">Configure Settings</span>
+                        </button>
+                    </div>
 
-                    <p><b>Step 1</b> - Select the domain from the dropdown.</p>
-                    <p><b>Step 2</b> - Optionally upload a source configuration or domain prompt to override the defaults.
-                        The <a href="{{ url_for('static', filename='assets/templates/config-template.yaml') }}"
-                               download>📄source configuration template</a> is the Default source configuration used when
-                        no YAML file is supplied. The <a
-                                href="{{ url_for('static', filename='assets/templates/example-prompt-template.txt') }}"
-                                download>📄domain prompt template</a> can be used when you want to override the
-                        Default domain prompt.</p>
-                    <p><b>Step 3</b> - Click "UPLOAD & START".</p>
+                    <p><b>Step 1</b> - Select the target domain from the dropdown.</p>
+                    <p><b>Step 2</b> - Optionally click <strong style="color: #1d70b8;">Configure Settings</strong> to customize settings in the <strong>Configuration Panel</strong> (or upload a domain prompt to override defaults).</p>
+                    <p><b>Step 3</b> - Click "START PIPELINE".</p>
 
-                    <p class="grey-text text-darken-1" style="margin-bottom: 20px;">You can start with only a selected
-                        domain. The default domain prompt is <code>#</code>.</p>
-
+                    <p class="grey-text text-darken-1" style="margin-top: 10px; margin-bottom: 20px;">
+                        The default domain prompt is <code>#</code>. You can download the 
+                        <a href="{{ url_for('static', filename='assets/templates/example-prompt-template.txt') }}" download>📄domain prompt template</a> if you want to override it.
+                    </p>
 
                     <form id="upload-form" enctype="multipart/form-data">
-
+                        <!-- Simplified Upload Zone for Prompts -->
                         <div id="drop-zone" class="drop-zone"
-                             style="border: 2px dashed var(--gov-border); border-radius: 8px; padding: 2rem; text-align: center; margin-bottom: 1.5rem; transition: background-color 0.2s; cursor: pointer;">
-                            <i class="material-icons" style="font-size: 3rem; color: #1d70b8;">cloud_upload</i>
-                            <h6 style="margin: 10px 0; font-weight: bold;">Drag & Drop files here</h6>
-                            <p class="grey-text text-darken-2" style="margin-bottom: 5px;">Optional: <strong>.yaml /
-                                .yml</strong> (Configuration)</p>
-                            <p class="grey-text text-darken-2" style="margin-top: 5px;">Optional: <strong>.txt</strong>
-                                (Domain Prompt)</p>
-                            <p class="grey-text" style="font-size: 0.9em; margin-top: 15px;">or click to browse</p>
+                             style="border: 2px dashed var(--gov-border); border-radius: 8px; padding: 1.5rem; text-align: center; margin-bottom: 1.5rem; transition: background-color 0.2s; cursor: pointer;">
+                            <i class="material-icons" style="font-size: 2.5rem; color: #1d70b8;">cloud_upload</i>
+                            <h6 style="margin: 5px 0; font-weight: bold; font-size: 1rem;">Drag & Drop Domain Prompt (.txt)</h6>
+                            <p class="grey-text" style="font-size: 0.85em; margin-top: 5px;">or click to browse</p>
 
                             <input type="file" id="file" name="file" accept=".yaml,.yml" style="display: none;">
                             <input type="file" id="text_file" name="text_file" accept=".txt" style="display: none;">
                         </div>
 
                         <ul class="collection" id="file-list"
-                            style="border: none; margin-bottom: 1.5rem; display: none;">
+                             style="border: none; margin-bottom: 1.5rem; display: none;">
                             <li class="collection-item avatar" id="yaml-file-item"
                                 style="display: none; min-height: auto; padding-left: 50px;">
                                 <i class="material-icons circle green"
@@ -55,7 +130,7 @@
                             </li>
                         </ul>
 
-                        <div class="input-field col s12">
+                        <div class="input-field col s12" style="padding-left: 0; padding-right: 0;">
                             <select id="domain-selector" name="domain" required>
                                 <option value="" disabled selected>Loading domains...</option>
                             </select>
@@ -66,8 +141,8 @@
                              style="display: none; margin-bottom: 1rem; padding: 10px; border-radius: 4px;"></div>
 
                         <button class="btn waves-effect waves-light" type="submit" id="submit-btn"
-                                style="width: 100%; background-color: #1d70b8;">
-                            Upload & Start <i class="material-icons right">send</i>
+                                style="width: 100%; background-color: #1d70b8; height: 45px; font-weight: bold;">
+                            Start Pipeline <i class="material-icons right">play_arrow</i>
                         </button>
 
                         <div class="progress" id="upload-progress" style="display: none;">
@@ -76,56 +151,569 @@
                     </form>
                 </div>
             </div>
-        </div>
+            
+            <div id="recent-jobs-column" style="display: none;">
+                <div class="card">
+                    <div class="card-content">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <span class="card-title" style="font-weight: bold; margin: 0;">Recent Jobs</span>
+                            <button id="refresh-jobs-btn" class="btn-flat waves-effect waves-teal" style="padding: 0 10px;">
+                                <i class="material-icons">refresh</i>
+                            </button>
+                        </div>
 
-        <div id="recent-jobs-column" style="display: none;">
-            <div class="card full-width">
-                <div class="card-content">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <span class="card-title" style="font-weight: bold; margin: 0;">Recent Jobs</span>
-                        <button id="refresh-jobs-btn" class="btn-flat waves-effect waves-teal" style="padding: 0 10px;">
-                            <i class="material-icons">refresh</i>
-                        </button>
+                        <table class="striped highlight responsive-table" id="jobs-table">
+                            <caption class="govuk-visually-hidden">Recent jobs</caption>
+                            <thead>
+                            <tr>
+                                <th scope="col" style="width: 50px;">#</th>
+                                <th scope="col">Domain</th>
+                                <th scope="col">Time of Run</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Pipeline</th>
+                                <th scope="col">TTL File</th>
+                                <th scope="col">Output</th>
+                                <th scope="col">Visualise</th>
+                                <th scope="col">Report</th>
+                                <th scope="col" id="actions-header">Actions</th>
+                                <th scope="col">Notes</th>
+                            </tr>
+                            </thead>
+                            <tbody id="jobs-tbody">
+                            <!-- Jobs populated via JS -->
+                            <tr>
+                                <td colspan="11" class="center-align grey-text">Loading jobs...</td>
+                            </tr>
+                            </tbody>
+                        </table>
                     </div>
-
-                    <table class="striped highlight responsive-table" id="jobs-table">
-                        <caption class="govuk-visually-hidden">Recent jobs</caption>
-                        <thead>
-                        <tr>
-                            <th scope="col">Job ID</th>
-                            <th scope="col">Created</th>
-                            <th scope="col">Status</th>
-                            <th scope="col">Domain</th>
-                            <th scope="col">TTL File</th>
-                            <th scope="col">Output</th>
-                            <th scope="col">Visualise</th>
-                            <th scope="col">Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody id="jobs-tbody">
-                        <!-- Jobs populated via JS -->
-                        <tr>
-                            <td colspan="8" class="center-align grey-text">Loading jobs...</td>
-                        </tr>
-                        </tbody>
-                    </table>
-
-                    <!-- <div style="margin-top: 15px;">
-                      <button id="rerender-btn" class="btn-small grey lighten-2 grey-text text-darken-3 waves-effect">Rerender</button>
-                    </div> -->
                 </div>
             </div>
         </div>
-    </div>
+
+        <!-- Right Column: Interactive Configuration Sidebar -->
+        <div class="col s12 l4" id="right-column">
+            <div class="card" id="config-sidebar-card" style="box-shadow: 0 4px 10px rgba(0,0,0,0.08); border-radius: 6px; border-top: 4px solid #1d70b8;">
+                <div class="card-content" style="padding: 1.5rem;">
+                    <span class="card-title" style="font-weight: bold; color: #1d70b8; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; font-size: 1.3rem;">
+                        <span>Configuration Panel</span>
+                        <button type="button" id="close-config-btn" class="btn-flat waves-effect" style="padding: 0; min-width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #505a5f; margin: 0;" title="Minimize settings">
+                            <i class="material-icons" style="font-size: 1.25rem; margin: 0;">close</i>
+                        </button>
+                    </span>
+
+                    <!-- LLM Model Selection -->
+                    <div class="input-field" style="margin-bottom: 1.5rem;">
+                        <select id="model-selector">
+                            <option value="bedrock:eu.anthropic.claude-sonnet-4-6" selected>Claude 3.5 Sonnet (bedrock:eu.anthropic.claude-sonnet-4-6)</option>
+                            <option value="google-vertex:gemini-1.5-pro">Gemini 1.5 Pro (Vertex)</option>
+                            <option value="google-vertex:gemini-1.5-flash">Gemini 1.5 Flash (Vertex)</option>
+                            <option value="bedrock:eu.anthropic.claude-3-5-haiku-20241022-v1:0">Claude 3.5 Haiku (Bedrock)</option>
+                            <option value="custom">-- Custom Model --</option>
+                        </select>
+                        <label style="font-weight: bold; color: #0b0c0c; position: static; font-size: 0.95rem;">LLM Model <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Select the Large Language Model to use for generating the ontology.">info_outline</i></label>
+                    </div>
+
+                    <!-- Custom Model Input (Hidden unless "custom" is selected) -->
+                    <div class="input-field" id="custom-model-container" style="display: none; margin-bottom: 1.5rem;">
+                        <input type="text" id="custom-model-input" placeholder="e.g. bedrock:us.meta.llama3-2-3b" class="validate">
+                        <label for="custom-model-input">Custom Model Name <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enter the exact API identifier for a custom model from Vertex AI or AWS Bedrock.">info_outline</i></label>
+                    </div>
+
+                    <!-- Temperature Slider -->
+                    <div class="range-field" style="margin-bottom: 1.5rem;">
+                        <label for="temp-slider" style="font-size: 0.95rem; color: #0b0c0c; font-weight: bold;">
+                            Temperature: <span id="temp-val" style="color: #1d70b8; margin-left: 5px; font-weight: 800;">0.00</span>
+                            <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Controls LLM response randomness. Lower values are more deterministic and focused.">info_outline</i>
+                        </label>
+                        <input type="range" id="temp-slider" min="0.0" max="1.0" step="0.05" value="0.00" style="margin-top: 8px; border: none;">
+                    </div>
+
+                    <!-- Extraction Prompt File Path -->
+                    <div class="input-field" style="margin-bottom: 2rem;">
+                        <input type="text" id="config-extraction-prompt-file" placeholder="e.g. domains/travel/prompts/custom_extraction.txt" class="validate">
+                        <label for="config-extraction-prompt-file" class="active">Custom Prompt File Path <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Optional path to custom extraction prompt file (relative or absolute).">info_outline</i></label>
+                    </div>
+
+                    <!-- Advanced Toggle Switch -->
+                    <div class="switch" style="margin-bottom: 1.5rem; background: #f3f2f1; padding: 10px 12px; border-radius: 4px;">
+                        <label style="font-size: 0.95rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                            <span>Advanced Parameters <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Customize underlying pipeline configs, embedding choices, and deduplication settings.">info_outline</i></span>
+                            <input type="checkbox" id="advanced-toggle">
+                            <span class="lever" style="margin-right: 0;"></span>
+                        </label>
+                    </div>
+
+                    <!-- Collapsible Accordion Container (Only shown when switch is checked) -->
+                    <div id="advanced-accordion-container" style="display: none; margin-top: 1rem;">
+                        <ul class="collapsible" id="advanced-collapsible" style="box-shadow: none; border: 1px solid #b1b4b6; border-radius: 4px; margin: 0;">
+                            
+                            <!-- Section 1: Paths & Outputs -->
+                            <li>
+                                <div class="collapsible-header"><i class="material-icons">folder_open</i>Paths & Outputs<i class="material-icons chevron-icon">expand_more</i></div>
+                                <div class="collapsible-body">
+                                    <div class="input-field" style="margin: 5px 0 15px 0;">
+                                        <input type="text" id="config-entity-prefix" class="validate">
+                                        <label for="config-entity-prefix" class="active">Entity ID Prefix <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Prefix for generated RDF/OWL class and property identifiers.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 5px 0 5px 0;">
+                                        <input type="text" id="config-rel-prefix" class="validate">
+                                        <label for="config-rel-prefix" class="active">Relationship ID Prefix <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Prefix for generated RDF/OWL relationship identifiers.">info_outline</i></label>
+                                    </div>
+                                </div>
+                            </li>
+
+                            <!-- Section 2: Chunking & Models -->
+                            <li>
+                                <div class="collapsible-header"><i class="material-icons">content_cut</i>Chunking & Models<i class="material-icons chevron-icon">expand_more</i></div>
+                                <div class="collapsible-body">
+                                    <div class="input-field" style="margin: 5px 0 15px 0;">
+                                        <input type="number" id="config-chunk-size" min="100" step="100" class="validate">
+                                        <label for="config-chunk-size" class="active">Chunk Size (chars) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Size of text chunks (in characters) sent to the LLM.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 5px 0 15px 0;">
+                                        <input type="number" id="config-chunk-overlap" min="0" step="50" class="validate">
+                                        <label for="config-chunk-overlap" class="active">Chunk Overlap (chars) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Overlap (in characters) between consecutive text chunks.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 5px 0 15px 0;">
+                                        <input type="number" id="config-max-tokens" min="1000" step="1000" class="validate">
+                                        <label for="config-max-tokens" class="active">LLM Max Output Tokens <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum number of tokens the LLM can generate in a single response.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 5px 0 15px 0;">
+                                        <input type="text" id="config-embedding-model" class="validate">
+                                        <label for="config-embedding-model" class="active">Embedding Model <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="The text embedding model used for similarity calculation and vector storage.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 5px 0 5px 0;">
+                                        <input type="number" id="config-embedding-dimension" min="1" step="1" class="validate">
+                                        <label for="config-embedding-dimension" class="active">Embedding Dimension <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Dimensionality of the vector representations produced by the embedding model.">info_outline</i></label>
+                                    </div>
+                                </div>
+                            </li>
+
+                            <!-- Section 3: Deduplication & FAISS -->
+                            <li>
+                                <div class="collapsible-header"><i class="material-icons">healing</i>Deduplication<i class="material-icons chevron-icon">expand_more</i></div>
+                                <div class="collapsible-body">
+                                    <div class="range-field" style="margin: 5px 0 15px 0;">
+                                        <label for="config-semantic-thresh" style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold;">
+                                            Semantic Threshold: <span id="semantic-thresh-val" style="color: #1d70b8; font-weight: 800;">0.88</span>
+                                            <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Cosine similarity threshold above which entities are merged.">info_outline</i>
+                                        </label>
+                                        <input type="range" id="config-semantic-thresh" min="0.5" max="1.0" step="0.01" value="0.88" style="margin-top: 8px; border: none;">
+                                    </div>
+                                    <div class="range-field" style="margin: 15px 0 15px 0;">
+                                        <label for="config-exact-thresh" style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold;">
+                                            Exact Match Threshold: <span id="exact-thresh-val" style="color: #1d70b8; font-weight: 800;">1.00</span>
+                                            <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Threshold for exact text matching during deduplication.">info_outline</i>
+                                        </label>
+                                        <input type="range" id="config-exact-thresh" min="0.5" max="1.0" step="0.01" value="1.00" style="margin-top: 8px; border: none;">
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <select id="config-conflict-strat">
+                                            <option value="confidence">Higher Confidence</option>
+                                            <option value="latest">Latest Value</option>
+                                        </select>
+                                        <label style="position: static; font-size: 0.9rem;">Conflict Strategy <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Method to resolve conflicts when merging properties.">info_outline</i></label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 5px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span style="display: inline-flex; align-items: center; gap: 4px;">
+                                                Label Similarity Check 
+                                                <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Perform an additional check on entity labels before merging." style="margin-top: -2px;">info_outline</i>
+                                            </span>
+                                            <input type="checkbox" id="config-label-similarity">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </li>
+
+                            <!-- Section 4: Export & RDF/OWL -->
+                            <li>
+                                <div class="collapsible-header"><i class="material-icons">import_export</i>OWL/RDF Export<i class="material-icons chevron-icon">expand_more</i></div>
+                                <div class="collapsible-body">
+                                    <div class="switch" style="margin: 5px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span style="display: inline-flex; align-items: center; gap: 4px;">
+                                                Enable OWL Export
+                                                <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Convert the generated ontology output to OWL format." style="margin-top: -2px;">info_outline</i>
+                                            </span>
+                                            <input type="checkbox" id="config-export-enabled">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="text" id="config-export-uri" class="validate">
+                                        <label for="config-export-uri" class="active">Base Ontology URI <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="The base URI for the generated OWL ontology metadata.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <select id="config-export-format">
+                                            <option value="turtle">Turtle (.ttl)</option>
+                                            <option value="rdfxml">RDF/XML (.rdf)</option>
+                                        </select>
+                                        <label style="position: static; font-size: 0.9rem;">Export Format <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="File format for the exported ontology (Turtle or RDF/XML).">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <select id="config-spelling-variant">
+                                            <option value="US">US Spelling</option>
+                                            <option value="UK">UK Spelling</option>
+                                            <option value="preserve">Preserve Original</option>
+                                        </select>
+                                        <label style="position: static; font-size: 0.9rem;">Spelling Variant <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Standard spelling convention for generated terms (US or UK).">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <select id="config-label-casing">
+                                            <option value="UpperCamelCase">UpperCamelCase</option>
+                                            <option value="lowerCamelCase">lowerCamelCase</option>
+                                            <option value="snake_case">snake_case</option>
+                                            <option value="preserve">Preserve Original</option>
+                                        </select>
+                                        <label style="position: static; font-size: 0.9rem;">Entity Casing Style <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Casing format applied to generated ontology entity labels.">info_outline</i></label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 5px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span style="display: inline-flex; align-items: center; gap: 4px;">
+                                                Type-Aware Canonical Keys
+                                                <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Prefix canonical keys with type to prevent cross-type identity collisions." style="margin-top: -2px;">info_outline</i>
+                                            </span>
+                                            <input type="checkbox" id="config-type-aware-keys">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </li>
+
+                            <!-- Section 5: Pipeline & Performance -->
+                            <li>
+                                <div class="collapsible-header"><i class="material-icons">settings_applications</i>Pipeline & Performance<i class="material-icons chevron-icon">expand_more</i></div>
+                                <div class="collapsible-body">
+                                    <div class="input-field" style="margin: 5px 0 15px 0;">
+                                        <input type="number" id="config-parallel-files" min="1" step="1" class="validate">
+                                        <label for="config-parallel-files" class="active">Parallel Files <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Number of files processed in parallel during ingestion/generation.">info_outline</i></label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span style="display: inline-flex; align-items: center; gap: 4px;">
+                                                Batch API Enabled
+                                                <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Use LLM batch API endpoints to reduce rate limit issues (increases latency)." style="margin-top: -2px;">info_outline</i>
+                                            </span>
+                                            <input type="checkbox" id="config-batch-api">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span style="display: inline-flex; align-items: center; gap: 4px;">
+                                                Term Extraction Enabled
+                                                <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Perform initial terminology extraction before relationship generation." style="margin-top: -2px;">info_outline</i>
+                                            </span>
+                                            <input type="checkbox" id="config-term-extraction">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 5px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span style="display: inline-flex; align-items: center; gap: 4px;">
+                                                Auto-Resume Checkpoint
+                                                <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Automatically resume from checkpoint if available, instead of starting fresh." style="margin-top: -2px;">info_outline</i>
+                                            </span>
+                                            <input type="checkbox" id="config-auto-resume">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </li>
+
+                            <!-- Section 6: Relationships -->
+                            <li>
+                                <div class="collapsible-header"><i class="material-icons">share</i>Relationships<i class="material-icons chevron-icon">expand_more</i></div>
+                                <div class="collapsible-body">
+                                    <div class="switch" style="margin: 5px 0 5px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span style="display: inline-flex; align-items: center; gap: 4px;">
+                                                Auto-Create Entities
+                                                <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Automatically create missing entities referenced in relationships." style="margin-top: -2px;">info_outline</i>
+                                            </span>
+                                            <input type="checkbox" id="config-auto-create-entities">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes Modal Structure -->
+        <div id="notes-modal" class="modal" style="border-radius: 6px; max-width: 600px; border-top: 4px solid #1d70b8; overflow-y: visible;">
+            <div class="modal-content" style="padding: 24px;">
+                <h4 style="font-weight: bold; color: #1d70b8; margin: 0 0 20px 0; display: flex; align-items: center; justify-content: space-between; font-size: 1.3rem;">
+                    <span id="notes-modal-title">Job Notes</span>
+                    <button type="button" class="modal-close btn-flat" style="padding: 0; min-width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #505a5f; margin: 0;" title="Close">
+                        <i class="material-icons" style="font-size: 1.25rem; margin: 0;">close</i>
+                    </button>
+                </h4>
+                <div id="notes-modal-list" style="max-height: 250px; overflow-y: auto; margin-bottom: 20px; padding-right: 5px;"></div>
+                <div style="border-top: 1px solid #b1b4b6; padding-top: 15px;">
+                    <label for="notes-modal-input" style="color: #0b0c0c; font-weight: bold; font-size: 0.95rem; display: block; margin-bottom: 8px;">Add a note</label>
+                    <div class="input-field" style="margin-top: 0; margin-bottom: 12px;">
+                        <textarea id="notes-modal-input" class="materialize-textarea" placeholder="Type a note here..." style="min-height: 60px; margin: 0; padding: 8px; border: 1px solid #b1b4b6; border-radius: 4px; box-sizing: border-box; background-color: #ffffff;"></textarea>
+                    </div>
+                    <button type="button" id="notes-modal-add-btn" class="btn" style="background-color: #1d70b8; font-weight: bold; height: 36px; line-height: 36px; padding: 0 16px; border-radius: 4px; box-shadow: none;">
+                        Add Note
+                    </button>
+                </div>
+            </div>
+        </div>
 {% endblock %}
 
 {% block extra_js %}
     <script>
+        const DEFAULT_CONFIG = {{ default_config | tojson | safe }};
+        let activeConfig = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+
+
+
+        function syncUIFromConfig(config) {
+            // Model Selector
+            const modelVal = config.llm.model;
+            const modelSel = document.getElementById('model-selector');
+            let matched = false;
+            for (let i = 0; i < modelSel.options.length; i++) {
+                if (modelSel.options[i].value === modelVal) {
+                    modelSel.value = modelVal;
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) {
+                modelSel.value = 'custom';
+                document.getElementById('custom-model-input').value = modelVal;
+                document.getElementById('custom-model-container').style.display = 'block';
+            } else {
+                document.getElementById('custom-model-container').style.display = 'none';
+            }
+
+            // Temperature
+            const tempVal = config.llm.temperature !== undefined ? config.llm.temperature : 0.00;
+            document.getElementById('temp-slider').value = tempVal;
+            document.getElementById('temp-val').textContent = parseFloat(tempVal).toFixed(2);
+
+            // Custom prompt file
+            document.getElementById('config-extraction-prompt-file').value = config.llm?.extraction_prompt_file || '';
+
+            // Paths & Outputs
+            document.getElementById('config-entity-prefix').value = config.output?.entity_id_prefix || 'entity_';
+            document.getElementById('config-rel-prefix').value = config.output?.relationship_id_prefix || 'rel_';
+
+            // Chunking & Text
+            document.getElementById('config-chunk-size').value = config.text_processing?.chunking?.chunk_size || 2500;
+            document.getElementById('config-chunk-overlap').value = config.text_processing?.chunking?.chunk_overlap || 250;
+            document.getElementById('config-max-tokens').value = config.llm?.max_tokens || 16000;
+            document.getElementById('config-embedding-model').value = config.embeddings?.model || 'bedrock:cohere.embed-multilingual-v3';
+            document.getElementById('config-embedding-dimension').value = config.embeddings?.dimension || 1024;
+
+            // Deduplication
+            const semThresh = config.deduplication?.semantic_threshold !== undefined ? config.deduplication.semantic_threshold : 0.88;
+            document.getElementById('config-semantic-thresh').value = semThresh;
+            document.getElementById('semantic-thresh-val').textContent = parseFloat(semThresh).toFixed(2);
+
+            const exThresh = config.deduplication?.exact_threshold !== undefined ? config.deduplication.exact_threshold : 1.00;
+            document.getElementById('config-exact-thresh').value = exThresh;
+            document.getElementById('exact-thresh-val').textContent = parseFloat(exThresh).toFixed(2);
+
+            document.getElementById('config-conflict-strat').value = config.deduplication?.conflict_resolution_strategy || 'confidence';
+            document.getElementById('config-label-similarity').checked = config.deduplication?.enable_label_similarity_check !== false;
+
+            // Export
+            document.getElementById('config-export-enabled').checked = config.output?.export?.enabled !== false;
+            document.getElementById('config-export-uri').value = config.output?.export?.base_uri || 'http://example.org/ontology';
+            document.getElementById('config-export-format').value = config.output?.export?.format || 'turtle';
+            document.getElementById('config-spelling-variant').value = config.naming_conventions?.spelling_variant || 'US';
+            document.getElementById('config-label-casing').value = config.naming_conventions?.entity_label_casing || 'UpperCamelCase';
+            document.getElementById('config-type-aware-keys').checked = config.output?.type_aware_canonical_keys !== false;
+
+            // Pipeline & Performance
+            document.getElementById('config-parallel-files').value = config.parallel_files !== undefined ? config.parallel_files : 20;
+            document.getElementById('config-batch-api').checked = !!config.batch_api_enabled;
+            document.getElementById('config-term-extraction').checked = config.term_extraction?.enabled !== false;
+            document.getElementById('config-auto-resume').checked = config.checkpointing?.auto_resume !== false;
+
+            // Relationships
+            document.getElementById('config-auto-create-entities').checked = config.relationship_processing?.auto_create_missing_entities !== false;
+
+            // Re-initialize select elements
+            M.FormSelect.init(document.querySelectorAll('#model-selector, #config-conflict-strat, #config-export-format, #config-spelling-variant, #config-label-casing'));
+            M.updateTextFields();
+        }
+
+        function syncConfigFromUI(config) {
+            // Model
+            const modelSel = document.getElementById('model-selector');
+            if (modelSel.value === 'custom') {
+                config.llm.model = document.getElementById('custom-model-input').value;
+            } else {
+                config.llm.model = modelSel.value;
+            }
+
+            // Temperature
+            config.llm.temperature = parseFloat(document.getElementById('temp-slider').value);
+
+            // Prompt file
+            config.llm.extraction_prompt_file = document.getElementById('config-extraction-prompt-file').value.trim() || null;
+
+            // Paths & Outputs
+            if (!config.output) config.output = {};
+            config.output.entity_id_prefix = document.getElementById('config-entity-prefix').value;
+            config.output.relationship_id_prefix = document.getElementById('config-rel-prefix').value;
+
+            // Chunking & Text
+            if (!config.text_processing) config.text_processing = {};
+            if (!config.text_processing.chunking) config.text_processing.chunking = {};
+            config.text_processing.chunking.chunk_size = parseInt(document.getElementById('config-chunk-size').value) || 2500;
+            config.text_processing.chunking.chunk_overlap = parseInt(document.getElementById('config-chunk-overlap').value) || 250;
+            config.llm.max_tokens = parseInt(document.getElementById('config-max-tokens').value) || 16000;
+            if (!config.embeddings) config.embeddings = {};
+            config.embeddings.model = document.getElementById('config-embedding-model').value;
+            config.embeddings.dimension = parseInt(document.getElementById('config-embedding-dimension').value) || 1024;
+
+            // Deduplication
+            if (!config.deduplication) config.deduplication = {};
+            config.deduplication.semantic_threshold = parseFloat(document.getElementById('config-semantic-thresh').value);
+            config.deduplication.exact_threshold = parseFloat(document.getElementById('config-exact-thresh').value);
+            config.deduplication.conflict_resolution_strategy = document.getElementById('config-conflict-strat').value;
+            config.deduplication.enable_label_similarity_check = document.getElementById('config-label-similarity').checked;
+
+            // Export
+            if (!config.output.export) config.output.export = {};
+            config.output.export.enabled = document.getElementById('config-export-enabled').checked;
+            config.output.export.base_uri = document.getElementById('config-export-uri').value;
+            config.output.export.format = document.getElementById('config-export-format').value;
+            if (!config.naming_conventions) config.naming_conventions = {};
+            config.naming_conventions.spelling_variant = document.getElementById('config-spelling-variant').value;
+            config.naming_conventions.entity_label_casing = document.getElementById('config-label-casing').value;
+            config.output.type_aware_canonical_keys = document.getElementById('config-type-aware-keys').checked;
+
+            // Pipeline & Performance
+            config.parallel_files = parseInt(document.getElementById('config-parallel-files').value) || 20;
+            config.batch_api_enabled = document.getElementById('config-batch-api').checked;
+            if (!config.term_extraction) config.term_extraction = {};
+            config.term_extraction.enabled = document.getElementById('config-term-extraction').checked;
+            if (!config.checkpointing) config.checkpointing = {};
+            config.checkpointing.auto_resume = document.getElementById('config-auto-resume').checked;
+
+            // Relationships
+            if (!config.relationship_processing) config.relationship_processing = {};
+            config.relationship_processing.auto_create_missing_entities = document.getElementById('config-auto-create-entities').checked;
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const dropZone = document.getElementById('drop-zone');
             const fileInput = document.getElementById('file');
             const txtFileInput = document.getElementById('text_file');
             const fileList = document.getElementById('file-list');
+
+            // Initialize Materialize select, collapsible, and tooltip elements
+            M.FormSelect.init(document.querySelectorAll('#model-selector, #config-conflict-strat, #config-export-format, #config-spelling-variant, #config-label-casing'));
+            M.Collapsible.init(document.querySelectorAll('#advanced-collapsible'));
+            M.Tooltip.init(document.querySelectorAll('.tooltipped'));
+            M.Modal.init(document.getElementById('notes-modal'), { dismissible: true });
+
+            // Handlers for sliders
+            const tempSlider = document.getElementById('temp-slider');
+            const tempVal = document.getElementById('temp-val');
+            tempSlider.addEventListener('input', () => {
+                tempVal.textContent = parseFloat(tempSlider.value).toFixed(2);
+            });
+
+            const semSlider = document.getElementById('config-semantic-thresh');
+            const semVal = document.getElementById('semantic-thresh-val');
+            semSlider.addEventListener('input', () => {
+                semVal.textContent = parseFloat(semSlider.value).toFixed(2);
+            });
+
+            const exSlider = document.getElementById('config-exact-thresh');
+            const exVal = document.getElementById('exact-thresh-val');
+            exSlider.addEventListener('input', () => {
+                exVal.textContent = parseFloat(exSlider.value).toFixed(2);
+            });
+
+            // Model selector changes
+            const modelSelector = document.getElementById('model-selector');
+            const customModelContainer = document.getElementById('custom-model-container');
+            modelSelector.addEventListener('change', () => {
+                if (modelSelector.value === 'custom') {
+                    customModelContainer.style.display = 'block';
+                } else {
+                    customModelContainer.style.display = 'none';
+                }
+            });
+
+            // Advanced toggle show/hide accordion
+            const advancedToggle = document.getElementById('advanced-toggle');
+            const advancedContainer = document.getElementById('advanced-accordion-container');
+            advancedToggle.addEventListener('change', () => {
+                if (advancedToggle.checked) {
+                    advancedContainer.style.display = 'block';
+                } else {
+                    advancedContainer.style.display = 'none';
+                }
+            });
+
+            // Toggle configuration sidebar panel
+            const toggleConfigBtn = document.getElementById('toggle-config-btn');
+            const toggleConfigText = document.getElementById('toggle-config-text');
+            const leftColumn = document.getElementById('left-column');
+            const rightColumn = document.getElementById('right-column');
+
+            function setConfigVisibility(visible) {
+                 const recentJobsColumn = document.getElementById('recent-jobs-column');
+                 const jobsTableBody = document.getElementById('jobs-tbody');
+                 if (visible) {
+                     leftColumn.classList.remove('l12');
+                     leftColumn.classList.add('l8');
+                     rightColumn.style.display = 'block';
+                     toggleConfigBtn.style.display = 'none';
+                     localStorage.setItem('showConfig', 'true');
+                     if (recentJobsColumn) {
+                         recentJobsColumn.style.display = 'none';
+                     }
+                 } else {
+                     leftColumn.classList.remove('l8');
+                     leftColumn.classList.add('l12');
+                     rightColumn.style.display = 'none';
+                     toggleConfigBtn.style.display = 'inline-flex';
+                     localStorage.setItem('showConfig', 'false');
+                     if (recentJobsColumn && jobsTableBody) {
+                         if (jobsTableBody.querySelectorAll('tr').length > 0 && jobsTableBody.textContent.indexOf('No jobs found') === -1) {
+                             recentJobsColumn.style.display = 'block';
+                         }
+                     }
+                 }
+            }
+
+            // Load saved state or default to false (collapsed)
+            const savedState = localStorage.getItem('showConfig');
+            let showConfig = savedState === null ? 'false' : savedState;
+            setConfigVisibility(showConfig === 'true');
+
+            toggleConfigBtn.addEventListener('click', () => {
+                const isVisible = rightColumn.style.display !== 'none';
+                setConfigVisibility(!isVisible);
+            });
+
+            // Close button inside the panel (minimize)
+            const closeConfigBtn = document.getElementById('close-config-btn');
+            if (closeConfigBtn) {
+                closeConfigBtn.addEventListener('click', () => {
+                    setConfigVisibility(false);
+                });
+            }
+
+            // Initial Sync
+            syncUIFromConfig(activeConfig);
 
             dropZone.addEventListener('click', () => {
                 const tempInput = document.createElement('input');
@@ -164,7 +752,6 @@
             });
 
             function handleFiles(files) {
-                // Reset
                 const dtYaml = new DataTransfer();
                 const dtTxt = new DataTransfer();
                 let hasYaml = false;
@@ -210,7 +797,15 @@
                 uploadStatus.style.display = 'none';
 
                 try {
+                    // Update configuration object from UI changes
+                    syncConfigFromUI(activeConfig);
+
                     const formData = new FormData(uploadForm);
+                    // Only send config_json if NO custom yaml config file is uploaded
+                    if (!fileInput.files.length) {
+                        formData.append('config_json', JSON.stringify(activeConfig));
+                    }
+
                     const response = await fetch("{{ url_for('ontology.upload_file') }}", {
                         method: 'POST',
                         body: formData
@@ -227,8 +822,12 @@
                         document.getElementById('yaml-file-item').style.display = 'none';
                         document.getElementById('txt-file-item').style.display = 'none';
 
-                        // Reveal the recent jobs column if hidden
-                        document.getElementById('recent-jobs-column').style.display = 'block';
+                        // Reset config state to initial default
+                        activeConfig = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+                        syncUIFromConfig(activeConfig);
+
+                        // Collapse configuration panel and reveal the recent jobs column
+                        setConfigVisibility(false);
 
                         fetchJobs(); // Instant refresh
                     } else {
@@ -254,6 +853,219 @@
             const refreshBtn = document.getElementById('refresh-jobs-btn');
             const recentJobsCol = document.getElementById('recent-jobs-column');
 
+            let currentEditingJobId = null;
+
+            function getJobNotes(jobId) {
+                const newNotes = localStorage.getItem('job-notes-' + jobId);
+                if (newNotes) {
+                    try {
+                        return JSON.parse(newNotes);
+                    } catch (e) {
+                        console.error("Error parsing job notes", e);
+                    }
+                }
+                const oldNote = localStorage.getItem('job-note-' + jobId);
+                if (oldNote) {
+                    const migrated = [{
+                        id: 'legacy-' + Date.now(),
+                        text: oldNote,
+                        timestamp: new Date().toISOString()
+                    }];
+                    localStorage.setItem('job-notes-' + jobId, JSON.stringify(migrated));
+                    localStorage.removeItem('job-note-' + jobId);
+                    return migrated;
+                }
+                return [];
+            }
+
+            function escapeHtml(text) {
+                return text
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
+            async function syncNotesFromS3(jobId) {
+                try {
+                    const response = await fetch(`/ontology/jobs/${jobId}/notes`);
+                    if (response.ok) {
+                        const s3Notes = await response.json();
+                        localStorage.setItem('job-notes-' + jobId, JSON.stringify(s3Notes));
+                        
+                        const btn = document.querySelector(`.edit-note-action[data-job-id="${jobId}"]`);
+                        if (btn) {
+                            const notesCount = s3Notes.length;
+                            const noteIcon = notesCount > 0 ? 'rate_review' : 'chat_bubble_outline';
+                            const noteColor = notesCount > 0 ? '#1d70b8' : '#b0bec5';
+                            
+                            let noteTooltip = 'Add a note';
+                            if (notesCount > 0) {
+                                const countText = notesCount === 1 ? '1 note' : `${notesCount} notes`;
+                                const latestText = s3Notes[notesCount - 1].text;
+                                noteTooltip = `${countText}. Latest: "${latestText.substring(0, 50)}${latestText.length > 50 ? '...' : ''}"`;
+                            }
+
+                            const inst = M.Tooltip.getInstance(btn);
+                            if (inst) inst.destroy();
+                            
+                            const iconEl = btn.querySelector('i');
+                            if (iconEl) iconEl.textContent = noteIcon;
+                            btn.style.color = noteColor;
+                            btn.setAttribute('data-tooltip', noteTooltip);
+                            M.Tooltip.init(btn);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error syncing notes from S3", e);
+                }
+            }
+
+            async function saveJobNotes(jobId, notes) {
+                localStorage.setItem('job-notes-' + jobId, JSON.stringify(notes));
+                try {
+                    await fetch(`/ontology/jobs/${jobId}/notes`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(notes)
+                    });
+                } catch (e) {
+                    console.error("Error saving notes to S3", e);
+                    M.toast({ html: 'Notes saved locally (failed to upload to S3)' });
+                }
+            }
+
+            function openNotesModal(jobId, domain) {
+                currentEditingJobId = jobId;
+                document.getElementById('notes-modal-title').textContent = `Notes for ${domain}`;
+                document.getElementById('notes-modal-input').value = '';
+                
+                const inputLabel = document.querySelector('label[for="notes-modal-input"]');
+                if (inputLabel) {
+                    inputLabel.classList.remove('active');
+                }
+                
+                renderNotesModalList();
+                
+                const modalInstance = M.Modal.getInstance(document.getElementById('notes-modal'));
+                if (modalInstance) {
+                    modalInstance.open();
+                }
+                
+                syncNotesFromS3(jobId).then(() => {
+                    renderNotesModalList();
+                });
+            }
+
+            function renderNotesModalList() {
+                const listContainer = document.getElementById('notes-modal-list');
+                if (!listContainer) return;
+                
+                const notes = getJobNotes(currentEditingJobId);
+                
+                if (notes.length === 0) {
+                    listContainer.innerHTML = `
+                      <div class="grey-text center-align" style="padding: 20px 0;">
+                        No notes recorded for this run. Type a note below to get started.
+                      </div>
+                    `;
+                    return;
+                }
+                
+                listContainer.innerHTML = '';
+                notes.forEach(note => {
+                    const dateStr = new Date(note.timestamp).toLocaleString('en-GB', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        timeZone: 'Europe/London'
+                    });
+                    
+                    const noteEl = document.createElement('div');
+                    noteEl.style.padding = '10px 0';
+                    noteEl.style.borderBottom = '1px solid #f3f2f1';
+                    noteEl.style.display = 'flex';
+                    noteEl.style.flexDirection = 'column';
+                    noteEl.style.position = 'relative';
+                    
+                    noteEl.innerHTML = `
+                      <div style="font-size: 0.85rem; color: #505a5f; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; padding-right: 60px;">
+                        <span>${dateStr}</span>
+                      </div>
+                      <div style="font-size: 0.95rem; color: #0b0c0c; white-space: pre-wrap; word-break: break-word; line-height: 1.4; padding-right: 60px;" id="note-text-${note.id}">${escapeHtml(note.text)}</div>
+                      <div style="position: absolute; right: 0; top: 10px; display: flex; gap: 4px;">
+                        <button type="button" class="btn-flat" onclick="editNoteItem('${note.id}')" style="padding: 0 4px; min-width: auto; height: 28px; line-height: 28px; color: #1d70b8;" title="Edit note">
+                          <i class="material-icons" style="font-size: 1.1rem;">edit</i>
+                        </button>
+                        <button type="button" class="btn-flat" onclick="deleteNoteItem('${note.id}')" style="padding: 0 4px; min-width: auto; height: 28px; line-height: 28px; color: #d4351c;" title="Delete note">
+                          <i class="material-icons" style="font-size: 1.1rem;">delete</i>
+                        </button>
+                      </div>
+                    `;
+                    listContainer.appendChild(noteEl);
+                });
+
+                setTimeout(() => {
+                    listContainer.scrollTop = listContainer.scrollHeight;
+                }, 50);
+            }
+
+            window.deleteNoteItem = function(noteId) {
+                if (!confirm("Are you sure you want to delete this note?")) return;
+                
+                let notes = getJobNotes(currentEditingJobId);
+                notes = notes.filter(n => n.id !== noteId);
+                saveJobNotes(currentEditingJobId, notes).then(() => {
+                    renderNotesModalList();
+                    fetchJobs();
+                });
+            };
+
+            window.editNoteItem = function(noteId) {
+                const notes = getJobNotes(currentEditingJobId);
+                const note = notes.find(n => n.id === noteId);
+                if (!note) return;
+                
+                const newText = prompt("Edit note text:", note.text);
+                if (newText === null) return;
+                
+                const trimmed = newText.trim();
+                if (!trimmed) {
+                    window.deleteNoteItem(noteId);
+                    return;
+                }
+                
+                note.text = trimmed;
+                saveJobNotes(currentEditingJobId, notes).then(() => {
+                    renderNotesModalList();
+                    fetchJobs();
+                });
+            };
+
+            document.getElementById('notes-modal-add-btn').addEventListener('click', () => {
+                const textarea = document.getElementById('notes-modal-input');
+                const text = textarea.value.trim();
+                if (!text) return;
+                
+                const notes = getJobNotes(currentEditingJobId);
+                notes.push({
+                    id: 'note-' + Date.now(),
+                    text: text,
+                    timestamp: new Date().toISOString()
+                });
+                
+                saveJobNotes(currentEditingJobId, notes).then(() => {
+                    textarea.value = '';
+                    renderNotesModalList();
+                    fetchJobs();
+                });
+            });
+
             async function fetchJobs() {
                 refreshBtn.classList.add('disabled');
                 try {
@@ -269,16 +1081,21 @@
             }
 
             function renderJobsTable(jobs) {
+                const showActions = jobs && jobs.some(job => ['pending', 'running'].includes(job.status.toLowerCase()));
+                const actionsHeader = document.getElementById('actions-header');
+                if (actionsHeader) {
+                    actionsHeader.style.display = showActions ? '' : 'none';
+                }
+                const colspanVal = showActions ? 11 : 10;
+
                 if (!jobs || jobs.length === 0) {
-                    jobsTbody.innerHTML = '<tr><td colspan="8" class="center-align grey-text">No jobs found.</td></tr>';
+                    jobsTbody.innerHTML = `<tr><td colspan="${colspanVal}" class="center-align grey-text">No jobs found.</td></tr>`;
                     return;
                 }
 
                 jobsTbody.innerHTML = '';
-                jobs.forEach(job => {
+                jobs.forEach((job, index) => {
                     const tr = document.createElement('tr');
-
-                    const idShort = job.job_id.split('-')[0];
 
                     let statusHtml = '';
                     if (job.status.toLowerCase() === 'completed') {
@@ -286,7 +1103,7 @@
                     } else if (job.status.toLowerCase() === 'stopped') {
                         statusHtml = '<span class="new badge grey" data-badge-caption="stopped"></span>';
                     } else if (job.status.toLowerCase() === 'failed') {
-                        statusHtml = `<span class="new badge red" data-badge-caption="failed"></span> <i class="material-icons tiny grey-text tooltipped" data-position="bottom" data-tooltip="${job.error || 'Unknown error'}">info_outline</i>`;
+                        statusHtml = `<span class="new badge red" data-badge-caption="failed"></span> <i class="material-icons tiny red-text tooltipped" data-position="bottom" data-tooltip="${job.error || 'Unknown error'}" style="vertical-align: middle; cursor: help; margin-left: 4px;">info_outline</i>`;
                     } else if (job.status.toLowerCase() === 'running') {
                         statusHtml = '<span class="new badge blue" data-badge-caption="running"></span>';
                     } else {
@@ -294,34 +1111,71 @@
                     }
 
                     const domainStr = job.domain ? job.domain : '-';
+                    const pipeline = job.pipeline || 'ontology';
+                    const isIngestion = pipeline === 'ingestion';
+                    const isHarness = pipeline === 'ontology-harness';
+                    const pipelineBadge = isIngestion
+                        ? '<span class="new badge teal lighten-2" data-badge-caption="ingestion"></span>'
+                        : isHarness
+                            ? '<span class="new badge purple lighten-1" data-badge-caption="test"></span>'
+                            : '<span class="new badge indigo lighten-1" data-badge-caption="ontology"></span>';
 
                     let ttlLink = 'N/A';
-                    let outputLink = '';
+                    let outputLink = 'N/A';
                     let visualiserLink = 'N/A';
-                    let actionsHtml = 'N/A';
+                    let reportLink = 'N/A';
 
-                    if (job.status.toLowerCase() === 'completed' && job.job_runs) {
+                    if (!isIngestion) {
                         const targetBucket = 'govuk-ai-accelerator-data-integration';
-                        outputLink = `<a href="/viewer/bucket/${targetBucket}/${domainStr}/${job.job_runs}/" class="btn-view">Browse Files</a>`;
-                        ttlLink = `<a href="/viewer/bucket/download/buckets/${targetBucket}/${domainStr}/${job.job_runs}/output/ontology.ttl" class="blue-text" target="_blank">Download</a>`;
-                        visualiserLink = `<a href="/visualizer/?run=${domainStr}/${job.job_runs}" class="btn-view">Visualise Graph</a>`;
+                        const hasOutputArtifacts = Boolean(job.job_runs);
+                        if (hasOutputArtifacts) {
+                            outputLink = `<a href="/viewer/bucket/${targetBucket}/${domainStr}/${job.job_runs}/" class="btn-view">Browse Files</a>`;
+                            ttlLink = `<a href="/viewer/bucket/download/buckets/${targetBucket}/${domainStr}/${job.job_runs}/output/ontology.ttl" class="blue-text" target="_blank">Download</a>`;
+                            visualiserLink = `<a href="/visualizer/?run=${domainStr}/${job.job_runs}" class="btn-view">Visualise Graph</a>`;
+                            if (isHarness) {
+                                reportLink = `<a href="/viewer/bucket/download/buckets/${targetBucket}/${domainStr}/${job.job_runs}/output/regression_report.json" class="blue-text" target="_blank">Download</a>`;
+                            }
+                        }
                     }
 
+                    let actionsHtml = '';
                     if (['pending', 'running'].includes(job.status.toLowerCase())) {
                         actionsHtml = `<button type="button" class="table-action-link stop-job-action" data-job-id="${job.job_id}">Stop<span class="govuk-visually-hidden"> job ${job.job_id}</span></button>`;
                     }
 
+                    // Retrieve existing notes
+                    const notes = getJobNotes(job.job_id);
+                    const noteIcon = notes.length > 0 ? 'rate_review' : 'chat_bubble_outline';
+                    const noteColor = notes.length > 0 ? '#1d70b8' : '#b0bec5';
+                    
+                    let noteTooltip = 'Add a note';
+                    if (notes.length > 0) {
+                        const countText = notes.length === 1 ? '1 note' : `${notes.length} notes`;
+                        const latestText = notes[notes.length - 1].text;
+                        noteTooltip = `${countText}. Latest: "${latestText.substring(0, 50)}${latestText.length > 50 ? '...' : ''}"`;
+                    }
+
+                    const noteBtnHtml = `
+                      <button type="button" class="btn-flat edit-note-action tooltipped" data-job-id="${job.job_id}" data-domain="${domainStr}" data-position="top" data-tooltip="${noteTooltip}" style="padding: 0 4px; min-width: auto; height: auto; line-height: 1; color: ${noteColor}; vertical-align: middle; margin-left: 6px;" aria-label="Edit notes for this job">
+                        <i class="material-icons" style="font-size: 1.15rem;">${noteIcon}</i>
+                      </button>
+                    `;
+
                     tr.innerHTML = `
-          <td style="font-family: monospace; font-size: 0.9em;">${job.job_id}</td>
-          <td>${new Date(job.created_at).toLocaleString('en-GB', {timeZone: 'Europe/London'})}</td>
-          <td>${statusHtml}</td>
-          <td>${domainStr}</td>
-          <td>${ttlLink}</td>
-          <td>${outputLink}</td>
-          <td>${visualiserLink}</td>
-          <td>${actionsHtml}</td>
-        `;
+                      <td class="grey-text">${index + 1}</td>
+                      <td style="vertical-align: middle;"><span style="font-weight: bold; vertical-align: middle;">${domainStr}</span></td>
+                      <td>${new Date(job.created_at).toLocaleString('en-GB', {timeZone: 'Europe/London'})}</td>
+                      <td>${statusHtml}</td>
+                      <td>${pipelineBadge}</td>
+                      <td>${ttlLink}</td>
+                      <td>${outputLink}</td>
+                      <td>${visualiserLink}</td>
+                      <td>${reportLink}</td>
+                      ${showActions ? `<td style="vertical-align: middle;">${actionsHtml}</td>` : ''}
+                      <td style="vertical-align: middle;">${noteBtnHtml}</td>
+                    `;
                     jobsTbody.appendChild(tr);
+                    syncNotesFromS3(job.job_id);
                 });
                 M.Tooltip.init(document.querySelectorAll('.tooltipped'));
             }
@@ -350,9 +1204,18 @@
             }
 
             jobsTbody.addEventListener('click', (event) => {
-                const button = event.target.closest('.stop-job-action');
-                if (!button) return;
-                stopJob(button.dataset.jobId, button);
+                const stopButton = event.target.closest('.stop-job-action');
+                if (stopButton) {
+                    stopJob(stopButton.dataset.jobId, stopButton);
+                    return;
+                }
+
+                const noteButton = event.target.closest('.edit-note-action');
+                if (noteButton) {
+                    const jobId = noteButton.dataset.jobId;
+                    const domain = noteButton.dataset.domain;
+                    openNotesModal(jobId, domain);
+                }
             });
 
             refreshBtn.addEventListener('click', fetchJobs);
@@ -362,7 +1225,9 @@
                 await fetchJobs();
                 // If there are rows in the table (other than the "No jobs" message), show it
                 if (jobsTbody.querySelectorAll('tr').length > 0 && jobsTbody.textContent.indexOf('No jobs found') === -1) {
-                    recentJobsCol.style.display = 'block';
+                    if (document.getElementById('right-column').style.display === 'none') {
+                        recentJobsCol.style.display = 'block';
+                    }
                 }
             }
 
