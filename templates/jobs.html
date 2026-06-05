@@ -21,16 +21,16 @@
           <thead>
             <tr>
                 <th scope="col" style="width: 50px;">#</th>
-                <th scope="col">Job ID</th>
-                <th scope="col">Created</th>
+                <th scope="col">Domain</th>
+                <th scope="col">Time of Run</th>
                 <th scope="col">Status</th>
                 <th scope="col">Pipeline</th>
-                <th scope="col">Domain</th>
                 <th scope="col">TTL File</th>
                 <th scope="col">Output</th>
                 <th scope="col">Visualise</th>
                 <th scope="col">Report</th>
-                <th scope="col">Actions</th>
+                <th scope="col" id="actions-header">Actions</th>
+                <th scope="col">Notes</th>
             </tr>
           </thead>
           <tbody id="jobs-tbody">
@@ -41,6 +41,28 @@
     </div>
   </div>
 </div>
+
+<!-- Notes Modal Structure -->
+<div id="notes-modal" class="modal" style="border-radius: 6px; max-width: 600px; border-top: 4px solid #1d70b8; overflow-y: visible;">
+    <div class="modal-content" style="padding: 24px;">
+        <h4 style="font-weight: bold; color: #1d70b8; margin: 0 0 20px 0; display: flex; align-items: center; justify-content: space-between; font-size: 1.3rem;">
+            <span id="notes-modal-title">Job Notes</span>
+            <button type="button" class="modal-close btn-flat" style="padding: 0; min-width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #505a5f; margin: 0;" title="Close">
+                <i class="material-icons" style="font-size: 1.25rem; margin: 0;">close</i>
+            </button>
+        </h4>
+        <div id="notes-modal-list" style="max-height: 250px; overflow-y: auto; margin-bottom: 20px; padding-right: 5px;"></div>
+        <div style="border-top: 1px solid #b1b4b6; padding-top: 15px;">
+            <label for="notes-modal-input" style="color: #0b0c0c; font-weight: bold; font-size: 0.95rem; display: block; margin-bottom: 8px;">Add a note</label>
+            <div class="input-field" style="margin-top: 0; margin-bottom: 12px;">
+                <textarea id="notes-modal-input" class="materialize-textarea" placeholder="Type a note here..." style="min-height: 60px; margin: 0; padding: 8px; border: 1px solid #b1b4b6; border-radius: 4px; box-sizing: border-box; background-color: #ffffff;"></textarea>
+            </div>
+            <button type="button" id="notes-modal-add-btn" class="btn" style="background-color: #1d70b8; font-weight: bold; height: 36px; line-height: 36px; padding: 0 16px; border-radius: 4px; box-shadow: none;">
+                Add Note
+            </button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -48,6 +70,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     const jobsTbody = document.getElementById('jobs-tbody');
     const refreshBtn = document.getElementById('refresh-jobs-btn');
+    M.Modal.init(document.getElementById('notes-modal'), { dismissible: true });
 
     async function fetchJobs() {
       refreshBtn.classList.add('disabled');
@@ -64,9 +87,229 @@
       }
     }
 
+    let currentEditingJobId = null;
+
+    function getJobNotes(jobId) {
+      const newNotes = localStorage.getItem('job-notes-' + jobId);
+      if (newNotes) {
+        try {
+          return JSON.parse(newNotes);
+        } catch (e) {
+          console.error("Error parsing job notes", e);
+        }
+      }
+      const oldNote = localStorage.getItem('job-note-' + jobId);
+      if (oldNote) {
+        const migrated = [{
+          id: 'legacy-' + Date.now(),
+          text: oldNote,
+          timestamp: new Date().toISOString()
+        }];
+        localStorage.setItem('job-notes-' + jobId, JSON.stringify(migrated));
+        localStorage.removeItem('job-note-' + jobId);
+        return migrated;
+      }
+      return [];
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    async function syncNotesFromS3(jobId) {
+      try {
+        const response = await fetch(`/ontology/jobs/${jobId}/notes`);
+        if (response.ok) {
+          const s3Notes = await response.json();
+          localStorage.setItem('job-notes-' + jobId, JSON.stringify(s3Notes));
+          
+          const btn = document.querySelector(`.edit-note-action[data-job-id="${jobId}"]`);
+          if (btn) {
+            const notesCount = s3Notes.length;
+            const noteIcon = notesCount > 0 ? 'rate_review' : 'chat_bubble_outline';
+            const noteColor = notesCount > 0 ? '#1d70b8' : '#b0bec5';
+            
+            let noteTooltip = 'Add a note';
+            if (notesCount > 0) {
+              const countText = notesCount === 1 ? '1 note' : `${notesCount} notes`;
+              const latestText = s3Notes[notesCount - 1].text;
+              noteTooltip = `${countText}. Latest: "${latestText.substring(0, 50)}${latestText.length > 50 ? '...' : ''}"`;
+            }
+
+            const inst = M.Tooltip.getInstance(btn);
+            if (inst) inst.destroy();
+            
+            const iconEl = btn.querySelector('i');
+            if (iconEl) iconEl.textContent = noteIcon;
+            btn.style.color = noteColor;
+            btn.setAttribute('data-tooltip', noteTooltip);
+            M.Tooltip.init(btn);
+          }
+        }
+      } catch (e) {
+        console.error("Error syncing notes from S3", e);
+      }
+    }
+
+    async function saveJobNotes(jobId, notes) {
+      localStorage.setItem('job-notes-' + jobId, JSON.stringify(notes));
+      try {
+        await fetch(`/ontology/jobs/${jobId}/notes`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(notes)
+        });
+      } catch (e) {
+        console.error("Error saving notes to S3", e);
+        M.toast({ html: 'Notes saved locally (failed to upload to S3)' });
+      }
+    }
+
+    function openNotesModal(jobId, domain) {
+      currentEditingJobId = jobId;
+      document.getElementById('notes-modal-title').textContent = `Notes for ${domain}`;
+      document.getElementById('notes-modal-input').value = '';
+      
+      const inputLabel = document.querySelector('label[for="notes-modal-input"]');
+      if (inputLabel) {
+        inputLabel.classList.remove('active');
+      }
+      
+      renderNotesModalList();
+      
+      const modalInstance = M.Modal.getInstance(document.getElementById('notes-modal'));
+      if (modalInstance) {
+        modalInstance.open();
+      }
+      
+      syncNotesFromS3(jobId).then(() => {
+        renderNotesModalList();
+      });
+    }
+
+    function renderNotesModalList() {
+      const listContainer = document.getElementById('notes-modal-list');
+      if (!listContainer) return;
+      
+      const notes = getJobNotes(currentEditingJobId);
+      
+      if (notes.length === 0) {
+        listContainer.innerHTML = `
+          <div class="grey-text center-align" style="padding: 20px 0;">
+            No notes recorded for this run. Type a note below to get started.
+          </div>
+        `;
+        return;
+      }
+      
+      listContainer.innerHTML = '';
+      notes.forEach(note => {
+        const dateStr = new Date(note.timestamp).toLocaleString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: 'Europe/London'
+        });
+        
+        const noteEl = document.createElement('div');
+        noteEl.style.padding = '10px 0';
+        noteEl.style.borderBottom = '1px solid #f3f2f1';
+        noteEl.style.display = 'flex';
+        noteEl.style.flexDirection = 'column';
+        noteEl.style.position = 'relative';
+        
+        noteEl.innerHTML = `
+          <div style="font-size: 0.85rem; color: #505a5f; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; padding-right: 60px;">
+            <span>${dateStr}</span>
+          </div>
+          <div style="font-size: 0.95rem; color: #0b0c0c; white-space: pre-wrap; word-break: break-word; line-height: 1.4; padding-right: 60px;" id="note-text-${note.id}">${escapeHtml(note.text)}</div>
+          <div style="position: absolute; right: 0; top: 10px; display: flex; gap: 4px;">
+            <button type="button" class="btn-flat" onclick="editNoteItem('${note.id}')" style="padding: 0 4px; min-width: auto; height: 28px; line-height: 28px; color: #1d70b8;" title="Edit note">
+              <i class="material-icons" style="font-size: 1.1rem;">edit</i>
+            </button>
+            <button type="button" class="btn-flat" onclick="deleteNoteItem('${note.id}')" style="padding: 0 4px; min-width: auto; height: 28px; line-height: 28px; color: #d4351c;" title="Delete note">
+              <i class="material-icons" style="font-size: 1.1rem;">delete</i>
+            </button>
+          </div>
+        `;
+        listContainer.appendChild(noteEl);
+      });
+
+      setTimeout(() => {
+        listContainer.scrollTop = listContainer.scrollHeight;
+      }, 50);
+    }
+
+    window.deleteNoteItem = function(noteId) {
+      if (!confirm("Are you sure you want to delete this note?")) return;
+      
+      let notes = getJobNotes(currentEditingJobId);
+      notes = notes.filter(n => n.id !== noteId);
+      saveJobNotes(currentEditingJobId, notes).then(() => {
+        renderNotesModalList();
+        fetchJobs();
+      });
+    };
+
+    window.editNoteItem = function(noteId) {
+      const notes = getJobNotes(currentEditingJobId);
+      const note = notes.find(n => n.id === noteId);
+      if (!note) return;
+      
+      const newText = prompt("Edit note text:", note.text);
+      if (newText === null) return;
+      
+      const trimmed = newText.trim();
+      if (!trimmed) {
+        window.deleteNoteItem(noteId);
+        return;
+      }
+      
+      note.text = trimmed;
+      saveJobNotes(currentEditingJobId, notes).then(() => {
+        renderNotesModalList();
+        fetchJobs();
+      });
+    };
+
+    document.getElementById('notes-modal-add-btn').addEventListener('click', () => {
+      const textarea = document.getElementById('notes-modal-input');
+      const text = textarea.value.trim();
+      if (!text) return;
+      
+      const notes = getJobNotes(currentEditingJobId);
+      notes.push({
+        id: 'note-' + Date.now(),
+        text: text,
+        timestamp: new Date().toISOString()
+      });
+      
+      saveJobNotes(currentEditingJobId, notes).then(() => {
+        textarea.value = '';
+        renderNotesModalList();
+        fetchJobs();
+      });
+    });
+
     function renderJobsTable(jobs) {
+      const showActions = jobs && jobs.some(job => ['pending', 'running'].includes(job.status.toLowerCase()));
+      const actionsHeader = document.getElementById('actions-header');
+      if (actionsHeader) {
+        actionsHeader.style.display = showActions ? '' : 'none';
+      }
+      const colspanVal = showActions ? 11 : 10;
+
       if (!jobs || jobs.length === 0) {
-        jobsTbody.innerHTML = '<tr><td colspan="11" class="center-align grey-text">No jobs found.</td></tr>';
+        jobsTbody.innerHTML = `<tr><td colspan="${colspanVal}" class="center-align grey-text">No jobs found.</td></tr>`;
         return;
       }
 
@@ -80,7 +323,7 @@
         } else if (job.status.toLowerCase() === 'stopped') {
           statusHtml = '<span class="new badge grey" data-badge-caption="stopped"></span>';
         } else if (job.status.toLowerCase() === 'failed') {
-          statusHtml = `<span class="new badge red" data-badge-caption="failed"></span> <i class="material-icons tiny grey-text tooltipped" data-position="bottom" data-tooltip="${job.error || 'Unknown error'}">info_outline</i>`;
+          statusHtml = `<span class="new badge red" data-badge-caption="failed"></span> <i class="material-icons tiny red-text tooltipped" data-position="bottom" data-tooltip="${job.error || 'Unknown error'}" style="vertical-align: middle; cursor: help; margin-left: 4px;">info_outline</i>`;
         } else if (job.status.toLowerCase() === 'running') {
           statusHtml = '<span class="new badge blue" data-badge-caption="running"></span>';
         } else {
@@ -101,7 +344,7 @@
         let outputLink = 'N/A';
         let visualiserLink = 'N/A';
         let reportLink = 'N/A';
-        let actionsHtml = 'N/A';
+        let actionsHtml = '';
 
         if (!isIngestion) {
           const targetBucket = 'govuk-ai-accelerator-data-integration';
@@ -120,20 +363,39 @@
           actionsHtml = `<button type="button" class="table-action-link stop-job-action" data-job-id="${job.job_id}">Stop<span class="govuk-visually-hidden"> job ${job.job_id}</span></button>`;
         }
 
+        // Retrieve existing notes
+        const notes = getJobNotes(job.job_id);
+        const noteIcon = notes.length > 0 ? 'rate_review' : 'chat_bubble_outline';
+        const noteColor = notes.length > 0 ? '#1d70b8' : '#b0bec5';
+        
+        let noteTooltip = 'Add a note';
+        if (notes.length > 0) {
+            const countText = notes.length === 1 ? '1 note' : `${notes.length} notes`;
+            const latestText = notes[notes.length - 1].text;
+            noteTooltip = `${countText}. Latest: "${latestText.substring(0, 50)}${latestText.length > 50 ? '...' : ''}"`;
+        }
+
+        const noteBtnHtml = `
+          <button type="button" class="btn-flat edit-note-action tooltipped" data-job-id="${job.job_id}" data-domain="${domainStr}" data-position="top" data-tooltip="${noteTooltip}" style="padding: 0 4px; min-width: auto; height: auto; line-height: 1; color: ${noteColor}; vertical-align: middle; margin-left: 6px;" aria-label="Edit notes for this job">
+            <i class="material-icons" style="font-size: 1.15rem;">${noteIcon}</i>
+          </button>
+        `;
+
         tr.innerHTML = `
           <td class="grey-text">${index + 1}</td>
-          <td style="font-family: monospace; font-size: 0.9em;">${job.job_id}</td>
+          <td style="vertical-align: middle;"><span style="font-weight: bold; vertical-align: middle;">${domainStr}</span></td>
           <td>${new Date(job.created_at).toLocaleString('en-GB', { timeZone: 'Europe/London' })}</td>
           <td>${statusHtml}</td>
           <td>${pipelineBadge}</td>
-          <td>${domainStr}</td>
           <td>${ttlLink}</td>
           <td>${outputLink}</td>
           <td>${visualiserLink}</td>
           <td>${reportLink}</td>
-          <td>${actionsHtml}</td>
+          ${showActions ? `<td style="vertical-align: middle;">${actionsHtml}</td>` : ''}
+          <td style="vertical-align: middle;">${noteBtnHtml}</td>
         `;
         jobsTbody.appendChild(tr);
+        syncNotesFromS3(job.job_id);
       });
       M.Tooltip.init(document.querySelectorAll('.tooltipped'));
     }
@@ -162,9 +424,18 @@
     }
 
     jobsTbody.addEventListener('click', (event) => {
-      const button = event.target.closest('.stop-job-action');
-      if (!button) return;
-      stopJob(button.dataset.jobId, button);
+      const stopButton = event.target.closest('.stop-job-action');
+      if (stopButton) {
+        stopJob(stopButton.dataset.jobId, stopButton);
+        return;
+      }
+
+      const noteButton = event.target.closest('.edit-note-action');
+      if (noteButton) {
+        const jobId = noteButton.dataset.jobId;
+        const domain = noteButton.dataset.domain;
+        openNotesModal(jobId, domain);
+      }
     });
 
     refreshBtn.addEventListener('click', fetchJobs);
