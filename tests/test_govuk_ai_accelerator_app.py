@@ -77,7 +77,7 @@ def test_ontology_dashboard_includes_stop_job_action():
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert '<th scope="col">Actions</th>' in html
+    assert '<th scope="col" id="actions-header">Actions</th>' in html
     assert "table-action-link stop-job-action" in html
     assert "Stop<span class=\"govuk-visually-hidden\"> job" in html
     assert "['pending', 'running'].includes(job.status.toLowerCase())" in html
@@ -91,8 +91,8 @@ def test_ontology_dashboard_describes_default_config_flow():
     assert response.status_code == 200
     assert 'id="file" name="file" accept=".yaml,.yml" style="display: none;"' in html
     assert "Please select a YAML configuration file." not in html
-    assert "Default source configuration" in html
-    assert "Default domain prompt" in html
+    assert "Configuration Panel" in html
+    assert "domain prompt template" in html
 
 
 def test_historical_jobs_uses_link_styled_stop_job_action():
@@ -465,3 +465,62 @@ def test_stop_job_returns_404_for_unknown_job(tmp_path):
     response = flask_app.test_client().post("/ontology/jobs/missing-job/stop")
 
     assert response.status_code == 404
+
+
+def test_job_notes_endpoints(tmp_path, monkeypatch):
+    from unittest.mock import MagicMock
+    app_module, flask_app = _jobs_test_app(tmp_path)
+
+    # Create a dummy job
+    with flask_app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="notes-test-job",
+                status="completed",
+                domain="test-domain",
+                job_runs="run-20260605-1",
+                created_at=datetime.now(timezone.utc),
+            )
+        )
+        app_module.db.session.commit()
+
+    # Mock boto3 client
+    mock_s3_client = MagicMock()
+    monkeypatch.setattr("boto3.client", lambda service_name: mock_s3_client if service_name == "s3" else MagicMock())
+
+    # 1. Test POST notes
+    notes_payload = [{"id": "1", "text": "This is a test note", "timestamp": "2026-06-05T12:00:00Z"}]
+    response = flask_app.test_client().post(
+        "/ontology/jobs/notes-test-job/notes",
+        data=json.dumps(notes_payload),
+        content_type="application/json"
+    )
+
+    assert response.status_code == 200
+    assert response.get_json()["status"] == "success"
+
+    # Verify s3 client was called with correct bucket and key
+    mock_s3_client.put_object.assert_called_once_with(
+        Bucket="govuk-ai-accelerator-data-integration",
+        Key="test-domain/run-20260605-1/notes.json",
+        Body=json.dumps(notes_payload).encode("utf-8"),
+        ContentType="application/json"
+    )
+
+    # Reset mock for GET test
+    mock_s3_client.reset_mock()
+
+    # Mock get_object response body
+    mock_body = MagicMock()
+    mock_body.read.return_value = json.dumps(notes_payload).encode("utf-8")
+    mock_s3_client.get_object.return_value = {"Body": mock_body}
+
+    # 2. Test GET notes
+    response = flask_app.test_client().get("/ontology/jobs/notes-test-job/notes")
+
+    assert response.status_code == 200
+    assert response.get_json() == notes_payload
+    mock_s3_client.get_object.assert_called_once_with(
+        Bucket="govuk-ai-accelerator-data-integration",
+        Key="test-domain/run-20260605-1/notes.json"
+    )
