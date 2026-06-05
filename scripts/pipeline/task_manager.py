@@ -46,7 +46,7 @@ def _uses_postgres(db) -> bool:
 
 def _try_acquire_leader_connection(db):
     if not _uses_postgres(db):
-        logger.info("[queue] sqlite mode detected; treating this pod as leader")
+        logger.debug("[queue] sqlite mode detected; treating this pod as leader")
         return True
 
     connection = db.engine.connect()
@@ -56,11 +56,11 @@ def _try_acquire_leader_connection(db):
     ).scalar()
 
     if acquired:
-        logger.info(f"[queue] advisory lock {LEADER_LOCK_ID} acquired")
+        logger.debug(f"[queue] advisory lock {LEADER_LOCK_ID} acquired")
         return connection
 
     connection.close()
-    logger.info(f"[queue] advisory lock {LEADER_LOCK_ID} not acquired")
+    logger.debug(f"[queue] advisory lock {LEADER_LOCK_ID} not acquired")
     return None
 
 
@@ -73,11 +73,23 @@ def _release_leader_connection(connection):
             text("SELECT pg_advisory_unlock(:lock_id)"),
             {"lock_id": LEADER_LOCK_ID},
         )
-        logger.info(f"[queue] advisory lock {LEADER_LOCK_ID} released")
+        logger.debug(f"[queue] advisory lock {LEADER_LOCK_ID} released")
     except Exception:
         pass
     finally:
         connection.close()
+
+
+def log_worker_slot_state(*, saturated, was_saturated, worker_id, max_workers) -> bool:
+    became_full = saturated and not was_saturated
+    freed_up = was_saturated and not saturated
+    if became_full:
+        logger.info(f"[queue] worker pool full ({max_workers} busy) worker={worker_id}")
+    elif freed_up:
+        logger.info(f"[queue] worker slot free worker={worker_id}")
+    elif saturated:
+        logger.debug(f"[queue] worker pool still full worker={worker_id}")
+    return saturated
 
 
 def cleanup_stale_jobs(app):
@@ -206,7 +218,10 @@ def requeue_claimed_job(db, job_model, job_id: str, error_message: str | None = 
     if job is None:
         return
 
-    logger.info(f"[job={job_id}] requeueing after executor submission failure")
+    logger.info(
+        f"[job={job_id}] requeueing after executor submission failure "
+        f"domain={job.domain} worker={job.claimed_by}"
+    )
     job.status = "pending"
     job.claimed_by = None
     job.claimed_at = None
@@ -221,7 +236,10 @@ def mark_job_failed_if_still_running(db, job_model, job_id: str, error_message: 
     if job is None or job.status != "running":
         return False
 
-    logger.info(f"[job={job_id}] marking running job as failed after worker failure")
+    logger.info(
+        f"[job={job_id}] marking running job as failed after worker failure "
+        f"domain={job.domain} worker={job.claimed_by}"
+    )
     job.status = "failed"
     job.error_message = error_message
     job.claimed_by = None
@@ -232,7 +250,7 @@ def mark_job_failed_if_still_running(db, job_model, job_id: str, error_message: 
 
 
 def run_claimed_job(app, worker_id: str, claimed_job: dict):
-    logger.info(
+    logger.debug(
         f"[job={claimed_job['job_id']}] execution starting "
         f"worker={worker_id} domain={claimed_job['domain']} attempt={claimed_job['attempt_count']}"
     )
@@ -253,7 +271,7 @@ def run_claimed_job(app, worker_id: str, claimed_job: dict):
         attempt_count=claimed_job.get("attempt_count"),
         worker_id=worker_id,
     )
-    logger.info(
+    logger.debug(
         f"[job={claimed_job['job_id']}] execution returned "
         f"worker={worker_id} domain={claimed_job['domain']}"
     )
@@ -310,6 +328,7 @@ def start_task_manager(app):
         slots = threading.BoundedSemaphore(EXECUTOR_MAX_WORKERS)
         last_cleanup = 0.0
         cleanup_interval = 60
+        was_saturated = False
 
         logger.info(
             f"[queue] task manager thread started worker={worker_id} max_workers={EXECUTOR_MAX_WORKERS}"
@@ -324,8 +343,14 @@ def start_task_manager(app):
                         _try_run_maintenance(app, db)
                     last_cleanup = time.time()
 
-                if not slots.acquire(blocking=False):
-                    logger.info(f"[queue] no free worker slots on worker={worker_id}")
+                acquired = slots.acquire(blocking=False)
+                was_saturated = log_worker_slot_state(
+                    saturated=not acquired,
+                    was_saturated=was_saturated,
+                    worker_id=worker_id,
+                    max_workers=EXECUTOR_MAX_WORKERS,
+                )
+                if not acquired:
                     time.sleep(1)
                     continue
 
@@ -360,7 +385,7 @@ def start_task_manager(app):
 
                 def _release_slot(_future):
                     handle_finished_job_future(app, worker_id, claimed_job, _future)
-                    logger.info(
+                    logger.debug(
                         f"[job={claimed_job['job_id']}] releasing worker slot on worker={worker_id}"
                     )
                     slots.release()

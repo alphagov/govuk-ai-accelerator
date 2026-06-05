@@ -347,7 +347,10 @@ def run_ontology_harness_background_task(
                 worker_id=worker_id,
             )
         )
-        logger.info(f"[job={job_id}] ontology harness generation completed")
+        logger.info(
+            f"[job={job_id}] ontology harness generation completed "
+            f"domain={config.get('domain_name', DEFAULT_HARNESS_DOMAIN)}"
+        )
 
         if output_dir:
             _persist_config_yaml(config, str(output_dir))
@@ -396,10 +399,16 @@ def run_ontology_harness_background_task(
         )
         return bool(report.get("passed"))
     except JobSupersededError as exc:
-        logger.warning(f"[job={job_id}] ontology harness superseded; abandoning: {exc}")
+        logger.warning(
+            f"[job={job_id}] ontology harness superseded; abandoning "
+            f"domain={config.get('domain_name', DEFAULT_HARNESS_DOMAIN)}: {exc}"
+        )
         return False
     except JobStoppedError as exc:
-        logger.info(f"[job={job_id}] ontology harness stopped: {exc}")
+        logger.info(
+            f"[job={job_id}] ontology harness stopped "
+            f"domain={config.get('domain_name', DEFAULT_HARNESS_DOMAIN)}: {exc}"
+        )
         if job_id:
             _update_job_status(
                 job_id,
@@ -409,6 +418,9 @@ def run_ontology_harness_background_task(
             )
         return False
     except Exception as exc:
-        logger.error(f"[job={job_id}] ontology harness failed error={exc}")
+        logger.error(
+            f"[job={job_id}] ontology harness failed "
+            f"domain={config.get('domain_name', DEFAULT_HARNESS_DOMAIN)} error={exc}"
+        )
         _finalize_job_status(job_id, "failed", attempt_count, worker_id, error_message=str(exc))
         raise

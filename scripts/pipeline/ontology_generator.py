@@ -13,7 +13,7 @@ import fsspec
 from sqlalchemy import update
 from sqlalchemy.exc import OperationalError
 
-from scripts.pipeline.logging_config import logger
+from scripts.pipeline.logging_config import log_step, logger
 from scripts.pipeline.utils import load_config_for_domain, PipelineConfig
 
 if TYPE_CHECKING:
@@ -51,7 +51,7 @@ def _mark_job_progress(job_id: str | None, stage: str) -> None:
             if job:
                 job.last_progress_at = datetime.now(timezone.utc)
                 db.session.commit()
-        logger.info(f"[job={job_id}] progress stage={stage}")
+        logger.debug(f"[job={job_id}] progress stage={stage}")
     except OperationalError as exc:
         logger.warning(f"[job={job_id}] unable to record progress stage={stage}: {exc}")
     except Exception as exc:
@@ -123,7 +123,7 @@ async def run_ontology_pipeline(
     _raise_if_superseded(job_id, attempt_count, worker_id)
 
     logger.info(
-        f"[job={job_id}] starting ontology pipeline domain={pipeline_config.domain_name}"
+        f"[job={job_id}] Generating ontology for domain={pipeline_config.domain_name} worker={worker_id}"
     )
 
     fs = fsspec.filesystem(ontology_config.filesystem.protocol)
@@ -137,33 +137,44 @@ async def run_ontology_pipeline(
         domain_prompt=domain_prompt,
     )
 
-    pipeline = _setup_pipeline(pipeline, pipeline_config)
+    with log_step("Setting up ontology pipeline", "set up ontology pipeline",
+                  job=job_id, domain=pipeline_config.domain_name):
+        pipeline = _setup_pipeline(pipeline, pipeline_config)
     _mark_job_progress(job_id, "pipeline-setup")
     _raise_if_job_stopped(job_id)
     _raise_if_superseded(job_id, attempt_count, worker_id)
 
-    pipeline = await _extract_ontology(pipeline)
+    with log_step("Extracting ontology data", "extracted ontology data",
+                  job=job_id, domain=pipeline_config.domain_name):
+        pipeline = await _extract_ontology(pipeline)
     _mark_job_progress(job_id, "ontology-extracted")
     _raise_if_job_stopped(job_id)
     _raise_if_superseded(job_id, attempt_count, worker_id)
 
-    pipeline = await _process_ontology(pipeline)
+    with log_step("Processing ontology data", "processed ontology data",
+                  job=job_id, domain=pipeline_config.domain_name):
+        pipeline = await _process_ontology(pipeline)
     _mark_job_progress(job_id, "ontology-processed")
     _raise_if_job_stopped(job_id)
     _raise_if_superseded(job_id, attempt_count, worker_id)
 
-    pipeline = await _create_ontology_graph(pipeline)
+    with log_step("Creating ontology graph", "created ontology graph",
+                  job=job_id, domain=pipeline_config.domain_name):
+        pipeline = await _create_ontology_graph(pipeline)
     _mark_job_progress(job_id, "graph-created")
     _raise_if_job_stopped(job_id)
     _raise_if_superseded(job_id, attempt_count, worker_id)
 
-    await _save_pipeline_output(pipeline, pipeline_config, fs)
+    with log_step("Saving pipeline output", "saved pipeline output",
+                  job=job_id, domain=pipeline_config.domain_name):
+        await _save_pipeline_output(pipeline, pipeline_config, fs)
     _mark_job_progress(job_id, "artifacts-saved")
     _raise_if_job_stopped(job_id)
     _raise_if_superseded(job_id, attempt_count, worker_id)
 
     logger.info(
-        f"[job={job_id}] ontology pipeline completed domain={pipeline_config.domain_name}"
+        f"[job={job_id}] Successfully generated ontology for domain={pipeline_config.domain_name} "
+        f"worker={worker_id}"
     )
     return str(pipeline.state.output_dir)
 
@@ -172,7 +183,6 @@ def _setup_pipeline(
     pipeline: OntologyPipelineBuilder,
     config: PipelineConfig,
 ) -> OntologyPipelineBuilder:
-    logger.info("Setting up ontology pipeline")
     pipeline = pipeline.setup_pipeline(
         input_path=config.input_path,
         output_dir=config.output_dir,
@@ -184,12 +194,10 @@ def _setup_pipeline(
 
 
 async def _extract_ontology(pipeline: OntologyPipelineBuilder) -> OntologyPipelineBuilder:
-    logger.info("Extracting ontology data")
     return await pipeline.extract_async()
 
 
 async def _process_ontology(pipeline: OntologyPipelineBuilder) -> OntologyPipelineBuilder:
-    logger.info("Processing ontology data")
     pipeline = await pipeline.deduplicate()
     pipeline = await pipeline.build_relations()
     pipeline = await pipeline.update_schema()
@@ -197,7 +205,6 @@ async def _process_ontology(pipeline: OntologyPipelineBuilder) -> OntologyPipeli
 
 
 async def _create_ontology_graph(pipeline: OntologyPipelineBuilder) -> OntologyPipelineBuilder:
-    logger.info("Creating ontology graph")
     if pipeline.state.incremental:
         pipeline = await pipeline.merge()
     return pipeline.validate().save().export()
@@ -208,7 +215,6 @@ async def _save_pipeline_output(
     config: PipelineConfig,
     fs: AbstractFileSystem,
 ) -> None:
-    logger.info("Saving pipeline output")
     await pipeline.finalize()
     await _save_version_info(config, pipeline.state.output_dir, fs)
 
@@ -387,7 +393,7 @@ def run_ontology_background_task(
                 worker_id=worker_id,
             )
         )
-        logger.info(f"[job={job_id}] pipeline task completed successfully")
+        logger.debug(f"[job={job_id}] pipeline task completed successfully")
 
         if output_dir:
             _persist_config_yaml(config, str(output_dir))
