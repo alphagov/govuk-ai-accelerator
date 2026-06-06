@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import sys
 import types
@@ -49,6 +50,9 @@ class _FakePipeline:
     async def finalize(self):
         return None
 
+    def build(self):
+        return None
+
 
 def _fake_configs(_config):
     ontology_config = types.SimpleNamespace(filesystem=types.SimpleNamespace(protocol="file"))
@@ -60,6 +64,30 @@ def _fake_configs(_config):
 
 async def _async_noop(*a, **k):
     return None
+
+
+def test_save_pipeline_output_builds_so_alignment_runs():
+    calls = []
+
+    class _RecordingPipeline:
+        def __init__(self):
+            self.state = _FakeState()
+
+        async def finalize(self):
+            calls.append("finalize")
+            return None
+
+        def build(self):
+            calls.append("build")
+            return None
+
+    asyncio.run(
+        og._save_pipeline_output(
+            _RecordingPipeline(), types.SimpleNamespace(output_dir="out"), object()
+        )
+    )
+
+    assert calls == ["finalize", "build"]
 
 
 def test_pipeline_logs_three_phase_per_step(monkeypatch, caplog):
