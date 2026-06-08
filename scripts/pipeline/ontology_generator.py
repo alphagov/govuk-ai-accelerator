@@ -216,6 +216,7 @@ async def _save_pipeline_output(
     fs: AbstractFileSystem,
 ) -> None:
     await pipeline.finalize()
+    pipeline.build()
     await _save_version_info(config, pipeline.state.output_dir, fs)
 
 
