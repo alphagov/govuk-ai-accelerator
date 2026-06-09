@@ -532,6 +532,17 @@ def test_govuk_frontend_assets_are_served():
     assert response.status_code == 200
 
 
+def test_govuk_frontend_assets_are_cached_immutably():
+    response = _client().get("/assets/fonts/light-94a07e06a1-v2.woff2")
+
+    assert response.status_code == 200
+    cache_control = response.headers["Cache-Control"]
+    assert "public" in cache_control
+    assert "max-age=31536000" in cache_control
+    assert "immutable" in cache_control
+    assert "no-cache" not in cache_control
+
+
 def test_header_uses_govuk_service_navigation():
     response = _client().get("/ontology/")
     html = response.get_data(as_text=True)
