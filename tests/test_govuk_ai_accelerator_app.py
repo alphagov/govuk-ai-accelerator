@@ -530,3 +530,83 @@ def test_govuk_frontend_assets_are_served():
     response = _client().get("/assets/images/favicon.ico")
 
     assert response.status_code == 200
+
+
+def test_header_uses_govuk_service_navigation():
+    response = _client().get("/ontology/")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert 'class="govuk-header"' in html
+    assert "govuk-service-navigation" in html
+    assert "vendor/govuk-frontend/govuk-frontend.min.css" in html
+
+
+def test_header_navigation_links_map_labels_to_paths():
+    response = _client().get("/ontology/domains")
+    html = response.get_data(as_text=True)
+
+    assert '<a class="govuk-service-navigation__link" href="/ontology"' in html
+    assert "Home" in html
+    assert '<a class="govuk-service-navigation__link" href="/ontology/all_jobs"' in html
+    assert "Review Ontologies" in html
+    assert "Create Domains" in html
+    assert (
+        '<a class="govuk-service-navigation__link" '
+        'href="/viewer/bucket/govuk-ai-accelerator-data-integration"' in html
+    )
+    assert "File Explorer" in html
+
+
+def test_header_marks_home_active_on_dashboard():
+    response = _client().get("/ontology/")
+    html = response.get_data(as_text=True)
+
+    assert '<a class="govuk-service-navigation__link" href="/ontology" aria-current="page">' in html
+    assert '<strong class="govuk-service-navigation__active-fallback">Home</strong>' in html
+
+
+def test_header_marks_create_domains_active_on_domains():
+    response = _client().get("/ontology/domains")
+    html = response.get_data(as_text=True)
+
+    assert (
+        '<a class="govuk-service-navigation__link" href="/ontology/domains" '
+        'aria-current="page">' in html
+    )
+    assert (
+        '<strong class="govuk-service-navigation__active-fallback">Create Domains</strong>'
+        in html
+    )
+
+
+def test_header_marks_review_ontologies_active_on_all_jobs():
+    response = _client().get("/ontology/all_jobs")
+    html = response.get_data(as_text=True)
+
+    assert (
+        '<a class="govuk-service-navigation__link" href="/ontology/all_jobs" '
+        'aria-current="page">' in html
+    )
+    assert (
+        '<strong class="govuk-service-navigation__active-fallback">Review Ontologies</strong>'
+        in html
+    )
+
+
+def test_left_sidebar_is_removed():
+    response = _client().get("/ontology/")
+    html = response.get_data(as_text=True)
+
+    assert 'class="sidebar"' not in html
+    assert '<aside' not in html
+
+
+def test_service_navigation_neutralises_materialize_nav_styling():
+    response = _client().get("/ontology/")
+    html = response.get_data(as_text=True)
+
+    assert ".govuk-service-navigation__wrapper {" in html
+    assert "background-color: transparent;" in html
+    assert ".govuk-service-navigation__link {" in html
+    assert "font-size: inherit;" in html
