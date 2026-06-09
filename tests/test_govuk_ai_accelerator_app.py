@@ -524,3 +524,9 @@ def test_job_notes_endpoints(tmp_path, monkeypatch):
         Bucket="govuk-ai-accelerator-data-integration",
         Key="test-domain/run-20260605-1/notes.json"
     )
+
+
+def test_govuk_frontend_assets_are_served():
+    response = _client().get("/assets/images/favicon.ico")
+
+    assert response.status_code == 200
