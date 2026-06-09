@@ -37,10 +37,10 @@ def test_domains_page_renders_form():
     assert 'type="file"' in body
 
 
-def test_sidebar_links_to_domains_page():
+def test_header_links_to_create_domains_page():
     response = _client().get("/ontology/")
 
     assert response.status_code == 200
     body = response.get_data(as_text=True)
     assert "/ontology/domains" in body
-    assert ">Domains<" in body
+    assert "Create Domains" in body

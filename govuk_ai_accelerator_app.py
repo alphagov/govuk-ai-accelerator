@@ -480,6 +480,14 @@ def create_flask_app():
     app.register_blueprint(viewer_bp)
     app.register_blueprint(home_bp)
 
+    govuk_assets = Blueprint(
+        "govuk_assets",
+        __name__,
+        static_folder="static/vendor/govuk-frontend/assets",
+        static_url_path="/assets",
+    )
+    app.register_blueprint(govuk_assets)
+
     with app.app_context():
         try:
             migrations_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "migrations")
