@@ -610,3 +610,10 @@ def test_service_navigation_neutralises_materialize_nav_styling():
     assert "background-color: transparent;" in html
     assert ".govuk-service-navigation__link {" in html
     assert "font-size: inherit;" in html
+
+
+def test_service_navigation_uses_rebranded_styling():
+    response = _client().get("/ontology/")
+    html = response.get_data(as_text=True)
+
+    assert 'class="govuk-template--rebranded"' in html
