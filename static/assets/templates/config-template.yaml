@@ -322,3 +322,6 @@ text_processing:
 
 parallel_files: 20
 batch_api_enabled: false
+term_extraction:
+  enabled: false
+
