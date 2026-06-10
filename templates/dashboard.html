@@ -77,6 +77,31 @@
             background-color: #003078 !important;
             color: white !important;
         }
+
+        /* Blue theme overrides for switches */
+        .switch label input[type=checkbox]:checked + .lever {
+            background-color: rgba(29, 112, 184, 0.5) !important;
+        }
+        .switch label input[type=checkbox]:checked + .lever:after {
+            background-color: #1d70b8 !important;
+        }
+
+        /* Blue theme overrides for range sliders */
+        input[type=range]::-webkit-slider-thumb {
+            background-color: #1d70b8 !important;
+        }
+        input[type=range]::-moz-range-thumb {
+            background-color: #1d70b8 !important;
+        }
+        input[type=range]::-ms-thumb {
+            background-color: #1d70b8 !important;
+        }
+        input[type=range] + .thumb {
+            background-color: #1d70b8 !important;
+        }
+        input[type=range] + .thumb .value {
+            color: #ffffff !important;
+        }
     </style>
     <div class="row" style="margin-top: 10px;">
         <!-- Left Column: Core Run Controller and Job History -->
@@ -204,14 +229,11 @@
 
                     <!-- LLM Model Selection -->
                     <div class="input-field" style="margin-bottom: 1.5rem;">
+                        <label style="font-weight: bold; color: #0b0c0c; position: static; font-size: 0.95rem;">LLM Model <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Select the Large Language Model to use for generating the ontology.">info_outline</i></label>
                         <select id="model-selector">
-                            <option value="bedrock:eu.anthropic.claude-sonnet-4-6" selected>Claude 3.5 Sonnet (bedrock:eu.anthropic.claude-sonnet-4-6)</option>
-                            <option value="google-vertex:gemini-1.5-pro">Gemini 1.5 Pro (Vertex)</option>
-                            <option value="google-vertex:gemini-1.5-flash">Gemini 1.5 Flash (Vertex)</option>
-                            <option value="bedrock:eu.anthropic.claude-3-5-haiku-20241022-v1:0">Claude 3.5 Haiku (Bedrock)</option>
+                            <option value="bedrock:eu.anthropic.claude-sonnet-4-6" selected>Claude 4.6 Sonnet</option>
                             <option value="custom">-- Custom Model --</option>
                         </select>
-                        <label style="font-weight: bold; color: #0b0c0c; position: static; font-size: 0.95rem;">LLM Model <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Select the Large Language Model to use for generating the ontology.">info_outline</i></label>
                     </div>
 
                     <!-- Custom Model Input (Hidden unless "custom" is selected) -->
@@ -220,20 +242,7 @@
                         <label for="custom-model-input">Custom Model Name <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enter the exact API identifier for a custom model from Vertex AI or AWS Bedrock.">info_outline</i></label>
                     </div>
 
-                    <!-- Temperature Slider -->
-                    <div class="range-field" style="margin-bottom: 1.5rem;">
-                        <label for="temp-slider" style="font-size: 0.95rem; color: #0b0c0c; font-weight: bold;">
-                            Temperature: <span id="temp-val" style="color: #1d70b8; margin-left: 5px; font-weight: 800;">0.00</span>
-                            <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Controls LLM response randomness. Lower values are more deterministic and focused.">info_outline</i>
-                        </label>
-                        <input type="range" id="temp-slider" min="0.0" max="1.0" step="0.05" value="0.00" style="margin-top: 8px; border: none;">
-                    </div>
 
-                    <!-- Extraction Prompt File Path -->
-                    <div class="input-field" style="margin-bottom: 2rem;">
-                        <input type="text" id="config-extraction-prompt-file" placeholder="e.g. domains/travel/prompts/custom_extraction.txt" class="validate">
-                        <label for="config-extraction-prompt-file" class="active">Custom Prompt File Path <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Optional path to custom extraction prompt file (relative or absolute).">info_outline</i></label>
-                    </div>
 
                     <!-- Advanced Toggle Switch -->
                     <div class="switch" style="margin-bottom: 1.5rem; background: #f3f2f1; padding: 10px 12px; border-radius: 4px;">
@@ -256,9 +265,30 @@
                                         <input type="text" id="config-entity-prefix" class="validate">
                                         <label for="config-entity-prefix" class="active">Entity ID Prefix <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Prefix for generated RDF/OWL class and property identifiers.">info_outline</i></label>
                                     </div>
-                                    <div class="input-field" style="margin: 5px 0 5px 0;">
+                                    <div class="input-field" style="margin: 5px 0 15px 0;">
                                         <input type="text" id="config-rel-prefix" class="validate">
                                         <label for="config-rel-prefix" class="active">Relationship ID Prefix <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Prefix for generated RDF/OWL relationship identifiers.">info_outline</i></label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>Compress Output <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Compress large JSON files with gzip.">info_outline</i></span>
+                                            <input type="checkbox" id="config-compress-output">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>Pretty Print JSON <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Pretty-print JSON output files.">info_outline</i></span>
+                                            <input type="checkbox" id="config-pretty-print">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 5px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>Include Metadata <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Include runtime metadata in output files.">info_outline</i></span>
+                                            <input type="checkbox" id="config-include-metadata">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
                                     </div>
                                 </div>
                             </li>
@@ -279,13 +309,31 @@
                                         <input type="number" id="config-max-tokens" min="1000" step="1000" class="validate">
                                         <label for="config-max-tokens" class="active">LLM Max Output Tokens <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum number of tokens the LLM can generate in a single response.">info_outline</i></label>
                                     </div>
+                                    <div class="range-field" style="margin: 5px 0 15px 0;">
+                                        <label for="temp-slider" style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold;">
+                                            Temperature: <span id="temp-val" style="color: #1d70b8; margin-left: 5px; font-weight: 800;">0.00</span>
+                                            <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Controls LLM response randomness. Lower values are more deterministic and focused.">info_outline</i>
+                                        </label>
+                                        <input type="range" id="temp-slider" min="0.0" max="1.0" step="0.05" value="0.00" style="margin-top: 8px; border: none;">
+                                    </div>
                                     <div class="input-field" style="margin: 5px 0 15px 0;">
                                         <input type="text" id="config-embedding-model" class="validate">
                                         <label for="config-embedding-model" class="active">Embedding Model <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="The text embedding model used for similarity calculation and vector storage.">info_outline</i></label>
                                     </div>
-                                    <div class="input-field" style="margin: 5px 0 5px 0;">
+                                    <div class="input-field" style="margin: 5px 0 15px 0;">
                                         <input type="number" id="config-embedding-dimension" min="1" step="1" class="validate">
                                         <label for="config-embedding-dimension" class="active">Embedding Dimension <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Dimensionality of the vector representations produced by the embedding model.">info_outline</i></label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>Embedding Cache Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable embedding caching to avoid re-computing.">info_outline</i></span>
+                                            <input type="checkbox" id="config-embedding-cache-enabled">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 5px 0;">
+                                        <input type="text" id="config-embedding-cache-dir" class="validate">
+                                        <label for="config-embedding-cache-dir" class="active">Embedding Cache Dir <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Directory to store cache files.">info_outline</i></label>
                                     </div>
                                 </div>
                             </li>
@@ -308,6 +356,20 @@
                                         </label>
                                         <input type="range" id="config-exact-thresh" min="0.5" max="1.0" step="0.01" value="1.00" style="margin-top: 8px; border: none;">
                                     </div>
+                                    <div class="range-field" style="margin: 15px 0 15px 0;">
+                                        <label for="config-high-sem-thresh" style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold;">
+                                            High Semantic Threshold: <span id="high-sem-thresh-val" style="color: #1d70b8; font-weight: 800;">0.98</span>
+                                            <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Threshold for strong semantic identity matches.">info_outline</i>
+                                        </label>
+                                        <input type="range" id="config-high-sem-thresh" min="0.8" max="1.0" step="0.005" value="0.985" style="margin-top: 8px; border: none;">
+                                    </div>
+                                    <div class="range-field" style="margin: 15px 0 15px 0;">
+                                        <label for="config-min-label-similarity" style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold;">
+                                            Min Label Similarity: <span id="min-label-similarity-val" style="color: #1d70b8; font-weight: 800;">0.75</span>
+                                            <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Minimum token overlap similarity required for entity label merging.">info_outline</i>
+                                        </label>
+                                        <input type="range" id="config-min-label-similarity" min="0.5" max="1.0" step="0.05" value="0.75" style="margin-top: 8px; border: none;">
+                                    </div>
                                     <div class="input-field" style="margin: 15px 0 15px 0;">
                                         <select id="config-conflict-strat">
                                             <option value="confidence">Higher Confidence</option>
@@ -315,13 +377,17 @@
                                         </select>
                                         <label style="position: static; font-size: 0.9rem;">Conflict Strategy <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Method to resolve conflicts when merging properties.">info_outline</i></label>
                                     </div>
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>Label Similarity Check <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Perform an additional check on entity labels before merging.">info_outline</i></span>
+                                            <input type="checkbox" id="config-label-similarity">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
                                     <div class="switch" style="margin: 15px 0 5px 0;">
                                         <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span style="display: inline-flex; align-items: center; gap: 4px;">
-                                                Label Similarity Check 
-                                                <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Perform an additional check on entity labels before merging." style="margin-top: -2px;">info_outline</i>
-                                            </span>
-                                            <input type="checkbox" id="config-label-similarity">
+                                            <span>Conflict Resolution Feature <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable conflict resolution stage.">info_outline</i></span>
+                                            <input type="checkbox" id="config-feat-conflict-resolution">
                                             <span class="lever" style="margin-right: 0;"></span>
                                         </label>
                                     </div>
@@ -393,31 +459,58 @@
                                     </div>
                                     <div class="switch" style="margin: 15px 0 15px 0;">
                                         <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span style="display: inline-flex; align-items: center; gap: 4px;">
-                                                Batch API Enabled
-                                                <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Use LLM batch API endpoints to reduce rate limit issues (increases latency)." style="margin-top: -2px;">info_outline</i>
-                                            </span>
+                                            <span>Batch API Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Use LLM batch API endpoints to reduce rate limit issues.">info_outline</i></span>
                                             <input type="checkbox" id="config-batch-api">
                                             <span class="lever" style="margin-right: 0;"></span>
                                         </label>
                                     </div>
                                     <div class="switch" style="margin: 15px 0 15px 0;">
                                         <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span style="display: inline-flex; align-items: center; gap: 4px;">
-                                                Term Extraction Enabled
-                                                <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Perform initial terminology extraction before relationship generation." style="margin-top: -2px;">info_outline</i>
-                                            </span>
+                                            <span>Term Extraction Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Perform initial terminology extraction before relationship generation.">info_outline</i></span>
                                             <input type="checkbox" id="config-term-extraction">
                                             <span class="lever" style="margin-right: 0;"></span>
                                         </label>
                                     </div>
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>Auto-Resume Checkpoint <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Automatically resume from checkpoint if available, instead of starting fresh.">info_outline</i></span>
+                                            <input type="checkbox" id="config-auto-resume">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>LLM Cache Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable LLM response caching.">info_outline</i></span>
+                                            <input type="checkbox" id="config-perf-llm-cache">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>Schema Evolution Feature <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable schema evolution tracking.">info_outline</i></span>
+                                            <input type="checkbox" id="config-feat-schema-evolution">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>Checkpointing Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable pipeline file checkpointing.">info_outline</i></span>
+                                            <input type="checkbox" id="config-checkpointing-enabled">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-checkpointing-flush-interval" min="0" class="validate">
+                                        <label for="config-checkpointing-flush-interval" class="active">Flush Interval (batches) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Flush checkpoints to disk every N batches.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-checkpointing-max-checkpoints" min="1" class="validate">
+                                        <label for="config-checkpointing-max-checkpoints" class="active">Max State Checkpoints <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Max number of checkpoints to keep.">info_outline</i></label>
+                                    </div>
                                     <div class="switch" style="margin: 15px 0 5px 0;">
                                         <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span style="display: inline-flex; align-items: center; gap: 4px;">
-                                                Auto-Resume Checkpoint
-                                                <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Automatically resume from checkpoint if available, instead of starting fresh." style="margin-top: -2px;">info_outline</i>
-                                            </span>
-                                            <input type="checkbox" id="config-auto-resume">
+                                            <span>Persist State <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Persist complete pipeline ExtractionState.">info_outline</i></span>
+                                            <input type="checkbox" id="config-checkpointing-persist-state">
                                             <span class="lever" style="margin-right: 0;"></span>
                                         </label>
                                     </div>
@@ -430,13 +523,47 @@
                                 <div class="collapsible-body">
                                     <div class="switch" style="margin: 5px 0 5px 0;">
                                         <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span style="display: inline-flex; align-items: center; gap: 4px;">
-                                                Auto-Create Entities
-                                                <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Automatically create missing entities referenced in relationships." style="margin-top: -2px;">info_outline</i>
-                                            </span>
+                                            <span>Auto-Create Entities <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Automatically create missing entities referenced in relationships.">info_outline</i></span>
                                             <input type="checkbox" id="config-auto-create-entities">
                                             <span class="lever" style="margin-right: 0;"></span>
                                         </label>
+                                    </div>
+                                </div>
+                            </li>
+
+                            <!-- Section 7: AWS Bedrock & Advanced -->
+                            <li>
+                                <div class="collapsible-header"><i class="material-icons">cloud_queue</i>AWS Bedrock & Advanced<i class="material-icons chevron-icon">expand_more</i></div>
+                                <div class="collapsible-body">
+                                    <div class="switch" style="margin: 5px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>AWS Bedrock Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable AWS Bedrock client interface.">info_outline</i></span>
+                                            <input type="checkbox" id="config-aws-bedrock-enabled">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-bedrock-read-timeout" min="1" class="validate">
+                                        <label for="config-bedrock-read-timeout" class="active">Bedrock Read Timeout (sec) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Read timeout for Bedrock operations.">info_outline</i></label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>Quota Governor Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable Bedrock API quota governor.">info_outline</i></span>
+                                            <input type="checkbox" id="config-bedrock-quota-gov">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-llm-retries" min="0" class="validate">
+                                        <label for="config-llm-retries" class="active">LLM API Retries <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Number of retries for LLM calls.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-max-file-size" step="0.1" class="validate">
+                                        <label for="config-max-file-size" class="active">Max File Size (MB) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum file size allowed for ingestion.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 5px 0;">
+                                        <input type="number" id="config-min-shard-length" min="1" class="validate">
+                                        <label for="config-min-shard-length" class="active">Min Shard Length <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Minimum character length per text shard.">info_outline</i></label>
                                     </div>
                                 </div>
                             </li>
@@ -501,12 +628,13 @@
             document.getElementById('temp-slider').value = tempVal;
             document.getElementById('temp-val').textContent = parseFloat(tempVal).toFixed(2);
 
-            // Custom prompt file
-            document.getElementById('config-extraction-prompt-file').value = config.llm?.extraction_prompt_file || '';
 
             // Paths & Outputs
             document.getElementById('config-entity-prefix').value = config.output?.entity_id_prefix || 'entity_';
             document.getElementById('config-rel-prefix').value = config.output?.relationship_id_prefix || 'rel_';
+            document.getElementById('config-compress-output').checked = !!config.output?.compress_output;
+            document.getElementById('config-pretty-print').checked = !!config.output?.pretty_print;
+            document.getElementById('config-include-metadata').checked = config.output?.include_metadata !== false;
 
             // Chunking & Text
             document.getElementById('config-chunk-size').value = config.text_processing?.chunking?.chunk_size || 2500;
@@ -514,6 +642,8 @@
             document.getElementById('config-max-tokens').value = config.llm?.max_tokens || 16000;
             document.getElementById('config-embedding-model').value = config.embeddings?.model || 'bedrock:cohere.embed-multilingual-v3';
             document.getElementById('config-embedding-dimension').value = config.embeddings?.dimension || 1024;
+            document.getElementById('config-embedding-cache-enabled').checked = config.embeddings?.cache?.enabled !== false;
+            document.getElementById('config-embedding-cache-dir').value = config.embeddings?.cache?.directory || 'domains/.cache';
 
             // Deduplication
             const semThresh = config.deduplication?.semantic_threshold !== undefined ? config.deduplication.semantic_threshold : 0.88;
@@ -524,8 +654,17 @@
             document.getElementById('config-exact-thresh').value = exThresh;
             document.getElementById('exact-thresh-val').textContent = parseFloat(exThresh).toFixed(2);
 
+            const highSemThresh = config.deduplication?.high_semantic_similarity !== undefined ? config.deduplication.high_semantic_similarity : 0.985;
+            document.getElementById('config-high-sem-thresh').value = highSemThresh;
+            document.getElementById('high-sem-thresh-val').textContent = parseFloat(highSemThresh).toFixed(3);
+
+            const minLabelSim = config.deduplication?.min_label_similarity !== undefined ? config.deduplication.min_label_similarity : 0.75;
+            document.getElementById('config-min-label-similarity').value = minLabelSim;
+            document.getElementById('min-label-similarity-val').textContent = parseFloat(minLabelSim).toFixed(2);
+
             document.getElementById('config-conflict-strat').value = config.deduplication?.conflict_resolution_strategy || 'confidence';
             document.getElementById('config-label-similarity').checked = config.deduplication?.enable_label_similarity_check !== false;
+            document.getElementById('config-feat-conflict-resolution').checked = config.features?.conflict_resolution !== false;
 
             // Export
             document.getElementById('config-export-enabled').checked = config.output?.export?.enabled !== false;
@@ -540,9 +679,23 @@
             document.getElementById('config-batch-api').checked = !!config.batch_api_enabled;
             document.getElementById('config-term-extraction').checked = config.term_extraction?.enabled !== false;
             document.getElementById('config-auto-resume').checked = config.checkpointing?.auto_resume !== false;
+            document.getElementById('config-perf-llm-cache').checked = config.performance?.llm_cache_enabled !== false;
+            document.getElementById('config-feat-schema-evolution').checked = config.features?.schema_evolution !== false;
+            document.getElementById('config-checkpointing-enabled').checked = config.checkpointing?.enabled !== false;
+            document.getElementById('config-checkpointing-flush-interval').value = config.checkpointing?.flush_interval_batches !== undefined ? config.checkpointing.flush_interval_batches : 100;
+            document.getElementById('config-checkpointing-max-checkpoints').value = config.checkpointing?.max_state_checkpoints !== undefined ? config.checkpointing.max_state_checkpoints : 3;
+            document.getElementById('config-checkpointing-persist-state').checked = !!config.checkpointing?.persist_state;
 
             // Relationships
             document.getElementById('config-auto-create-entities').checked = config.relationship_processing?.auto_create_missing_entities !== false;
+
+            // AWS Bedrock & Advanced
+            document.getElementById('config-aws-bedrock-enabled').checked = config.llm?.aws_bedrock_enabled !== false;
+            document.getElementById('config-bedrock-read-timeout').value = config.llm?.bedrock_read_timeout_seconds || 600;
+            document.getElementById('config-bedrock-quota-gov').checked = config.llm?.bedrock_quota_governor?.enabled !== false;
+            document.getElementById('config-llm-retries').value = config.llm?.retries !== undefined ? config.llm.retries : 3;
+            document.getElementById('config-max-file-size').value = config.input_validation?.max_file_size_mb !== undefined ? config.input_validation.max_file_size_mb : 2.0;
+            document.getElementById('config-min-shard-length').value = config.input_validation?.min_shard_length !== undefined ? config.input_validation.min_shard_length : 1;
 
             // Re-initialize select elements
             M.FormSelect.init(document.querySelectorAll('#model-selector, #config-conflict-strat, #config-export-format, #config-spelling-variant, #config-label-casing'));
@@ -561,13 +714,14 @@
             // Temperature
             config.llm.temperature = parseFloat(document.getElementById('temp-slider').value);
 
-            // Prompt file
-            config.llm.extraction_prompt_file = document.getElementById('config-extraction-prompt-file').value.trim() || null;
 
             // Paths & Outputs
             if (!config.output) config.output = {};
             config.output.entity_id_prefix = document.getElementById('config-entity-prefix').value;
             config.output.relationship_id_prefix = document.getElementById('config-rel-prefix').value;
+            config.output.compress_output = document.getElementById('config-compress-output').checked;
+            config.output.pretty_print = document.getElementById('config-pretty-print').checked;
+            config.output.include_metadata = document.getElementById('config-include-metadata').checked;
 
             // Chunking & Text
             if (!config.text_processing) config.text_processing = {};
@@ -578,13 +732,20 @@
             if (!config.embeddings) config.embeddings = {};
             config.embeddings.model = document.getElementById('config-embedding-model').value;
             config.embeddings.dimension = parseInt(document.getElementById('config-embedding-dimension').value) || 1024;
+            if (!config.embeddings.cache) config.embeddings.cache = {};
+            config.embeddings.cache.enabled = document.getElementById('config-embedding-cache-enabled').checked;
+            config.embeddings.cache.directory = document.getElementById('config-embedding-cache-dir').value;
 
             // Deduplication
             if (!config.deduplication) config.deduplication = {};
             config.deduplication.semantic_threshold = parseFloat(document.getElementById('config-semantic-thresh').value);
             config.deduplication.exact_threshold = parseFloat(document.getElementById('config-exact-thresh').value);
+            config.deduplication.high_semantic_similarity = parseFloat(document.getElementById('config-high-sem-thresh').value);
+            config.deduplication.min_label_similarity = parseFloat(document.getElementById('config-min-label-similarity').value);
             config.deduplication.conflict_resolution_strategy = document.getElementById('config-conflict-strat').value;
             config.deduplication.enable_label_similarity_check = document.getElementById('config-label-similarity').checked;
+            if (!config.features) config.features = {};
+            config.features.conflict_resolution = document.getElementById('config-feat-conflict-resolution').checked;
 
             // Export
             if (!config.output.export) config.output.export = {};
@@ -603,11 +764,29 @@
             config.term_extraction.enabled = document.getElementById('config-term-extraction').checked;
             if (!config.checkpointing) config.checkpointing = {};
             config.checkpointing.auto_resume = document.getElementById('config-auto-resume').checked;
+            config.checkpointing.enabled = document.getElementById('config-checkpointing-enabled').checked;
+            config.checkpointing.flush_interval_batches = parseInt(document.getElementById('config-checkpointing-flush-interval').value) || 0;
+            config.checkpointing.max_state_checkpoints = parseInt(document.getElementById('config-checkpointing-max-checkpoints').value) || 3;
+            config.checkpointing.persist_state = document.getElementById('config-checkpointing-persist-state').checked;
+            if (!config.performance) config.performance = {};
+            config.performance.llm_cache_enabled = document.getElementById('config-perf-llm-cache').checked;
+            config.features.schema_evolution = document.getElementById('config-feat-schema-evolution').checked;
 
             // Relationships
             if (!config.relationship_processing) config.relationship_processing = {};
             config.relationship_processing.auto_create_missing_entities = document.getElementById('config-auto-create-entities').checked;
+
+            // AWS Bedrock & Advanced
+            config.llm.aws_bedrock_enabled = document.getElementById('config-aws-bedrock-enabled').checked;
+            config.llm.bedrock_read_timeout_seconds = parseInt(document.getElementById('config-bedrock-read-timeout').value) || 600;
+            if (!config.llm.bedrock_quota_governor) config.llm.bedrock_quota_governor = {};
+            config.llm.bedrock_quota_governor.enabled = document.getElementById('config-bedrock-quota-gov').checked;
+            config.llm.retries = parseInt(document.getElementById('config-llm-retries').value) || 3;
+            if (!config.input_validation) config.input_validation = {};
+            config.input_validation.max_file_size_mb = parseFloat(document.getElementById('config-max-file-size').value) || 2.0;
+            config.input_validation.min_shard_length = parseInt(document.getElementById('config-min-shard-length').value) || 1;
         }
+
 
         document.addEventListener('DOMContentLoaded', () => {
             const dropZone = document.getElementById('drop-zone');
@@ -638,6 +817,18 @@
             const exVal = document.getElementById('exact-thresh-val');
             exSlider.addEventListener('input', () => {
                 exVal.textContent = parseFloat(exSlider.value).toFixed(2);
+            });
+
+            const highSemSlider = document.getElementById('config-high-sem-thresh');
+            const highSemVal = document.getElementById('high-sem-thresh-val');
+            highSemSlider.addEventListener('input', () => {
+                highSemVal.textContent = parseFloat(highSemSlider.value).toFixed(3);
+            });
+
+            const minLabelSimSlider = document.getElementById('config-min-label-similarity');
+            const minLabelSimVal = document.getElementById('min-label-similarity-val');
+            minLabelSimSlider.addEventListener('input', () => {
+                minLabelSimVal.textContent = parseFloat(minLabelSimSlider.value).toFixed(2);
             });
 
             // Model selector changes
