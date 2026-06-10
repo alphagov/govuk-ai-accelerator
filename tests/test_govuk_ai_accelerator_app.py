@@ -630,6 +630,48 @@ def test_service_navigation_uses_rebranded_styling():
     assert 'class="govuk-template--rebranded"' in html
 
 
+def test_header_matches_graph_tools_brand_layout():
+    response = _client().get("/ontology/")
+    html = response.get_data(as_text=True)
+
+    assert '<svg class="govuk-header__logotype"' in html
+    assert 'height="28" width="150"' in html
+    assert "<h1>Ontology Generator</h1>" in html
+    assert 'class="govuk-header__content"' not in html
+    assert html.index('<section aria-label="Service information"') < html.index("</header>")
+
+
+def test_header_uses_graph_tools_brand_row_styling():
+    response = _client().get("/ontology/")
+    html = response.get_data(as_text=True)
+
+    assert ".govuk-header > .govuk-width-container {" in html
+    assert "padding-top: 14px;" in html
+    assert "padding-bottom: 14px;" in html
+    assert "align-items: flex-end;" in html
+    assert "gap: 24px;" in html
+    assert ".govuk-header__logo {" in html
+    assert "gap: 16px;" in html
+    assert ".govuk-header__logotype {" in html
+    assert "width: 150px;" in html
+    assert "height: 28px;" in html
+    assert "padding-right: 16px;" in html
+    assert "border-right: 1px solid rgba(255, 255, 255, 0.4);" in html
+    assert ".govuk-header h1 {" in html
+    assert "font-size: 24px;" in html
+    assert "line-height: 1.1;" in html
+    assert "letter-spacing: -0.01em;" in html
+    assert "body.govuk-template--rebranded .govuk-header {" in html
+    assert "body.govuk-template--rebranded .govuk-header__logo {" in html
+    assert "body.govuk-template--rebranded .govuk-header__logotype {" in html
+    assert ".govuk-header .govuk-service-navigation {" in html
+    assert "font-size: 19px;" in html
+    assert ".govuk-header .govuk-service-navigation__item {" in html
+    assert ".govuk-header .govuk-service-navigation__link {" in html
+    assert "display: inline;" in html
+    assert "margin-right: auto;" in html
+
+
 def test_header_preloads_govuk_fonts_to_avoid_navigation_font_swap():
     response = _client().get("/ontology/")
     html = response.get_data(as_text=True)
