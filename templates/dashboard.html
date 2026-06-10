@@ -283,10 +283,44 @@
                                             <span class="lever" style="margin-right: 0;"></span>
                                         </label>
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 5px 0;">
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
                                         <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
                                             <span>Include Metadata <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Include runtime metadata in output files.">info_outline</i></span>
                                             <input type="checkbox" id="config-include-metadata">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="text" id="config-deduplication-log-filename" class="validate">
+                                        <label for="config-deduplication-log-filename" class="active">Deduplication Log Filename <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Custom filename for the deduplication logs.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="text" id="config-faiss-index-filename" class="validate">
+                                        <label for="config-faiss-index-filename" class="active">FAISS Index Filename <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Custom filename for the FAISS index.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="text" id="config-graph-filename" class="validate">
+                                        <label for="config-graph-filename" class="active">Graph Filename <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Custom filename for the generated output graph.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="text" id="config-schema-filename" class="validate">
+                                        <label for="config-schema-filename" class="active">Schema Filename <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Custom filename for the schema output.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="text" id="config-timestamp-format" class="validate">
+                                        <label for="config-timestamp-format" class="active">Timestamp Format <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Format pattern used for datetime strings.">info_outline</i></label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>Emit Deduplication Logs <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Write deduplication details to logs.">info_outline</i></span>
+                                            <input type="checkbox" id="config-emit-deduplication-logs">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 5px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>Emit Stage Lists <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Output entity and relationship lists at intermediate stages.">info_outline</i></span>
+                                            <input type="checkbox" id="config-emit-pipeline-stage-lists">
                                             <span class="lever" style="margin-right: 0;"></span>
                                         </label>
                                     </div>
@@ -331,9 +365,29 @@
                                             <span class="lever" style="margin-right: 0;"></span>
                                         </label>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 5px 0;">
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
                                         <input type="text" id="config-embedding-cache-dir" class="validate">
                                         <label for="config-embedding-cache-dir" class="active">Embedding Cache Dir <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Directory to store cache files.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-embedding-concurrency" min="1" step="1" class="validate">
+                                        <label for="config-embedding-concurrency" class="active">Embedding Concurrency <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum concurrent API calls for embeddings generation (async mode only).">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-chunking-chars-per-token" min="1" step="0.1" class="validate">
+                                        <label for="config-chunking-chars-per-token" class="active">Chars Per Token Estimate <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Multiplier to estimate token length from characters (~4 for English).">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-chunking-max-chunks" min="1" class="validate">
+                                        <label for="config-chunking-max-chunks" class="active">Max Chunks <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum number of chunks to create (leave blank for unlimited).">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-chunking-min-chunk-size" min="1" class="validate">
+                                        <label for="config-chunking-min-chunk-size" class="active">Min Chunk Size (tokens) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Minimum token size allowed per chunk. Fragments below this will be skipped.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 5px 0;">
+                                        <input type="text" id="config-chunking-separators" class="validate">
+                                        <label for="config-chunking-separators" class="active">Text Separators <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Comma-separated separators used to split text (e.g. \\n\\n, \\n, . , ).">info_outline</i></label>
                                     </div>
                                 </div>
                             </li>
@@ -384,12 +438,32 @@
                                             <span class="lever" style="margin-right: 0;"></span>
                                         </label>
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 5px 0;">
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
                                         <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
                                             <span>Conflict Resolution Feature <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable conflict resolution stage.">info_outline</i></span>
                                             <input type="checkbox" id="config-feat-conflict-resolution">
                                             <span class="lever" style="margin-right: 0;"></span>
                                         </label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-faiss-threshold" min="1" step="1" class="validate">
+                                        <label for="config-faiss-threshold" class="active">FAISS Threshold <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Use FAISS index when entity count exceeds this threshold.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-faiss-rebuild-threshold" min="1" step="1" class="validate">
+                                        <label for="config-faiss-rebuild-threshold" class="active">FAISS Rebuild Threshold <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Rebuild FAISS index after N new entities.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-faiss-batch-size" min="1" step="1" class="validate">
+                                        <label for="config-faiss-batch-size" class="active">FAISS Search Batch Size <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Batch size for FAISS search queries.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-faiss-top-k" min="1" step="1" class="validate">
+                                        <label for="config-faiss-top-k" class="active">FAISS Top K Neighbors <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Number of nearest neighbors to search in FAISS.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 5px 0;">
+                                        <input type="text" id="config-faiss-index-type" class="validate">
+                                        <label for="config-faiss-index-type" class="active">FAISS Index Type <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="FAISS index structure configuration (e.g. IDMap, Flat, auto).">info_outline</i></label>
                                     </div>
                                 </div>
                             </li>
@@ -436,7 +510,34 @@
                                         </select>
                                         <label style="position: static; font-size: 0.9rem;">Entity Casing Style <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Casing format applied to generated ontology entity labels.">info_outline</i></label>
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 5px 0;">
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <select id="config-entity-type-casing">
+                                            <option value="UpperCamelCase">UpperCamelCase</option>
+                                            <option value="lowerCamelCase">lowerCamelCase</option>
+                                            <option value="snake_case">snake_case</option>
+                                            <option value="preserve">Preserve Original</option>
+                                        </select>
+                                        <label style="position: static; font-size: 0.9rem;">Entity Type Casing <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Casing style for entity types (e.g. MedicalConcept).">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <select id="config-property-casing">
+                                            <option value="lowerCamelCase">lowerCamelCase</option>
+                                            <option value="UpperCamelCase">UpperCamelCase</option>
+                                            <option value="snake_case">snake_case</option>
+                                            <option value="preserve">Preserve Original</option>
+                                        </select>
+                                        <label style="position: static; font-size: 0.9rem;">Property Casing <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Casing style for property keys (e.g. startDate).">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <select id="config-relationship-type-casing">
+                                            <option value="lowerCamelCase">lowerCamelCase</option>
+                                            <option value="UpperCamelCase">UpperCamelCase</option>
+                                            <option value="snake_case">snake_case</option>
+                                            <option value="preserve">Preserve Original</option>
+                                        </select>
+                                        <label style="position: static; font-size: 0.9rem;">Relationship Type Casing <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Casing style for relationship types (e.g. isPartOf).">info_outline</i></label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
                                         <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
                                             <span style="display: inline-flex; align-items: center; gap: 4px;">
                                                 Type-Aware Canonical Keys
@@ -445,6 +546,42 @@
                                             <input type="checkbox" id="config-type-aware-keys">
                                             <span class="lever" style="margin-right: 0;"></span>
                                         </label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="text" id="config-export-entity-suffix" class="validate">
+                                        <label for="config-export-entity-suffix" class="active">Entity URI Suffix <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="URI suffix for entities (e.g. /entity#).">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="text" id="config-export-relationship-suffix" class="validate">
+                                        <label for="config-export-relationship-suffix" class="active">Relationship URI Suffix <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="URI suffix for relationships (e.g. /relationship#).">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="text" id="config-export-filename" class="validate">
+                                        <label for="config-export-filename" class="active">Export OWL Filename <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Filename for exported OWL/RDF file (without extension).">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-export-min-property-frequency" min="0" class="validate">
+                                        <label for="config-export-min-property-frequency" class="active">Min Property Frequency <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Only export DatatypeProperty for keys seen at least N times.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <select id="config-naming-entity-label-spelling">
+                                            <option value="UK">UK Spelling</option>
+                                            <option value="US">US Spelling</option>
+                                            <option value="preserve">Preserve Original</option>
+                                        </select>
+                                        <label style="position: static; font-size: 0.9rem;">Entity Label Spelling Variant <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Spelling variant style for human-readable labels.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <select id="config-naming-entity-iri-spelling">
+                                            <option value="US">US Spelling</option>
+                                            <option value="UK">UK Spelling</option>
+                                            <option value="preserve">Preserve Original</option>
+                                        </select>
+                                        <label style="position: static; font-size: 0.9rem;">Entity IRI Spelling Variant <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Spelling variant style for OWL IRIs.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 5px 0;">
+                                        <input type="text" id="config-naming-language-tag" class="validate">
+                                        <label for="config-naming-language-tag" class="active">Entity Label Language Tag <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="RDF language tag for term labels (e.g. en-GB).">info_outline</i></label>
                                     </div>
                                 </div>
                             </li>
@@ -507,10 +644,21 @@
                                         <input type="number" id="config-checkpointing-max-checkpoints" min="1" class="validate">
                                         <label for="config-checkpointing-max-checkpoints" class="active">Max State Checkpoints <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Max number of checkpoints to keep.">info_outline</i></label>
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 5px 0;">
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
                                         <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
                                             <span>Persist State <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Persist complete pipeline ExtractionState.">info_outline</i></span>
                                             <input type="checkbox" id="config-checkpointing-persist-state">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-perf-max-cache-size" min="1" class="validate">
+                                        <label for="config-perf-max-cache-size" class="active">Max Cache Size (MB) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum cache size allowed in megabytes.">info_outline</i></label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 5px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>Normalization Cache Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable normalization caching.">info_outline</i></span>
+                                            <input type="checkbox" id="config-perf-normalization-cache">
                                             <span class="lever" style="margin-right: 0;"></span>
                                         </label>
                                     </div>
@@ -521,12 +669,23 @@
                             <li>
                                 <div class="collapsible-header"><i class="material-icons">share</i>Relationships<i class="material-icons chevron-icon">expand_more</i></div>
                                 <div class="collapsible-body">
-                                    <div class="switch" style="margin: 5px 0 5px 0;">
+                                    <div class="switch" style="margin: 5px 0 15px 0;">
                                         <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
                                             <span>Auto-Create Entities <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Automatically create missing entities referenced in relationships.">info_outline</i></span>
                                             <input type="checkbox" id="config-auto-create-entities">
                                             <span class="lever" style="margin-right: 0;"></span>
                                         </label>
+                                    </div>
+                                    <div class="range-field" style="margin: 15px 0 15px 0;">
+                                        <label for="config-relationship-auto-confidence" style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold;">
+                                            Auto-Created Entity Confidence: <span id="relationship-auto-confidence-val" style="color: #1d70b8; font-weight: 800;">0.50</span>
+                                            <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Confidence score assigned to auto-created missing entities.">info_outline</i>
+                                        </label>
+                                        <input type="range" id="config-relationship-auto-confidence" min="0.0" max="1.0" step="0.05" value="0.50" style="margin-top: 8px; border: none;">
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 5px 0;">
+                                        <input type="text" id="config-relationship-auto-default-type" class="validate">
+                                        <label for="config-relationship-auto-default-type" class="active">Auto-Created Default Type <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Entity type assigned to auto-created missing entities (e.g. entity).">info_outline</i></label>
                                     </div>
                                 </div>
                             </li>
@@ -546,7 +705,7 @@
                                         <input type="number" id="config-bedrock-read-timeout" min="1" class="validate">
                                         <label for="config-bedrock-read-timeout" class="active">Bedrock Read Timeout (sec) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Read timeout for Bedrock operations.">info_outline</i></label>
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
+                                    <div class="switch" style="margin: 5px 0 15px 0;">
                                         <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
                                             <span>Quota Governor Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable Bedrock API quota governor.">info_outline</i></span>
                                             <input type="checkbox" id="config-bedrock-quota-gov">
@@ -561,9 +720,321 @@
                                         <input type="number" id="config-max-file-size" step="0.1" class="validate">
                                         <label for="config-max-file-size" class="active">Max File Size (MB) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum file size allowed for ingestion.">info_outline</i></label>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 5px 0;">
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
                                         <input type="number" id="config-min-shard-length" min="1" class="validate">
                                         <label for="config-min-shard-length" class="active">Min Shard Length <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Minimum character length per text shard.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-retry-backoff-multiplier" min="1.0" step="0.1" class="validate">
+                                        <label for="config-retry-backoff-multiplier" class="active">Retry Backoff Multiplier <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Multiplier for exponential backoff delays.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-retry-initial-delay" min="0.1" step="0.1" class="validate">
+                                        <label for="config-retry-initial-delay" class="active">Retry Initial Delay (sec) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Initial delay in seconds before the first retry attempt.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-retry-max-delay" min="1.0" step="0.1" class="validate">
+                                        <label for="config-retry-max-delay" class="active">Retry Max Delay (sec) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum delay in seconds between retry attempts.">info_outline</i></label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>Retry on Rate Limit <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Retry automatically when rate limits (429) are encountered.">info_outline</i></span>
+                                            <input type="checkbox" id="config-retry-rate-limit">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>Retry on Timeout <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Automatically retry on timeouts.">info_outline</i></span>
+                                            <input type="checkbox" id="config-retry-on-timeout">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>Retry Jitter <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Add random jitter delay to retry attempts.">info_outline</i></span>
+                                            <input type="checkbox" id="config-retry-jitter">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <select id="config-retry-strategy-type">
+                                            <option value="exponential">Exponential</option>
+                                            <option value="linear">Linear</option>
+                                            <option value="constant">Constant</option>
+                                        </select>
+                                        <label style="position: static; font-size: 0.9rem;">Retry Strategy Type <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Retry backoff progression strategy.">info_outline</i></label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>Bedrock 1M Beta Context <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable context 1M beta endpoints for Bedrock.">info_outline</i></span>
+                                            <input type="checkbox" id="config-bedrock-enable-beta">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="text" id="config-bedrock-beta-flag" class="validate">
+                                        <label for="config-bedrock-beta-flag" class="active">Bedrock Beta Flag <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Beta API request flag header.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-governor-rpm" min="1" class="validate">
+                                        <label for="config-governor-rpm" class="active">Governor Requests Per Minute <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Max Bedrock requests permitted per minute.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-governor-tpm" min="1" class="validate">
+                                        <label for="config-governor-tpm" class="active">Governor Tokens Per Minute <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Max Bedrock tokens permitted per minute.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-governor-max-concurrency" min="1" class="validate">
+                                        <label for="config-governor-max-concurrency" class="active">Governor Max Concurrency <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Max concurrent Bedrock requests.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-governor-window" min="1" class="validate">
+                                        <label for="config-governor-window" class="active">Governor Window (sec) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Window seconds for quota calculations.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-governor-jitter-min" min="0" step="0.1" class="validate">
+                                        <label for="config-governor-jitter-min" class="active">Governor Jitter Min (sec) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Minimum delay jitter added to governor retries.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 5px 0;">
+                                        <input type="number" id="config-governor-jitter-max" min="0" step="0.1" class="validate">
+                                        <label for="config-governor-jitter-max" class="active">Governor Jitter Max (sec) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum delay jitter added to governor retries.">info_outline</i></label>
+                                    </div>
+                                </div>
+                            </li>
+
+                            <!-- Section 8: Batching -->
+                            <li>
+                                <div class="collapsible-header"><i class="material-icons">view_module</i>Batching<i class="material-icons chevron-icon">expand_more</i></div>
+                                <div class="collapsible-body">
+                                    <div class="input-field" style="margin: 5px 0 15px 0;">
+                                        <input type="number" id="config-batching-chunks-per-batch" min="1" step="1" class="validate">
+                                        <label for="config-batching-chunks-per-batch" class="active">Chunks Per Batch <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Number of text chunks bundled in a single LLM request.">info_outline</i></label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>File Scaffold Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Build a compact per-file scaffold to improve chunk-level consistency.">info_outline</i></span>
+                                            <input type="checkbox" id="config-batching-scaffold-enabled">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-batching-input-token-ratio" min="0.1" max="1.0" step="0.05" class="validate">
+                                        <label for="config-batching-input-token-ratio" class="active">Input Token Ratio <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Budget ratio of LLM max tokens reserved for prompt input.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-batching-max-batch-anthropic" min="1" step="1" class="validate">
+                                        <label for="config-batching-max-batch-anthropic" class="active">Max Batch Size (Anthropic) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Upper limit for Anthropic batch sizes to avoid API timeouts.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-batching-max-input-tokens" min="1000" step="1000" class="validate">
+                                        <label for="config-batching-max-input-tokens" class="active">Max Input Tokens <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum total input tokens allowed per batch.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-batching-min-batch-tokens" min="10" step="10" class="validate">
+                                        <label for="config-batching-min-batch-tokens" class="active">Min Batch Tokens <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Minimum tokens budget reserved for processing the batch.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="text" id="config-batching-chunk-separator" class="validate">
+                                        <label for="config-batching-chunk-separator" class="active">Chunk Separator <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Separator boundary string between chunks in a batch.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-batching-max-batch-text-length" min="100" class="validate">
+                                        <label for="config-batching-max-batch-text-length" class="active">Max Batch Text Length (chars) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum permitted batch size in characters (safety cap).">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 5px 0;">
+                                        <input type="number" id="config-batching-min-batch-size" min="1" class="validate">
+                                        <label for="config-batching-min-batch-size" class="active">Min Batch Size <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Minimum batch size allowed (progress safety floor).">info_outline</i></label>
+                                    </div>
+                                </div>
+                            </li>
+
+                            <!-- Section 9: Web Research -->
+                            <li>
+                                <div class="collapsible-header"><i class="material-icons">public</i>Web Research<i class="material-icons chevron-icon">expand_more</i></div>
+                                <div class="collapsible-body">
+                                    <div class="input-field" style="margin: 5px 0 15px 0;">
+                                        <input type="text" id="config-research-allowed-domains" class="validate" placeholder="e.g. .gov, .edu">
+                                        <label for="config-research-allowed-domains" class="active">Allowed Domains <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Comma-separated list of domains to restrict search results to.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="text" id="config-research-blocked-domains" class="validate" placeholder="e.g. facebook.com, twitter.com">
+                                        <label for="config-research-blocked-domains" class="active">Blocked Domains <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Comma-separated list of domains to ignore.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-research-max-fetches" min="1" step="1" class="validate">
+                                        <label for="config-research-max-fetches" class="active">Max Page Fetches <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum total web pages to fetch.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-research-num-queries" min="1" step="1" class="validate">
+                                        <label for="config-research-num-queries" class="active">Number of Queries <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Number of search queries to generate.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 5px 0;">
+                                        <input type="number" id="config-research-results-per-query" min="1" step="1" class="validate">
+                                        <label for="config-research-results-per-query" class="active">Results Per Query <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Web results to fetch per search query.">info_outline</i></label>
+                                    </div>
+                                </div>
+                            </li>
+
+                            <!-- Section 10: Source Grounding -->
+                            <li>
+                                <div class="collapsible-header"><i class="material-icons">assignment</i>Source Grounding<i class="material-icons chevron-icon">expand_more</i></div>
+                                <div class="collapsible-body">
+                                    <div class="switch" style="margin: 5px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>Source Grounding Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable source grounding to track entity/relationship origins.">info_outline</i></span>
+                                            <input type="checkbox" id="config-source-grounding-enabled">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>Merge Sources on Deduplication <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Combine original source lists when merging duplicate entities.">info_outline</i></span>
+                                            <input type="checkbox" id="config-source-grounding-merge">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="text" id="config-source-grounding-fallback" class="validate">
+                                        <label for="config-source-grounding-fallback" class="active">Fallback Source Prefix <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Prefix for synthetic source IDs when processing raw text input (no file).">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-source-grounding-max-length" min="10" class="validate">
+                                        <label for="config-source-grounding-max-length" class="active">Max Source Length <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum length permitted for a single source identifier string.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="text" id="config-source-grounding-property-name" class="validate">
+                                        <label for="config-source-grounding-property-name" class="active">Source Property Name <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Property key name used to store source identifiers in the output.">info_outline</i></label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 5px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>Validate Source Format <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Validate that source identifiers are non-empty strings.">info_outline</i></span>
+                                            <input type="checkbox" id="config-source-grounding-validate">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </li>
+
+                            <!-- Section 11: Text Normalization -->
+                            <li>
+                                <div class="collapsible-header"><i class="material-icons">text_fields</i>Text Normalization<i class="material-icons chevron-icon">expand_more</i></div>
+                                <div class="collapsible-body">
+                                    <div class="input-field" style="margin: 5px 0 15px 0;">
+                                        <select id="config-norm-casing">
+                                            <option value="lowercase">lowercase</option>
+                                            <option value="uppercase">uppercase</option>
+                                            <option value="preserve">preserve</option>
+                                        </select>
+                                        <label style="position: static; font-size: 0.9rem;">Text Casing <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Standard casing normalization strategy.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <select id="config-norm-punctuation">
+                                            <option value="remove">remove</option>
+                                            <option value="preserve">preserve</option>
+                                            <option value="normalize">normalize</option>
+                                        </select>
+                                        <label style="position: static; font-size: 0.9rem;">Punctuation Handling <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Method to resolve special characters and punctuation.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <textarea id="config-norm-abbreviation-mappings" class="materialize-textarea" style="min-height: 80px; padding: 8px; border: 1px solid #b1b4b6; border-radius: 4px; box-sizing: border-box; background-color: #ffffff;"></textarea>
+                                        <label for="config-norm-abbreviation-mappings" class="active">Abbreviation Mappings (JSON) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="JSON mapping object for abbreviation expansion (e.g. {&quot;USA&quot;: &quot;United States&quot;}).">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="text" id="config-norm-preserve-patterns" class="validate" placeholder="e.g. ^[A-Z]+_\d+$">
+                                        <label for="config-norm-preserve-patterns" class="active">Preserve Identifier Patterns <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Comma-separated regular expressions matching identifiers that skip casing normalization.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 5px 0;">
+                                        <input type="text" id="config-norm-remove-words" class="validate" placeholder="e.g. the, and">
+                                        <label for="config-norm-remove-words" class="active">Remove Common Words <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Comma-separated list of common stopwords to remove from text.">info_outline</i></label>
+                                    </div>
+                                </div>
+                            </li>
+
+                            <!-- Section 12: Schema Evolution -->
+                            <li>
+                                <div class="collapsible-header"><i class="material-icons">device_hub</i>Schema Evolution<i class="material-icons chevron-icon">expand_more</i></div>
+                                <div class="collapsible-body">
+                                    <div class="input-field" style="margin: 5px 0 15px 0;">
+                                        <input type="text" id="config-schema-initial-version" class="validate">
+                                        <label for="config-schema-initial-version" class="active">Initial Schema Version <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Starting schema version identifier string.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-schema-similarity-threshold" min="0.0" max="1.0" step="0.05" class="validate">
+                                        <label for="config-schema-similarity-threshold" class="active">Type Similarity Threshold <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Threshold above which similar schemas are merged together.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 5px 0;">
+                                        <select id="config-schema-version-increment">
+                                            <option value="patch">patch</option>
+                                            <option value="minor">minor</option>
+                                            <option value="major">major</option>
+                                        </select>
+                                        <label style="position: static; font-size: 0.9rem;">Version Increment Strategy <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Semantic version increment strategy.">info_outline</i></label>
+                                    </div>
+                                </div>
+                            </li>
+
+                            <!-- Section 13: System Resource Limits -->
+                            <li>
+                                <div class="collapsible-header"><i class="material-icons">report_problem</i>System Resource Limits<i class="material-icons chevron-icon">expand_more</i></div>
+                                <div class="collapsible-body">
+                                    <div class="input-field" style="margin: 5px 0 15px 0;">
+                                        <input type="number" id="config-limits-max-entities" min="1" class="validate">
+                                        <label for="config-limits-max-entities" class="active">Max Entities <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum number of entities allowed.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-limits-max-entity-types" min="1" class="validate">
+                                        <label for="config-limits-max-entity-types" class="active">Max Entity Types <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum number of entity types allowed.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-limits-max-relationship-types" min="1" class="validate">
+                                        <label for="config-limits-max-relationship-types" class="active">Max Relationship Types <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum number of relationship types allowed.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-limits-max-relationships" min="1" class="validate">
+                                        <label for="config-limits-max-relationships" class="active">Max Relationships <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum number of relationships allowed.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-limits-max-shard-length" min="1" class="validate">
+                                        <label for="config-limits-max-shard-length" class="active">Max Shard Length <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum character length allowed per text shard.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-limits-max-shards" min="1" class="validate">
+                                        <label for="config-limits-max-shards" class="active">Max Shards <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum number of input shards to generate.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-limits-max-text-length" min="1" class="validate">
+                                        <label for="config-limits-max-text-length" class="active">Max Text Length <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum allowed length of total input text.">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-limits-max-errors" min="0" class="validate">
+                                        <label for="config-limits-max-errors" class="active">Max Errors <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum number of errors to collect before failing.">info_outline</i></label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>Continue on Error <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Continue processing on non-critical step execution errors.">info_outline</i></span>
+                                            <input type="checkbox" id="config-error-continue">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="switch" style="margin: 15px 0 15px 0;">
+                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
+                                            <span>Check Available Memory <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Validate available host memory before parsing large files.">info_outline</i></span>
+                                            <input type="checkbox" id="config-memory-check">
+                                            <span class="lever" style="margin-right: 0;"></span>
+                                        </label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-memory-max-usage" min="1" class="validate">
+                                        <label for="config-memory-max-usage" class="active">Max Memory Usage (MB) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Memory ceiling cap for processing (defaults to 80% RAM).">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                        <input type="number" id="config-memory-safety-margin" min="1" class="validate">
+                                        <label for="config-memory-safety-margin" class="active">Memory Safety Margin (MB) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Safety margin memory reserved (default 256MB).">info_outline</i></label>
+                                    </div>
+                                    <div class="input-field" style="margin: 15px 0 5px 0;">
+                                        <input type="number" id="config-memory-warn-threshold" min="1" class="validate">
+                                        <label for="config-memory-warn-threshold" class="active">Memory Warning Threshold (MB) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Threshold above which warning alerts are triggered.">info_outline</i></label>
                                     </div>
                                 </div>
                             </li>
@@ -604,6 +1075,23 @@
 
 
         function syncUIFromConfig(config) {
+            // Helper functions to keep it DRY
+            const setVal = (id, val, fallback) => {
+                const el = document.getElementById(id);
+                if (el) el.value = (val !== undefined && val !== null) ? val : fallback;
+            };
+            const setCheck = (id, val, fallback = false) => {
+                const el = document.getElementById(id);
+                if (el) el.checked = (val !== undefined && val !== null) ? !!val : fallback;
+            };
+            const setSlider = (sliderId, valId, val, fallback, precision = 2) => {
+                const actual = (val !== undefined && val !== null) ? val : fallback;
+                const sliderEl = document.getElementById(sliderId);
+                if (sliderEl) sliderEl.value = actual;
+                const valEl = document.getElementById(valId);
+                if (valEl) valEl.textContent = parseFloat(actual).toFixed(precision);
+            };
+
             // Model Selector
             const modelVal = config.llm.model;
             const modelSel = document.getElementById('model-selector');
@@ -617,88 +1105,179 @@
             }
             if (!matched) {
                 modelSel.value = 'custom';
-                document.getElementById('custom-model-input').value = modelVal;
+                setVal('custom-model-input', modelVal, '');
                 document.getElementById('custom-model-container').style.display = 'block';
             } else {
                 document.getElementById('custom-model-container').style.display = 'none';
             }
 
             // Temperature
-            const tempVal = config.llm.temperature !== undefined ? config.llm.temperature : 0.00;
-            document.getElementById('temp-slider').value = tempVal;
-            document.getElementById('temp-val').textContent = parseFloat(tempVal).toFixed(2);
-
+            setSlider('temp-slider', 'temp-val', config.llm.temperature, 0.00);
 
             // Paths & Outputs
-            document.getElementById('config-entity-prefix').value = config.output?.entity_id_prefix || 'entity_';
-            document.getElementById('config-rel-prefix').value = config.output?.relationship_id_prefix || 'rel_';
-            document.getElementById('config-compress-output').checked = !!config.output?.compress_output;
-            document.getElementById('config-pretty-print').checked = !!config.output?.pretty_print;
-            document.getElementById('config-include-metadata').checked = config.output?.include_metadata !== false;
+            setVal('config-entity-prefix', config.output?.entity_id_prefix, 'entity_');
+            setVal('config-rel-prefix', config.output?.relationship_id_prefix, 'rel_');
+            setCheck('config-compress-output', config.output?.compress_output, false);
+            setCheck('config-pretty-print', config.output?.pretty_print, false);
+            setCheck('config-include-metadata', config.output?.include_metadata, true);
 
             // Chunking & Text
-            document.getElementById('config-chunk-size').value = config.text_processing?.chunking?.chunk_size || 2500;
-            document.getElementById('config-chunk-overlap').value = config.text_processing?.chunking?.chunk_overlap || 250;
-            document.getElementById('config-max-tokens').value = config.llm?.max_tokens || 16000;
-            document.getElementById('config-embedding-model').value = config.embeddings?.model || 'bedrock:cohere.embed-multilingual-v3';
-            document.getElementById('config-embedding-dimension').value = config.embeddings?.dimension || 1024;
-            document.getElementById('config-embedding-cache-enabled').checked = config.embeddings?.cache?.enabled !== false;
-            document.getElementById('config-embedding-cache-dir').value = config.embeddings?.cache?.directory || 'domains/.cache';
+            setVal('config-chunk-size', config.text_processing?.chunking?.chunk_size, 2500);
+            setVal('config-chunk-overlap', config.text_processing?.chunking?.chunk_overlap, 250);
+            setVal('config-max-tokens', config.llm?.max_tokens, 16000);
+            setVal('config-embedding-model', config.embeddings?.model, 'bedrock:cohere.embed-multilingual-v3');
+            setVal('config-embedding-dimension', config.embeddings?.dimension, 1024);
+            setCheck('config-embedding-cache-enabled', config.embeddings?.cache?.enabled, true);
+            setVal('config-embedding-cache-dir', config.embeddings?.cache?.directory, 'domains/.cache');
+            setVal('config-embedding-concurrency', config.embeddings?.concurrency, 10);
 
             // Deduplication
-            const semThresh = config.deduplication?.semantic_threshold !== undefined ? config.deduplication.semantic_threshold : 0.88;
-            document.getElementById('config-semantic-thresh').value = semThresh;
-            document.getElementById('semantic-thresh-val').textContent = parseFloat(semThresh).toFixed(2);
+            setSlider('config-semantic-thresh', 'semantic-thresh-val', config.deduplication?.semantic_threshold, 0.88);
+            setSlider('config-exact-thresh', 'exact-thresh-val', config.deduplication?.exact_threshold, 1.00);
+            setSlider('config-high-sem-thresh', 'high-sem-thresh-val', config.deduplication?.high_semantic_similarity, 0.985, 3);
+            setSlider('config-min-label-similarity', 'min-label-similarity-val', config.deduplication?.min_label_similarity, 0.75);
 
-            const exThresh = config.deduplication?.exact_threshold !== undefined ? config.deduplication.exact_threshold : 1.00;
-            document.getElementById('config-exact-thresh').value = exThresh;
-            document.getElementById('exact-thresh-val').textContent = parseFloat(exThresh).toFixed(2);
+            setVal('config-conflict-strat', config.deduplication?.conflict_resolution_strategy, 'confidence');
+            setCheck('config-label-similarity', config.deduplication?.enable_label_similarity_check, true);
+            setCheck('config-feat-conflict-resolution', config.features?.conflict_resolution, true);
 
-            const highSemThresh = config.deduplication?.high_semantic_similarity !== undefined ? config.deduplication.high_semantic_similarity : 0.985;
-            document.getElementById('config-high-sem-thresh').value = highSemThresh;
-            document.getElementById('high-sem-thresh-val').textContent = parseFloat(highSemThresh).toFixed(3);
-
-            const minLabelSim = config.deduplication?.min_label_similarity !== undefined ? config.deduplication.min_label_similarity : 0.75;
-            document.getElementById('config-min-label-similarity').value = minLabelSim;
-            document.getElementById('min-label-similarity-val').textContent = parseFloat(minLabelSim).toFixed(2);
-
-            document.getElementById('config-conflict-strat').value = config.deduplication?.conflict_resolution_strategy || 'confidence';
-            document.getElementById('config-label-similarity').checked = config.deduplication?.enable_label_similarity_check !== false;
-            document.getElementById('config-feat-conflict-resolution').checked = config.features?.conflict_resolution !== false;
+            // FAISS deduplication
+            setVal('config-faiss-threshold', config.deduplication?.faiss?.threshold, 100);
+            setVal('config-faiss-rebuild-threshold', config.deduplication?.faiss?.rebuild_threshold, 10000);
+            setVal('config-faiss-batch-size', config.deduplication?.faiss?.batch_size, 100);
+            setVal('config-faiss-top-k', config.deduplication?.faiss?.top_k, 50);
+            setVal('config-faiss-index-type', config.deduplication?.faiss?.index_type, 'auto');
 
             // Export
-            document.getElementById('config-export-enabled').checked = config.output?.export?.enabled !== false;
-            document.getElementById('config-export-uri').value = config.output?.export?.base_uri || 'http://example.org/ontology';
-            document.getElementById('config-export-format').value = config.output?.export?.format || 'turtle';
-            document.getElementById('config-spelling-variant').value = config.naming_conventions?.spelling_variant || 'US';
-            document.getElementById('config-label-casing').value = config.naming_conventions?.entity_label_casing || 'UpperCamelCase';
-            document.getElementById('config-type-aware-keys').checked = config.output?.type_aware_canonical_keys !== false;
+            setCheck('config-export-enabled', config.output?.export?.enabled, true);
+            setVal('config-export-uri', config.output?.export?.base_uri, 'http://example.org/ontology');
+            setVal('config-export-format', config.output?.export?.format, 'turtle');
+            setVal('config-spelling-variant', config.naming_conventions?.spelling_variant, 'US');
+            setVal('config-label-casing', config.naming_conventions?.entity_label_casing, 'UpperCamelCase');
+            setCheck('config-type-aware-keys', config.output?.type_aware_canonical_keys, true);
+
+            // Export URIs, prefixes & tags
+            setVal('config-export-entity-suffix', config.output?.export?.entity_uri_suffix, '/entity#');
+            setVal('config-export-relationship-suffix', config.output?.export?.relationship_uri_suffix, '/relationship#');
+            setVal('config-export-filename', config.output?.export?.filename, 'ontology');
+            setVal('config-export-min-property-frequency', config.output?.export?.min_property_frequency, 4);
+
+            setVal('config-naming-entity-label-spelling', config.naming_conventions?.entity_label_spelling_variant, 'UK');
+            setVal('config-naming-entity-iri-spelling', config.naming_conventions?.entity_iri_spelling_variant, 'US');
+            setVal('config-naming-language-tag', config.naming_conventions?.entity_label_language_tag, 'en-GB');
+
+            // Naming casings
+            setVal('config-entity-type-casing', config.naming_conventions?.entity_type_casing, 'UpperCamelCase');
+            setVal('config-property-casing', config.naming_conventions?.property_casing, 'lowerCamelCase');
+            setVal('config-relationship-type-casing', config.naming_conventions?.relationship_type_casing, 'lowerCamelCase');
 
             // Pipeline & Performance
-            document.getElementById('config-parallel-files').value = config.parallel_files !== undefined ? config.parallel_files : 20;
-            document.getElementById('config-batch-api').checked = !!config.batch_api_enabled;
-            document.getElementById('config-term-extraction').checked = config.term_extraction?.enabled !== false;
-            document.getElementById('config-auto-resume').checked = config.checkpointing?.auto_resume !== false;
-            document.getElementById('config-perf-llm-cache').checked = config.performance?.llm_cache_enabled !== false;
-            document.getElementById('config-feat-schema-evolution').checked = config.features?.schema_evolution !== false;
-            document.getElementById('config-checkpointing-enabled').checked = config.checkpointing?.enabled !== false;
-            document.getElementById('config-checkpointing-flush-interval').value = config.checkpointing?.flush_interval_batches !== undefined ? config.checkpointing.flush_interval_batches : 100;
-            document.getElementById('config-checkpointing-max-checkpoints').value = config.checkpointing?.max_state_checkpoints !== undefined ? config.checkpointing.max_state_checkpoints : 3;
-            document.getElementById('config-checkpointing-persist-state').checked = !!config.checkpointing?.persist_state;
+            setVal('config-parallel-files', config.parallel_files, 20);
+            setCheck('config-batch-api', config.batch_api_enabled, false);
+            setCheck('config-term-extraction', config.term_extraction?.enabled, true);
+            setCheck('config-auto-resume', config.checkpointing?.auto_resume, true);
+            setCheck('config-perf-llm-cache', config.performance?.llm_cache_enabled, true);
+            setCheck('config-feat-schema-evolution', config.features?.schema_evolution, true);
+            setCheck('config-checkpointing-enabled', config.checkpointing?.enabled, true);
+            setVal('config-checkpointing-flush-interval', config.checkpointing?.flush_interval_batches, 100);
+            setVal('config-checkpointing-max-checkpoints', config.checkpointing?.max_state_checkpoints, 3);
+            setCheck('config-checkpointing-persist-state', config.checkpointing?.persist_state, false);
+
+            setVal('config-perf-max-cache-size', config.performance?.max_cache_size_mb, 500);
+            setCheck('config-perf-normalization-cache', config.performance?.normalization_cache_enabled, true);
 
             // Relationships
-            document.getElementById('config-auto-create-entities').checked = config.relationship_processing?.auto_create_missing_entities !== false;
+            setCheck('config-auto-create-entities', config.relationship_processing?.auto_create_missing_entities, true);
+            setSlider('config-relationship-auto-confidence', 'relationship-auto-confidence-val', config.relationship_processing?.auto_created_entity_confidence, 0.50);
+            setVal('config-relationship-auto-default-type', config.relationship_processing?.auto_created_entity_default_type, 'entity');
 
             // AWS Bedrock & Advanced
-            document.getElementById('config-aws-bedrock-enabled').checked = config.llm?.aws_bedrock_enabled !== false;
-            document.getElementById('config-bedrock-read-timeout').value = config.llm?.bedrock_read_timeout_seconds || 600;
-            document.getElementById('config-bedrock-quota-gov').checked = config.llm?.bedrock_quota_governor?.enabled !== false;
-            document.getElementById('config-llm-retries').value = config.llm?.retries !== undefined ? config.llm.retries : 3;
-            document.getElementById('config-max-file-size').value = config.input_validation?.max_file_size_mb !== undefined ? config.input_validation.max_file_size_mb : 2.0;
-            document.getElementById('config-min-shard-length').value = config.input_validation?.min_shard_length !== undefined ? config.input_validation.min_shard_length : 1;
+            setCheck('config-aws-bedrock-enabled', config.llm?.aws_bedrock_enabled, true);
+            setVal('config-bedrock-read-timeout', config.llm?.bedrock_read_timeout_seconds, 600);
+            setCheck('config-bedrock-quota-gov', config.llm?.bedrock_quota_governor?.enabled, true);
+            setVal('config-llm-retries', config.llm?.retries, 3);
+            setVal('config-max-file-size', config.input_validation?.max_file_size_mb, 2.0);
+            setVal('config-min-shard-length', config.input_validation?.min_shard_length, 1);
+
+            // Retry strategy
+            setVal('config-retry-backoff-multiplier', config.llm?.retry_strategy?.backoff_multiplier, 2.0);
+            setVal('config-retry-initial-delay', config.llm?.retry_strategy?.initial_delay, 1.0);
+            setVal('config-retry-max-delay', config.llm?.retry_strategy?.max_delay, 30.0);
+            setCheck('config-retry-rate-limit', config.llm?.retry_strategy?.retry_on_rate_limit, true);
+            setCheck('config-retry-on-timeout', config.llm?.retry_strategy?.retry_on_timeout, true);
+            setCheck('config-retry-jitter', config.llm?.retry_strategy?.jitter, true);
+            setVal('config-retry-strategy-type', config.llm?.retry_strategy?.strategy_type, 'exponential');
+
+            setCheck('config-bedrock-enable-beta', config.llm?.bedrock_enable_context_1m_beta, false);
+            setVal('config-bedrock-beta-flag', config.llm?.bedrock_context_1m_beta_flag, 'context-1m-2025-08-07');
+            setVal('config-governor-rpm', config.llm?.bedrock_quota_governor?.requests_per_minute, 7000);
+            setVal('config-governor-tpm', config.llm?.bedrock_quota_governor?.tokens_per_minute, 3500000);
+            setVal('config-governor-max-concurrency', config.llm?.bedrock_quota_governor?.max_concurrency, 10);
+            setVal('config-governor-window', config.llm?.bedrock_quota_governor?.window_seconds, 60);
+            setVal('config-governor-jitter-min', config.llm?.bedrock_quota_governor?.jitter_min_seconds, 0.2);
+            setVal('config-governor-jitter-max', config.llm?.bedrock_quota_governor?.jitter_max_seconds, 1.5);
+
+            // Batching
+            setVal('config-batching-chunks-per-batch', config.batching?.chunks_per_batch, 2);
+            setCheck('config-batching-scaffold-enabled', config.batching?.file_level_scaffold_enabled, true);
+            setVal('config-batching-input-token-ratio', config.batching?.input_token_ratio, 0.5);
+            setVal('config-batching-max-batch-anthropic', config.batching?.max_batch_size_anthropic, 4);
+            setVal('config-batching-max-input-tokens', config.batching?.max_input_tokens, 32000);
+            setVal('config-batching-min-batch-tokens', config.batching?.min_batch_tokens, 200);
+            setVal('config-batching-chunk-separator', config.batching?.chunk_separator, '\n\n---\n\n');
+            setVal('config-batching-max-batch-text-length', config.batching?.max_batch_text_length, '');
+            setVal('config-batching-min-batch-size', config.batching?.min_batch_size, 1);
+
+            // Web Research
+            setVal('config-research-allowed-domains', (config.research?.allowed_domains || []).join(', '), '');
+            setVal('config-research-blocked-domains', (config.research?.blocked_domains || []).join(', '), '');
+            setVal('config-research-max-fetches', config.research?.max_fetches, 50);
+            setVal('config-research-num-queries', config.research?.num_queries, 5);
+            setVal('config-research-results-per-query', config.research?.results_per_query, 10);
+
+            // Source Grounding
+            setCheck('config-source-grounding-enabled', config.source_grounding?.enabled, true);
+            setCheck('config-source-grounding-merge', config.source_grounding?.merge_sources_on_deduplication, true);
+            setVal('config-source-grounding-fallback', config.source_grounding?.fallback_source_prefix, 'text_input');
+            setVal('config-source-grounding-max-length', config.source_grounding?.max_source_length, 1000);
+            setVal('config-source-grounding-property-name', config.source_grounding?.source_property_name, 'sourceUrls');
+            setCheck('config-source-grounding-validate', config.source_grounding?.validate_source_format, true);
+
+            // Text Normalization (Section 11)
+            setVal('config-norm-casing', config.text_processing?.normalization?.casing, 'lowercase');
+            setVal('config-norm-punctuation', config.text_processing?.normalization?.punctuation_handling, 'remove');
+            let abbrVal = '';
+            try {
+                abbrVal = JSON.stringify(config.text_processing?.normalization?.abbreviation_mappings || {}, null, 2);
+            } catch(e) {
+                abbrVal = '{}';
+            }
+            setVal('config-norm-abbreviation-mappings', abbrVal, '{}');
+            setVal('config-norm-preserve-patterns', (config.text_processing?.normalization?.preserve_identifier_patterns || []).join(', '), '');
+            setVal('config-norm-remove-words', (config.text_processing?.normalization?.remove_common_words || []).join(', '), '');
+
+            // Schema Evolution (Section 12)
+            setVal('config-schema-initial-version', config.schema_evolution?.initial_version, '1.0');
+            setVal('config-schema-similarity-threshold', config.schema_evolution?.type_similarity_threshold, 0.75);
+            setVal('config-schema-version-increment', config.schema_evolution?.version_increment, 'patch');
+
+            // System Resource Limits (Section 13)
+            setVal('config-limits-max-entities', config.limits?.max_entities, '');
+            setVal('config-limits-max-entity-types', config.limits?.max_entity_types, '');
+            setVal('config-limits-max-relationship-types', config.limits?.max_relationship_types, '');
+            setVal('config-limits-max-relationships', config.limits?.max_relationships, '');
+            setVal('config-limits-max-shard-length', config.input_validation?.max_shard_length, '');
+            setVal('config-limits-max-shards', config.input_validation?.max_shards, '');
+            setVal('config-limits-max-text-length', config.input_validation?.max_text_length, '');
+            setVal('config-limits-max-errors', config.error_handling?.max_errors, '');
+            setCheck('config-error-continue', config.error_handling?.continue_on_error, true);
+            setCheck('config-memory-check', config.memory?.check_available, true);
+            setVal('config-memory-max-usage', config.memory?.max_usage_mb, '');
+            setVal('config-memory-safety-margin', config.memory?.safety_margin_mb, 256);
+            setVal('config-memory-warn-threshold', config.memory?.warn_threshold_mb, '');
 
             // Re-initialize select elements
-            M.FormSelect.init(document.querySelectorAll('#model-selector, #config-conflict-strat, #config-export-format, #config-spelling-variant, #config-label-casing'));
+            M.FormSelect.init(document.querySelectorAll('#model-selector, #config-conflict-strat, #config-export-format, #config-spelling-variant, #config-label-casing, #config-entity-type-casing, #config-property-casing, #config-relationship-type-casing, #config-naming-entity-label-spelling, #config-naming-entity-iri-spelling, #config-retry-strategy-type, #config-norm-casing, #config-norm-punctuation, #config-schema-version-increment'));
             M.updateTextFields();
         }
 
@@ -713,7 +1292,6 @@
 
             // Temperature
             config.llm.temperature = parseFloat(document.getElementById('temp-slider').value);
-
 
             // Paths & Outputs
             if (!config.output) config.output = {};
@@ -735,6 +1313,7 @@
             if (!config.embeddings.cache) config.embeddings.cache = {};
             config.embeddings.cache.enabled = document.getElementById('config-embedding-cache-enabled').checked;
             config.embeddings.cache.directory = document.getElementById('config-embedding-cache-dir').value;
+            config.embeddings.concurrency = parseInt(document.getElementById('config-embedding-concurrency').value) || 10;
 
             // Deduplication
             if (!config.deduplication) config.deduplication = {};
@@ -747,14 +1326,34 @@
             if (!config.features) config.features = {};
             config.features.conflict_resolution = document.getElementById('config-feat-conflict-resolution').checked;
 
+            // FAISS
+            if (!config.deduplication.faiss) config.deduplication.faiss = {};
+            config.deduplication.faiss.threshold = parseInt(document.getElementById('config-faiss-threshold').value) || 100;
+            config.deduplication.faiss.rebuild_threshold = parseInt(document.getElementById('config-faiss-rebuild-threshold').value) || 10000;
+            config.deduplication.faiss.batch_size = parseInt(document.getElementById('config-faiss-batch-size').value) || 100;
+            config.deduplication.faiss.top_k = parseInt(document.getElementById('config-faiss-top-k').value) || 50;
+            config.deduplication.faiss.index_type = document.getElementById('config-faiss-index-type').value || 'auto';
+
             // Export
             if (!config.output.export) config.output.export = {};
             config.output.export.enabled = document.getElementById('config-export-enabled').checked;
             config.output.export.base_uri = document.getElementById('config-export-uri').value;
             config.output.export.format = document.getElementById('config-export-format').value;
+            config.output.export.entity_uri_suffix = document.getElementById('config-export-entity-suffix').value;
+            config.output.export.relationship_uri_suffix = document.getElementById('config-export-relationship-suffix').value;
+            config.output.export.filename = document.getElementById('config-export-filename').value;
+            config.output.export.min_property_frequency = parseInt(document.getElementById('config-export-min-property-frequency').value) || 4;
+
             if (!config.naming_conventions) config.naming_conventions = {};
             config.naming_conventions.spelling_variant = document.getElementById('config-spelling-variant').value;
             config.naming_conventions.entity_label_casing = document.getElementById('config-label-casing').value;
+            config.naming_conventions.entity_label_spelling_variant = document.getElementById('config-naming-entity-label-spelling').value;
+            config.naming_conventions.entity_iri_spelling_variant = document.getElementById('config-naming-entity-iri-spelling').value;
+            config.naming_conventions.entity_label_language_tag = document.getElementById('config-naming-language-tag').value;
+
+            config.naming_conventions.entity_type_casing = document.getElementById('config-entity-type-casing').value;
+            config.naming_conventions.property_casing = document.getElementById('config-property-casing').value;
+            config.naming_conventions.relationship_type_casing = document.getElementById('config-relationship-type-casing').value;
             config.output.type_aware_canonical_keys = document.getElementById('config-type-aware-keys').checked;
 
             // Pipeline & Performance
@@ -768,13 +1367,18 @@
             config.checkpointing.flush_interval_batches = parseInt(document.getElementById('config-checkpointing-flush-interval').value) || 0;
             config.checkpointing.max_state_checkpoints = parseInt(document.getElementById('config-checkpointing-max-checkpoints').value) || 3;
             config.checkpointing.persist_state = document.getElementById('config-checkpointing-persist-state').checked;
+
             if (!config.performance) config.performance = {};
             config.performance.llm_cache_enabled = document.getElementById('config-perf-llm-cache').checked;
+            config.performance.max_cache_size_mb = parseInt(document.getElementById('config-perf-max-cache-size').value) || 500;
+            config.performance.normalization_cache_enabled = document.getElementById('config-perf-normalization-cache').checked;
             config.features.schema_evolution = document.getElementById('config-feat-schema-evolution').checked;
 
             // Relationships
             if (!config.relationship_processing) config.relationship_processing = {};
             config.relationship_processing.auto_create_missing_entities = document.getElementById('config-auto-create-entities').checked;
+            config.relationship_processing.auto_created_entity_confidence = parseFloat(document.getElementById('config-relationship-auto-confidence').value);
+            config.relationship_processing.auto_created_entity_default_type = document.getElementById('config-relationship-auto-default-type').value;
 
             // AWS Bedrock & Advanced
             config.llm.aws_bedrock_enabled = document.getElementById('config-aws-bedrock-enabled').checked;
@@ -782,9 +1386,108 @@
             if (!config.llm.bedrock_quota_governor) config.llm.bedrock_quota_governor = {};
             config.llm.bedrock_quota_governor.enabled = document.getElementById('config-bedrock-quota-gov').checked;
             config.llm.retries = parseInt(document.getElementById('config-llm-retries').value) || 3;
+
             if (!config.input_validation) config.input_validation = {};
             config.input_validation.max_file_size_mb = parseFloat(document.getElementById('config-max-file-size').value) || 2.0;
             config.input_validation.min_shard_length = parseInt(document.getElementById('config-min-shard-length').value) || 1;
+
+            // Retry strategy
+            if (!config.llm.retry_strategy) config.llm.retry_strategy = {};
+            config.llm.retry_strategy.backoff_multiplier = parseFloat(document.getElementById('config-retry-backoff-multiplier').value) || 2.0;
+            config.llm.retry_strategy.initial_delay = parseFloat(document.getElementById('config-retry-initial-delay').value) || 1.0;
+            config.llm.retry_strategy.max_delay = parseFloat(document.getElementById('config-retry-max-delay').value) || 30.0;
+            config.llm.retry_strategy.retry_on_rate_limit = document.getElementById('config-retry-rate-limit').checked;
+            config.llm.retry_strategy.retry_on_timeout = document.getElementById('config-retry-on-timeout').checked;
+            config.llm.retry_strategy.jitter = document.getElementById('config-retry-jitter').checked;
+            config.llm.retry_strategy.strategy_type = document.getElementById('config-retry-strategy-type').value;
+
+            config.llm.bedrock_enable_context_1m_beta = document.getElementById('config-bedrock-enable-beta').checked;
+            config.llm.bedrock_context_1m_beta_flag = document.getElementById('config-bedrock-beta-flag').value;
+            config.llm.bedrock_quota_governor.requests_per_minute = parseInt(document.getElementById('config-governor-rpm').value) || 7000;
+            config.llm.bedrock_quota_governor.tokens_per_minute = parseInt(document.getElementById('config-governor-tpm').value) || 3500000;
+            config.llm.bedrock_quota_governor.max_concurrency = parseInt(document.getElementById('config-governor-max-concurrency').value) || 10;
+            config.llm.bedrock_quota_governor.window_seconds = parseInt(document.getElementById('config-governor-window').value) || 60;
+            config.llm.bedrock_quota_governor.jitter_min_seconds = parseFloat(document.getElementById('config-governor-jitter-min').value) || 0.2;
+            config.llm.bedrock_quota_governor.jitter_max_seconds = parseFloat(document.getElementById('config-governor-jitter-max').value) || 1.5;
+
+            // Batching
+            if (!config.batching) config.batching = {};
+            config.batching.chunks_per_batch = parseInt(document.getElementById('config-batching-chunks-per-batch').value) || 2;
+            config.batching.file_level_scaffold_enabled = document.getElementById('config-batching-scaffold-enabled').checked;
+            config.batching.input_token_ratio = parseFloat(document.getElementById('config-batching-input-token-ratio').value) || 0.5;
+            config.batching.max_batch_size_anthropic = parseInt(document.getElementById('config-batching-max-batch-anthropic').value) || 4;
+            config.batching.max_input_tokens = parseInt(document.getElementById('config-batching-max-input-tokens').value) || 32000;
+            config.batching.min_batch_tokens = parseInt(document.getElementById('config-batching-min-batch-tokens').value) || 200;
+            config.batching.chunk_separator = document.getElementById('config-batching-chunk-separator').value;
+            const maxTextLen = parseInt(document.getElementById('config-batching-max-batch-text-length').value);
+            config.batching.max_batch_text_length = isNaN(maxTextLen) ? null : maxTextLen;
+            config.batching.min_batch_size = parseInt(document.getElementById('config-batching-min-batch-size').value) || 1;
+
+            // Web Research
+            if (!config.research) config.research = {};
+            config.research.allowed_domains = document.getElementById('config-research-allowed-domains').value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            config.research.blocked_domains = document.getElementById('config-research-blocked-domains').value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            config.research.max_fetches = parseInt(document.getElementById('config-research-max-fetches').value) || 50;
+            config.research.num_queries = parseInt(document.getElementById('config-research-num-queries').value) || 5;
+            config.research.results_per_query = parseInt(document.getElementById('config-research-results-per-query').value) || 10;
+
+            // Source Grounding
+            if (!config.source_grounding) config.source_grounding = {};
+            config.source_grounding.enabled = document.getElementById('config-source-grounding-enabled').checked;
+            config.source_grounding.merge_sources_on_deduplication = document.getElementById('config-source-grounding-merge').checked;
+            config.source_grounding.fallback_source_prefix = document.getElementById('config-source-grounding-fallback').value;
+            config.source_grounding.max_source_length = parseInt(document.getElementById('config-source-grounding-max-length').value) || 1000;
+            config.source_grounding.source_property_name = document.getElementById('config-source-grounding-property-name').value;
+            config.source_grounding.validate_source_format = document.getElementById('config-source-grounding-validate').checked;
+
+            // Text Normalization (Section 11)
+            if (!config.text_processing.normalization) config.text_processing.normalization = {};
+            config.text_processing.normalization.casing = document.getElementById('config-norm-casing').value;
+            config.text_processing.normalization.punctuation_handling = document.getElementById('config-norm-punctuation').value;
+            try {
+                config.text_processing.normalization.abbreviation_mappings = JSON.parse(document.getElementById('config-norm-abbreviation-mappings').value);
+            } catch(e) {
+                config.text_processing.normalization.abbreviation_mappings = {};
+            }
+            config.text_processing.normalization.preserve_identifier_patterns = document.getElementById('config-norm-preserve-patterns').value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            config.text_processing.normalization.remove_common_words = document.getElementById('config-norm-remove-words').value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+            // Schema Evolution (Section 12)
+            if (!config.schema_evolution) config.schema_evolution = {};
+            config.schema_evolution.initial_version = document.getElementById('config-schema-initial-version').value;
+            config.schema_evolution.type_similarity_threshold = parseFloat(document.getElementById('config-schema-similarity-threshold').value) || 0.75;
+            config.schema_evolution.version_increment = document.getElementById('config-schema-version-increment').value;
+
+            // System Resource Limits (Section 13)
+            if (!config.limits) config.limits = {};
+            const maxEnt = parseInt(document.getElementById('config-limits-max-entities').value);
+            config.limits.max_entities = isNaN(maxEnt) ? null : maxEnt;
+            const maxEntTypes = parseInt(document.getElementById('config-limits-max-entity-types').value);
+            config.limits.max_entity_types = isNaN(maxEntTypes) ? null : maxEntTypes;
+            const maxRelTypes = parseInt(document.getElementById('config-limits-max-relationship-types').value);
+            config.limits.max_relationship_types = isNaN(maxRelTypes) ? null : maxRelTypes;
+            const maxRels = parseInt(document.getElementById('config-limits-max-relationships').value);
+            config.limits.max_relationships = isNaN(maxRels) ? null : maxRels;
+
+            const maxShardLen = parseInt(document.getElementById('config-limits-max-shard-length').value);
+            config.input_validation.max_shard_length = isNaN(maxShardLen) ? null : maxShardLen;
+            const maxShardsVal = parseInt(document.getElementById('config-limits-max-shards').value);
+            config.input_validation.max_shards = isNaN(maxShardsVal) ? null : maxShardsVal;
+            const maxTextLenVal = parseInt(document.getElementById('config-limits-max-text-length').value);
+            config.input_validation.max_text_length = isNaN(maxTextLenVal) ? null : maxTextLenVal;
+
+            if (!config.error_handling) config.error_handling = {};
+            const maxErr = parseInt(document.getElementById('config-limits-max-errors').value);
+            config.error_handling.max_errors = isNaN(maxErr) ? null : maxErr;
+            config.error_handling.continue_on_error = document.getElementById('config-error-continue').checked;
+
+            if (!config.memory) config.memory = {};
+            config.memory.check_available = document.getElementById('config-memory-check').checked;
+            const memMax = parseInt(document.getElementById('config-memory-max-usage').value);
+            config.memory.max_usage_mb = isNaN(memMax) ? null : memMax;
+            config.memory.safety_margin_mb = parseInt(document.getElementById('config-memory-safety-margin').value) || 256;
+            const memWarn = parseInt(document.getElementById('config-memory-warn-threshold').value);
+            config.memory.warn_threshold_mb = isNaN(memWarn) ? null : memWarn;
         }
 
 
@@ -795,7 +1498,7 @@
             const fileList = document.getElementById('file-list');
 
             // Initialize Materialize select, collapsible, and tooltip elements
-            M.FormSelect.init(document.querySelectorAll('#model-selector, #config-conflict-strat, #config-export-format, #config-spelling-variant, #config-label-casing'));
+            M.FormSelect.init(document.querySelectorAll('#model-selector, #config-conflict-strat, #config-export-format, #config-spelling-variant, #config-label-casing, #config-entity-type-casing, #config-property-casing, #config-relationship-type-casing, #config-naming-entity-label-spelling, #config-naming-entity-iri-spelling, #config-retry-strategy-type, #config-norm-casing, #config-norm-punctuation, #config-schema-version-increment'));
             M.Collapsible.init(document.querySelectorAll('#advanced-collapsible'));
             M.Tooltip.init(document.querySelectorAll('.tooltipped'));
             M.Modal.init(document.getElementById('notes-modal'), { dismissible: true });
@@ -829,6 +1532,12 @@
             const minLabelSimVal = document.getElementById('min-label-similarity-val');
             minLabelSimSlider.addEventListener('input', () => {
                 minLabelSimVal.textContent = parseFloat(minLabelSimSlider.value).toFixed(2);
+            });
+
+            const relAutoConfSlider = document.getElementById('config-relationship-auto-confidence');
+            const relAutoConfVal = document.getElementById('relationship-auto-confidence-val');
+            relAutoConfSlider.addEventListener('input', () => {
+                relAutoConfVal.textContent = parseFloat(relAutoConfSlider.value).toFixed(2);
             });
 
             // Model selector changes
