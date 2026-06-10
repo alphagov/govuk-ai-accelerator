@@ -43,6 +43,7 @@ except ModuleNotFoundError as exc:
 db = SQLAlchemy()
 migrate = Migrate()
 DEFAULT_DOMAIN_PROMPT = "#"
+FINGERPRINTED_ASSET_CACHE_CONTROL = "public, max-age=31536000, immutable"
 DEFAULT_CONFIG_TEMPLATE_PATH = (
     Path(__file__).resolve().parent
     / "static"
@@ -487,6 +488,12 @@ def create_flask_app():
         static_url_path="/assets",
     )
     app.register_blueprint(govuk_assets)
+
+    @app.after_request
+    def set_fingerprinted_asset_cache_headers(response):
+        if request.endpoint == "govuk_assets.static":
+            response.headers["Cache-Control"] = FINGERPRINTED_ASSET_CACHE_CONTROL
+        return response
 
     with app.app_context():
         try:
