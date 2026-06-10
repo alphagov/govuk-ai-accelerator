@@ -628,3 +628,31 @@ def test_service_navigation_uses_rebranded_styling():
     html = response.get_data(as_text=True)
 
     assert 'class="govuk-template--rebranded"' in html
+
+
+def test_header_preloads_govuk_fonts_to_avoid_navigation_font_swap():
+    response = _client().get("/ontology/")
+    html = response.get_data(as_text=True)
+
+    assert 'rel="preload"' in html
+    assert 'href="/assets/fonts/light-94a07e06a1-v2.woff2"' in html
+    assert 'href="/assets/fonts/bold-b542beb274-v2.woff2"' in html
+    assert 'as="font"' in html
+    assert 'type="font/woff2"' in html
+
+
+def test_header_resets_inner_container_border_that_causes_uneven_blue_height():
+    response = _client().get("/ontology/")
+    html = response.get_data(as_text=True)
+
+    assert ".govuk-header__container {" in html
+    assert "margin-bottom: 0;" in html
+    assert "border-bottom: 0;" in html
+
+
+def test_active_service_navigation_link_does_not_add_text_underline_to_active_bar():
+    response = _client().get("/ontology/all_jobs")
+    html = response.get_data(as_text=True)
+
+    assert ".govuk-service-navigation__item--active .govuk-service-navigation__link" in html
+    assert "text-decoration: none;" in html
