@@ -100,8 +100,9 @@ def test_historical_jobs_uses_link_styled_stop_job_action():
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert "review-job-actions" in html
-    assert "govuk-button govuk-button--warning stop-job-action" in html
+    assert "renderRowActions(canStop, job, domainStr, notesCount)" in html
+    assert "govuk-button govuk-button--warning review-row-action stop-job-action" in html
+    assert "review-job-actions" not in html
     assert "btn-small red darken-1 stop-job-btn" not in html
 
 
@@ -617,7 +618,7 @@ def test_jobs_page_renders_review_table_headings():
     assert response.status_code == 200
     assert "<h2>Review Ontologies</h2>" in html
     assert '<table class="review-jobs-table" id="jobs-table">' in html
-    for heading in ("Ontology", "Domain", "Created At", "Status", "Type"):
+    for heading in ("Ontology", "Domain", "Created At", "Status", "Type", "Actions"):
         assert f"<span>{heading}</span>" in html
 
 
@@ -629,7 +630,8 @@ def test_jobs_page_renders_expanded_review_context_sections():
     assert "Ontology Files" in html
     assert "Intermediary Files" in html
     assert "Notes" in html
-    assert "renderJobActions(canStop, job)" in html
+    assert "renderRowActions(canStop, job, domainStr, notesCount)" in html
+    assert "renderJobActions" not in html
     assert "renderStopAction" not in html
 
 
@@ -644,6 +646,8 @@ def test_jobs_page_uses_gds_tags_and_notes_modal_controls():
     assert 'class="govuk-button review-add-note-button"' in html
     assert 'class="govuk-textarea review-note-textarea"' in html
     assert 'class="govuk-label govuk-label--s"' in html
+    assert "review-note-button" not in html
+    assert "chat_bubble_outline" not in html
 
 
 def test_left_sidebar_is_removed():

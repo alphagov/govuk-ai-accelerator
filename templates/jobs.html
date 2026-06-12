@@ -45,10 +45,11 @@
           <th scope="col"><span>Created At</span> <span class="sort-icon-active" aria-hidden="true">▼</span></th>
           <th scope="col"><span>Status</span> <span class="sort-icon-inactive" aria-hidden="true">↕</span></th>
           <th scope="col"><span>Type</span> <span class="sort-icon-inactive" aria-hidden="true">↕</span></th>
+          <th scope="col"><span>Actions</span></th>
         </tr>
       </thead>
       <tbody id="jobs-tbody">
-        <tr><td colspan="5" class="review-table-empty">Loading jobs...</td></tr>
+        <tr><td colspan="6" class="review-table-empty">Loading jobs...</td></tr>
       </tbody>
     </table>
   </div>
@@ -92,7 +93,7 @@
         renderJobsTable(filterJobs());
       } catch (err) {
         console.error(err);
-        jobsTbody.innerHTML = `<tr><td colspan="5" class="review-table-empty red-text">Error fetching jobs: ${err.message}</td></tr>`;
+        jobsTbody.innerHTML = `<tr><td colspan="6" class="review-table-empty red-text">Error fetching jobs: ${err.message}</td></tr>`;
       } finally {
         refreshBtn.classList.remove('disabled');
       }
@@ -203,27 +204,16 @@
 
     function updateNoteButtons(jobId, notes) {
       const notesCount = notes.length;
-      const noteIcon = notesCount > 0 ? 'rate_review' : 'chat_bubble_outline';
-      const noteColor = notesCount > 0 ? '#1d70b8' : '#505a5f';
-
-      let noteTooltip = 'Add a note';
-      if (notesCount > 0) {
-        const countText = notesCount === 1 ? '1 note' : `${notesCount} notes`;
-        const latestText = notes[notesCount - 1].text;
-        noteTooltip = `${countText}. Latest: "${latestText.substring(0, 50)}${latestText.length > 50 ? '...' : ''}"`;
-      }
+      const notesLabel = notesCount > 0 ? `View notes (${notesCount})` : 'Add note';
 
       document.querySelectorAll(`.edit-note-action[data-job-id="${jobId}"]`).forEach(btn => {
         const inst = M.Tooltip.getInstance(btn);
         if (inst) inst.destroy();
 
-        const iconEl = btn.querySelector('i');
         const countEl = btn.querySelector('.notes-count');
-        if (iconEl) iconEl.textContent = noteIcon;
-        if (countEl) countEl.textContent = notesCount === 1 ? '1 note' : `${notesCount} notes`;
-        btn.style.color = noteColor;
-        btn.setAttribute('data-tooltip', noteTooltip);
-        M.Tooltip.init(btn);
+        if (countEl) countEl.textContent = notesLabel;
+        btn.classList.toggle('has-notes', notesCount > 0);
+        btn.setAttribute('aria-label', `${notesLabel} for this job`);
       });
     }
 
@@ -389,7 +379,7 @@
       }
 
       if (!latestJobs.length) {
-        jobsTbody.innerHTML = '<tr><td colspan="5" class="review-table-empty">No jobs found.</td></tr>';
+        jobsTbody.innerHTML = '<tr><td colspan="6" class="review-table-empty">No jobs found.</td></tr>';
         return;
       }
 
@@ -404,6 +394,8 @@
         const isSelected = selectedJobId === job.job_id;
         const ontologyLabel = job.job_runs ? `${job.job_runs} (${job.job_id})` : job.job_id;
         const typeLabel = pipelineTypeLabel(pipeline);
+        const notesCount = getJobNotes(job.job_id).length;
+        const canStop = ['pending', 'running'].includes(status);
 
         const tr = document.createElement('tr');
         tr.className = `review-job-row${isSelected ? ' is-selected' : ''}`;
@@ -422,13 +414,16 @@
           <td>
             <span class="govuk-tag review-tag govuk-tag--${pipelineTagModifier(pipeline)}">${escapeHtml(typeLabel)}</span>
           </td>
+          <td>
+            ${renderRowActions(canStop, job, domainStr, notesCount)}
+          </td>
         `;
         jobsTbody.appendChild(tr);
 
         if (isSelected) {
           const detailTr = document.createElement('tr');
           detailTr.className = 'review-detail-row';
-          detailTr.innerHTML = `<td colspan="5">${renderJobDetail(job, { domainStr, isHarness, hasOutputArtifacts, status })}</td>`;
+          detailTr.innerHTML = `<td colspan="6">${renderJobDetail(job, { domainStr, isHarness, hasOutputArtifacts, status })}</td>`;
           jobsTbody.appendChild(detailTr);
         }
 
@@ -474,7 +469,6 @@
             ${renderDetailTab('notes', 'Notes')}
           </div>
           <div class="review-detail-panel">
-            ${renderJobActions(canStop, job)}
             ${selectedDetailSection === 'notes'
               ? renderNotesDetail(job, domainStr, notesCount, latestNote)
               : selectedDetailSection === 'intermediary-files'
@@ -508,14 +502,18 @@
       return '<p class="review-empty-state">No generated artefacts are available for this job yet.</p>';
     }
 
-    function renderJobActions(canStop, job) {
-      if (!canStop) return '';
+    function renderRowActions(canStop, job, domainStr, notesCount) {
+      const notesLabel = notesCount > 0 ? `View notes (${notesCount})` : 'Add note';
       return `
-        <div class="review-job-actions">
-          <h3>Job actions</h3>
-          <button type="button" class="govuk-button govuk-button--warning stop-job-action" data-job-id="${escapeAttribute(job.job_id)}">
-            Stop job<span class="govuk-visually-hidden"> ${escapeHtml(job.job_id)}</span>
+        <div class="review-row-actions" aria-label="Actions for ${escapeAttribute(job.job_id)}">
+          <button type="button" class="govuk-button govuk-button--secondary review-row-action edit-note-action" data-job-id="${escapeAttribute(job.job_id)}" data-domain="${escapeAttribute(domainStr)}" aria-label="${notesLabel} for ${escapeAttribute(domainStr)}">
+            <span class="notes-count">${notesLabel}</span>
           </button>
+          ${canStop ? `
+            <button type="button" class="govuk-button govuk-button--warning review-row-action stop-job-action" data-job-id="${escapeAttribute(job.job_id)}">
+              Stop job<span class="govuk-visually-hidden"> ${escapeHtml(job.job_id)}</span>
+            </button>
+          ` : ''}
         </div>
       `;
     }
@@ -550,15 +548,13 @@
     }
 
     function renderNotesDetail(job, domainStr, notesCount, latestNote) {
-      const noteIcon = notesCount > 0 ? 'rate_review' : 'chat_bubble_outline';
-      const noteSummary = notesCount === 1 ? '1 note' : `${notesCount} notes`;
+      const notesLabel = notesCount > 0 ? `View notes (${notesCount})` : 'Add note';
       return `
         <div class="review-detail-content">
           <h3>Notes</h3>
           <p class="review-note-summary">${notesCount > 0 ? escapeHtml(latestNote) : 'No notes recorded for this run.'}</p>
-          <button type="button" class="review-note-button edit-note-action tooltipped" data-job-id="${escapeAttribute(job.job_id)}" data-domain="${escapeAttribute(domainStr)}" data-position="top" data-tooltip="Add a note" aria-label="Edit notes for this job">
-            <i class="material-icons" aria-hidden="true">${noteIcon}</i>
-            <span class="notes-count">${noteSummary}</span>
+          <button type="button" class="govuk-button govuk-button--secondary review-notes-action edit-note-action" data-job-id="${escapeAttribute(job.job_id)}" data-domain="${escapeAttribute(domainStr)}" aria-label="${notesLabel} for this job">
+            <span class="notes-count">${notesLabel}</span>
           </button>
         </div>
       `;
@@ -583,7 +579,7 @@
         M.toast({ html: `Could not stop job: ${err.message}` });
         button.disabled = false;
         button.removeAttribute('aria-disabled');
-        button.innerHTML = `Stop<span class="govuk-visually-hidden"> job ${jobId}</span>`;
+        button.innerHTML = `Stop job<span class="govuk-visually-hidden"> ${jobId}</span>`;
       }
     }
 
@@ -684,7 +680,8 @@
 
   .review-icon-button:focus,
   .review-detail-tab:focus,
-  .review-note-button:focus,
+  .review-notes-action:focus,
+  .review-row-action:focus,
   .review-modal-close:focus,
   .review-note-icon-button:focus {
       outline: 3px solid #ffdd00;
@@ -766,23 +763,27 @@
   }
 
   .review-jobs-table th:nth-child(1) {
-      width: 30%;
+      width: 27%;
   }
 
   .review-jobs-table th:nth-child(2) {
-      width: 28%;
+      width: 24%;
   }
 
   .review-jobs-table th:nth-child(3) {
-      width: 18%;
+      width: 17%;
   }
 
   .review-jobs-table th:nth-child(4) {
-      width: 12%;
+      width: 10%;
   }
 
   .review-jobs-table th:nth-child(5) {
       width: 12%;
+  }
+
+  .review-jobs-table th:nth-child(6) {
+      width: 10%;
   }
 
   .sort-icon-inactive {
@@ -877,25 +878,6 @@
       padding: 24px 28px;
   }
 
-  .review-job-actions {
-      margin: 0 0 22px;
-      padding: 0 0 18px;
-      border-bottom: 1px solid #f3f2f1;
-  }
-
-  .review-job-actions h3 {
-      margin: 0 0 12px;
-      color: #374151;
-      font-size: 15px;
-      line-height: 1.3;
-      font-weight: 700;
-      text-transform: uppercase;
-  }
-
-  .review-job-actions .govuk-button {
-      margin: 0;
-  }
-
   .review-detail-content h3 {
       margin: 0 0 16px;
       color: #374151;
@@ -947,23 +929,25 @@
       word-break: break-word;
   }
 
-  .review-note-button {
-      min-height: 40px;
-      display: inline-flex;
+  .review-row-actions {
+      display: flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: 8px;
-      border: 1px solid #1d70b8;
-      border-radius: 4px;
-      background: #ffffff;
-      color: #1d70b8;
-      cursor: pointer;
-      font: inherit;
-      font-weight: 700;
-      padding: 8px 12px;
   }
 
-  .review-note-button:hover {
-      background: #f3f8ff;
+  .review-row-action,
+  .review-notes-action {
+      min-height: 34px;
+      margin: 0;
+      padding: 6px 10px;
+      font-size: 15px;
+      line-height: 1.2;
+      white-space: nowrap;
+  }
+
+  .review-notes-action {
+      margin: 0;
   }
 
   .review-notes-modal {
