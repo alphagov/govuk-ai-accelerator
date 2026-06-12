@@ -49,11 +49,31 @@
       <caption class="govuk-visually-hidden">Historical jobs</caption>
       <thead>
         <tr>
-          <th scope="col"><span>Ontology</span> <span class="sort-icon-inactive" aria-hidden="true">↕</span></th>
-          <th scope="col"><span>Domain</span> <span class="sort-icon-inactive" aria-hidden="true">↕</span></th>
-          <th scope="col"><span>Created At</span> <span class="sort-icon-active" aria-hidden="true">▼</span></th>
-          <th scope="col"><span>Status</span> <span class="sort-icon-inactive" aria-hidden="true">↕</span></th>
-          <th scope="col"><span>Type</span> <span class="sort-icon-inactive" aria-hidden="true">↕</span></th>
+          <th scope="col" aria-sort="none">
+            <button type="button" class="review-sort-button" data-sort-key="ontology">
+              <span>Ontology</span> <span class="sort-icon-inactive" data-sort-icon aria-hidden="true">↕</span>
+            </button>
+          </th>
+          <th scope="col" aria-sort="none">
+            <button type="button" class="review-sort-button" data-sort-key="domain">
+              <span>Domain</span> <span class="sort-icon-inactive" data-sort-icon aria-hidden="true">↕</span>
+            </button>
+          </th>
+          <th scope="col" aria-sort="descending">
+            <button type="button" class="review-sort-button" data-sort-key="created_at">
+              <span>Created At</span> <span class="sort-icon-active" data-sort-icon aria-hidden="true">▼</span>
+            </button>
+          </th>
+          <th scope="col" aria-sort="none">
+            <button type="button" class="review-sort-button" data-sort-key="status">
+              <span>Status</span> <span class="sort-icon-inactive" data-sort-icon aria-hidden="true">↕</span>
+            </button>
+          </th>
+          <th scope="col" aria-sort="none">
+            <button type="button" class="review-sort-button" data-sort-key="type">
+              <span>Type</span> <span class="sort-icon-inactive" data-sort-icon aria-hidden="true">↕</span>
+            </button>
+          </th>
           <th scope="col"><span>Actions</span></th>
         </tr>
       </thead>
@@ -90,6 +110,7 @@
     const jobsTbody = document.getElementById('jobs-tbody');
     const refreshBtn = document.getElementById('refresh-jobs-btn');
     const jobsSearch = document.getElementById('jobs-search');
+    const sortButtons = document.querySelectorAll('.review-sort-button');
     M.Modal.init(document.getElementById('notes-modal'), { dismissible: true });
 
     async function fetchJobs() {
@@ -99,7 +120,7 @@
         if (!response.ok) throw new Error("Failed to fetch jobs");
         const jobs = await response.json();
         allJobs = jobs || [];
-        renderJobsTable(filterJobs());
+        renderCurrentJobs();
       } catch (err) {
         console.error(err);
         jobsTbody.innerHTML = `<tr><td colspan="6" class="review-table-empty red-text">Error fetching jobs: ${err.message}</td></tr>`;
@@ -113,6 +134,8 @@
     let selectedDetailSection = 'ontology-files';
     let latestJobs = [];
     let allJobs = [];
+    let sortKey = 'created_at';
+    let sortDirection = 'desc';
 
     function getJobNotes(jobId) {
       const newNotes = localStorage.getItem('job-notes-' + jobId);
@@ -208,6 +231,70 @@
           pipelineTypeLabel(job.pipeline)
         ];
         return values.some(value => String(value || '').toLowerCase().includes(query));
+      });
+    }
+
+    function sortValue(job, key) {
+      if (key === 'ontology') {
+        return String(job.job_runs ? `${job.job_runs} (${job.job_id})` : job.job_id || '').toLowerCase();
+      }
+
+      if (key === 'domain') {
+        return String(job.domain || '').toLowerCase();
+      }
+
+      if (key === 'created_at') {
+        const createdAt = Date.parse(job.created_at || '');
+        return Number.isNaN(createdAt) ? 0 : createdAt;
+      }
+
+      if (key === 'status') {
+        return jobStatusLabel(job).toLowerCase();
+      }
+
+      if (key === 'type') {
+        return pipelineTypeLabel(job.pipeline || 'ontology').toLowerCase();
+      }
+
+      return '';
+    }
+
+    function sortedJobs(jobs) {
+      return [...(jobs || [])].sort((firstJob, secondJob) => {
+        const firstValue = sortValue(firstJob, sortKey);
+        const secondValue = sortValue(secondJob, sortKey);
+        const comparison = typeof firstValue === 'number' && typeof secondValue === 'number'
+          ? firstValue - secondValue
+          : String(firstValue).localeCompare(String(secondValue), 'en', {
+              numeric: true,
+              sensitivity: 'base'
+            });
+
+        return sortDirection === 'asc' ? comparison : comparison * -1;
+      });
+    }
+
+    function renderCurrentJobs() {
+      renderJobsTable(sortedJobs(filterJobs()));
+    }
+
+    function updateSortIndicators() {
+      sortButtons.forEach(button => {
+        const active = button.dataset.sortKey === sortKey;
+        const icon = button.querySelector('[data-sort-icon]');
+        const tableHeader = button.closest('th');
+
+        if (tableHeader) {
+          tableHeader.setAttribute(
+            'aria-sort',
+            active ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'
+          );
+        }
+
+        if (icon) {
+          icon.textContent = active ? (sortDirection === 'asc' ? '▲' : '▼') : '↕';
+          icon.className = active ? 'sort-icon-active' : 'sort-icon-inactive';
+        }
       });
     }
 
@@ -382,6 +469,7 @@
 
     function renderJobsTable(jobs) {
       latestJobs = jobs || [];
+      updateSortIndicators();
 
       if (selectedJobId && !latestJobs.some(job => job.job_id === selectedJobId)) {
         selectedJobId = null;
@@ -628,7 +716,7 @@
       const detailTab = event.target.closest('.review-detail-tab');
       if (detailTab) {
         selectedDetailSection = detailTab.dataset.detailSection;
-        renderJobsTable(filterJobs());
+        renderCurrentJobs();
         return;
       }
 
@@ -636,7 +724,7 @@
       if (jobRow) {
         selectedJobId = selectedJobId === jobRow.dataset.jobId ? null : jobRow.dataset.jobId;
         selectedDetailSection = 'ontology-files';
-        renderJobsTable(filterJobs());
+        renderCurrentJobs();
       }
     });
 
@@ -649,11 +737,25 @@
       event.preventDefault();
       selectedJobId = selectedJobId === jobRow.dataset.jobId ? null : jobRow.dataset.jobId;
       selectedDetailSection = 'ontology-files';
-      renderJobsTable(filterJobs());
+      renderCurrentJobs();
     });
 
-    jobsSearch.addEventListener('input', () => renderJobsTable(filterJobs()));
+    sortButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const nextSortKey = button.dataset.sortKey;
+        if (sortKey === nextSortKey) {
+          sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+          sortKey = nextSortKey;
+          sortDirection = nextSortKey === 'created_at' ? 'desc' : 'asc';
+        }
+        renderCurrentJobs();
+      });
+    });
+
+    jobsSearch.addEventListener('input', renderCurrentJobs);
     refreshBtn.addEventListener('click', fetchJobs);
+    updateSortIndicators();
     fetchJobs();
     setInterval(fetchJobs, 30000); // Slower refresh for historical view
   });
@@ -706,6 +808,7 @@
   }
 
   .review-icon-button:focus,
+  .review-sort-button:focus,
   .review-detail-tab:focus,
   .review-notes-action:focus,
   .review-row-action:focus,
@@ -787,6 +890,32 @@
       font-weight: 700;
       text-align: left;
       text-transform: uppercase;
+  }
+
+  .review-sort-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      font: inherit;
+      font-size: inherit;
+      font-weight: inherit;
+      line-height: inherit;
+      letter-spacing: 0;
+      text-align: left;
+      text-transform: inherit;
+  }
+
+  .review-sort-button:hover span:first-child {
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
+      text-underline-offset: 3px;
   }
 
   .review-jobs-table th:nth-child(1) {
