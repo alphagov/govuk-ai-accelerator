@@ -1,44 +1,48 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row">
-  <div class="col s12">
-    <div class="card">
-      <div class="card-content">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-          <span class="card-title" style="font-weight: bold; margin: 0; color: #1d70b8;">Historical Jobs</span>
-          <button id="refresh-jobs-btn" class="btn-flat waves-effect waves-teal" style="padding: 0 10px;">
-            <i class="material-icons">refresh</i>
-          </button>
-        </div>
-        
-        <p class="grey-text text-darken-1" style="margin-bottom: 20px;">
-          View all historical pipeline processing jobs and their current status.
-        </p>
+<style>
+  main {
+      max-width: none;
+      padding: 24px;
+      display: block;
+  }
 
-        <table class="striped highlight responsive-table" id="jobs-table">
-          <caption class="govuk-visually-hidden">Historical jobs</caption>
-          <thead>
-            <tr>
-                <th scope="col" style="width: 50px;">#</th>
-                <th scope="col">Domain</th>
-                <th scope="col">Time of Run</th>
-                <th scope="col">Status</th>
-                <th scope="col">Pipeline</th>
-                <th scope="col">TTL File</th>
-                <th scope="col">Output</th>
-                <th scope="col">Visualise</th>
-                <th scope="col">Report</th>
-                <th scope="col" id="actions-header">Actions</th>
-                <th scope="col">Notes</th>
-            </tr>
-          </thead>
-          <tbody id="jobs-tbody">
-            <tr><td colspan="11" class="center-align grey-text">Loading jobs...</td></tr>
-          </tbody>
-        </table>
-      </div>
+  .content-area {
+      background: transparent;
+      box-shadow: none;
+      border-radius: 0;
+      padding: 0;
+  }
+</style>
+
+<div class="review-jobs-page">
+  <div class="review-jobs-header">
+    <div>
+      <h2>Historical Jobs</h2>
+      <p>View historical ontology runs, generated artefacts, and review notes.</p>
     </div>
+    <button id="refresh-jobs-btn" class="review-icon-button tooltipped" data-position="left" data-tooltip="Refresh jobs" type="button" aria-label="Refresh jobs">
+      <i class="material-icons" aria-hidden="true">refresh</i>
+    </button>
+  </div>
+
+  <div class="review-table-container">
+    <table class="review-jobs-table" id="jobs-table">
+      <caption class="govuk-visually-hidden">Historical jobs</caption>
+      <thead>
+        <tr>
+          <th scope="col"><span>Ontology</span> <span class="sort-icon-inactive" aria-hidden="true">↕</span></th>
+          <th scope="col"><span>Domain</span> <span class="sort-icon-inactive" aria-hidden="true">↕</span></th>
+          <th scope="col"><span>Created At</span> <span class="sort-icon-active" aria-hidden="true">▼</span></th>
+          <th scope="col"><span>Status</span> <span class="sort-icon-inactive" aria-hidden="true">↕</span></th>
+          <th scope="col"><span>Type</span> <span class="sort-icon-inactive" aria-hidden="true">↕</span></th>
+        </tr>
+      </thead>
+      <tbody id="jobs-tbody">
+        <tr><td colspan="5" class="review-table-empty">Loading jobs...</td></tr>
+      </tbody>
+    </table>
   </div>
 </div>
 
@@ -81,13 +85,16 @@
         renderJobsTable(jobs);
       } catch (err) {
         console.error(err);
-        jobsTbody.innerHTML = `<tr><td colspan="11" class="center-align red-text">Error fetching jobs: ${err.message}</td></tr>`;
+        jobsTbody.innerHTML = `<tr><td colspan="5" class="review-table-empty red-text">Error fetching jobs: ${err.message}</td></tr>`;
       } finally {
         refreshBtn.classList.remove('disabled');
       }
     }
 
     let currentEditingJobId = null;
+    let selectedJobId = null;
+    let selectedDetailSection = 'ontology-files';
+    let latestJobs = [];
 
     function getJobNotes(jobId) {
       const newNotes = localStorage.getItem('job-notes-' + jobId);
@@ -121,6 +128,65 @@
         .replace(/'/g, "&#039;");
     }
 
+    function escapeAttribute(text) {
+      return escapeHtml(String(text || ''));
+    }
+
+    function formatDateTime(value) {
+      if (!value) return '-';
+
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '-';
+
+      return date.toLocaleString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZone: 'Europe/London'
+      });
+    }
+
+    function jobStatusLabel(job) {
+      const status = String(job.status || 'pending').toLowerCase();
+      if (status === 'completed') return 'Created';
+      return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+
+    function pipelineTypeLabel(pipeline) {
+      if (pipeline === 'ingestion') return 'ingestion';
+      if (pipeline === 'ontology-harness') return 'test';
+      return 'ontology';
+    }
+
+    function updateNoteButtons(jobId, notes) {
+      const notesCount = notes.length;
+      const noteIcon = notesCount > 0 ? 'rate_review' : 'chat_bubble_outline';
+      const noteColor = notesCount > 0 ? '#1d70b8' : '#505a5f';
+
+      let noteTooltip = 'Add a note';
+      if (notesCount > 0) {
+        const countText = notesCount === 1 ? '1 note' : `${notesCount} notes`;
+        const latestText = notes[notesCount - 1].text;
+        noteTooltip = `${countText}. Latest: "${latestText.substring(0, 50)}${latestText.length > 50 ? '...' : ''}"`;
+      }
+
+      document.querySelectorAll(`.edit-note-action[data-job-id="${jobId}"]`).forEach(btn => {
+        const inst = M.Tooltip.getInstance(btn);
+        if (inst) inst.destroy();
+
+        const iconEl = btn.querySelector('i');
+        const countEl = btn.querySelector('.notes-count');
+        if (iconEl) iconEl.textContent = noteIcon;
+        if (countEl) countEl.textContent = notesCount === 1 ? '1 note' : `${notesCount} notes`;
+        btn.style.color = noteColor;
+        btn.setAttribute('data-tooltip', noteTooltip);
+        M.Tooltip.init(btn);
+      });
+    }
+
     async function syncNotesFromS3(jobId) {
       try {
         const response = await fetch(`/ontology/jobs/${jobId}/notes`);
@@ -128,28 +194,7 @@
           const s3Notes = await response.json();
           localStorage.setItem('job-notes-' + jobId, JSON.stringify(s3Notes));
           
-          const btn = document.querySelector(`.edit-note-action[data-job-id="${jobId}"]`);
-          if (btn) {
-            const notesCount = s3Notes.length;
-            const noteIcon = notesCount > 0 ? 'rate_review' : 'chat_bubble_outline';
-            const noteColor = notesCount > 0 ? '#1d70b8' : '#b0bec5';
-            
-            let noteTooltip = 'Add a note';
-            if (notesCount > 0) {
-              const countText = notesCount === 1 ? '1 note' : `${notesCount} notes`;
-              const latestText = s3Notes[notesCount - 1].text;
-              noteTooltip = `${countText}. Latest: "${latestText.substring(0, 50)}${latestText.length > 50 ? '...' : ''}"`;
-            }
-
-            const inst = M.Tooltip.getInstance(btn);
-            if (inst) inst.destroy();
-            
-            const iconEl = btn.querySelector('i');
-            if (iconEl) iconEl.textContent = noteIcon;
-            btn.style.color = noteColor;
-            btn.setAttribute('data-tooltip', noteTooltip);
-            M.Tooltip.init(btn);
-          }
+          updateNoteButtons(jobId, s3Notes);
         }
       } catch (e) {
         console.error("Error syncing notes from S3", e);
@@ -301,103 +346,186 @@
     });
 
     function renderJobsTable(jobs) {
-      const showActions = jobs && jobs.some(job => ['pending', 'running'].includes(job.status.toLowerCase()));
-      const actionsHeader = document.getElementById('actions-header');
-      if (actionsHeader) {
-        actionsHeader.style.display = showActions ? '' : 'none';
-      }
-      const colspanVal = showActions ? 11 : 10;
+      latestJobs = jobs || [];
 
-      if (!jobs || jobs.length === 0) {
-        jobsTbody.innerHTML = `<tr><td colspan="${colspanVal}" class="center-align grey-text">No jobs found.</td></tr>`;
+      if (selectedJobId && !latestJobs.some(job => job.job_id === selectedJobId)) {
+        selectedJobId = null;
+      }
+
+      if (!latestJobs.length) {
+        jobsTbody.innerHTML = '<tr><td colspan="5" class="review-table-empty">No jobs found.</td></tr>';
         return;
       }
 
       jobsTbody.innerHTML = '';
-      jobs.forEach((job, index) => {
-        const tr = document.createElement('tr');
-        
-        let statusHtml = '';
-        if (job.status.toLowerCase() === 'completed') {
-          statusHtml = '<span class="new badge green" data-badge-caption="done"></span>';
-        } else if (job.status.toLowerCase() === 'stopped') {
-          statusHtml = '<span class="new badge grey" data-badge-caption="stopped"></span>';
-        } else if (job.status.toLowerCase() === 'failed') {
-          statusHtml = `<span class="new badge red" data-badge-caption="failed"></span> <i class="material-icons tiny red-text tooltipped" data-position="bottom" data-tooltip="${job.error || 'Unknown error'}" style="vertical-align: middle; cursor: help; margin-left: 4px;">info_outline</i>`;
-        } else if (job.status.toLowerCase() === 'running') {
-          statusHtml = '<span class="new badge blue" data-badge-caption="running"></span>';
-        } else {
-          statusHtml = '<span class="new badge orange" data-badge-caption="pending"></span>';
-        }
-
-        const domainStr = job.domain ? job.domain : '-';
+      latestJobs.forEach(job => {
+        const status = String(job.status || 'pending').toLowerCase();
+        const domainStr = job.domain ? String(job.domain) : '-';
         const pipeline = job.pipeline || 'ontology';
         const isIngestion = pipeline === 'ingestion';
         const isHarness = pipeline === 'ontology-harness';
-        const pipelineBadge = isIngestion
-          ? '<span class="new badge teal lighten-2" data-badge-caption="ingestion"></span>'
-          : isHarness
-            ? '<span class="new badge purple lighten-1" data-badge-caption="test"></span>'
-            : '<span class="new badge indigo lighten-1" data-badge-caption="ontology"></span>';
+        const hasOutputArtifacts = Boolean(job.job_runs) && !isIngestion;
+        const isSelected = selectedJobId === job.job_id;
+        const ontologyLabel = job.job_runs ? `${job.job_runs} (${job.job_id})` : job.job_id;
+        const typeLabel = pipelineTypeLabel(pipeline);
 
-        let ttlLink = 'N/A';
-        let outputLink = 'N/A';
-        let visualiserLink = 'N/A';
-        let reportLink = 'N/A';
-        let actionsHtml = '';
-
-        if (!isIngestion) {
-          const targetBucket = 'govuk-ai-accelerator-data-integration';
-          const hasOutputArtifacts = Boolean(job.job_runs);
-          if (hasOutputArtifacts) {
-              outputLink = `<a href="/viewer/bucket/${targetBucket}/${domainStr}/${job.job_runs}/" class="btn-view">Browse Files</a>`;
-              ttlLink = `<a href="/viewer/bucket/download/buckets/${targetBucket}/${domainStr}/${job.job_runs}/output/ontology.ttl" class="blue-text" target="_blank">Download</a>`;
-              visualiserLink = `<a href="/visualizer/?run=${domainStr}/${job.job_runs}" class="btn-view">Visualise Graph</a>`;
-              if (isHarness) {
-                reportLink = `<a href="/viewer/bucket/download/buckets/${targetBucket}/${domainStr}/${job.job_runs}/output/regression_report.json" class="blue-text" target="_blank">Download</a>`;
-              }
-          }
-        }
-
-        if (['pending', 'running'].includes(job.status.toLowerCase())) {
-          actionsHtml = `<button type="button" class="table-action-link stop-job-action" data-job-id="${job.job_id}">Stop<span class="govuk-visually-hidden"> job ${job.job_id}</span></button>`;
-        }
-
-        // Retrieve existing notes
-        const notes = getJobNotes(job.job_id);
-        const noteIcon = notes.length > 0 ? 'rate_review' : 'chat_bubble_outline';
-        const noteColor = notes.length > 0 ? '#1d70b8' : '#b0bec5';
-        
-        let noteTooltip = 'Add a note';
-        if (notes.length > 0) {
-            const countText = notes.length === 1 ? '1 note' : `${notes.length} notes`;
-            const latestText = notes[notes.length - 1].text;
-            noteTooltip = `${countText}. Latest: "${latestText.substring(0, 50)}${latestText.length > 50 ? '...' : ''}"`;
-        }
-
-        const noteBtnHtml = `
-          <button type="button" class="btn-flat edit-note-action tooltipped" data-job-id="${job.job_id}" data-domain="${domainStr}" data-position="top" data-tooltip="${noteTooltip}" style="padding: 0 4px; min-width: auto; height: auto; line-height: 1; color: ${noteColor}; vertical-align: middle; margin-left: 6px;" aria-label="Edit notes for this job">
-            <i class="material-icons" style="font-size: 1.15rem;">${noteIcon}</i>
-          </button>
-        `;
-
+        const tr = document.createElement('tr');
+        tr.className = `review-job-row${isSelected ? ' is-selected' : ''}`;
+        tr.dataset.jobId = job.job_id;
+        tr.tabIndex = 0;
+        tr.setAttribute('aria-expanded', isSelected ? 'true' : 'false');
         tr.innerHTML = `
-          <td class="grey-text">${index + 1}</td>
-          <td style="vertical-align: middle;"><span style="font-weight: bold; vertical-align: middle;">${domainStr}</span></td>
-          <td>${new Date(job.created_at).toLocaleString('en-GB', { timeZone: 'Europe/London' })}</td>
-          <td>${statusHtml}</td>
-          <td>${pipelineBadge}</td>
-          <td>${ttlLink}</td>
-          <td>${outputLink}</td>
-          <td>${visualiserLink}</td>
-          <td>${reportLink}</td>
-          ${showActions ? `<td style="vertical-align: middle;">${actionsHtml}</td>` : ''}
-          <td style="vertical-align: middle;">${noteBtnHtml}</td>
+          <td>
+            <strong>${escapeHtml(ontologyLabel)}</strong>
+          </td>
+          <td>${escapeHtml(domainStr)}</td>
+          <td>${formatDateTime(job.created_at)}</td>
+          <td>
+            <span class="review-status review-status--${escapeAttribute(status)}">${escapeHtml(jobStatusLabel(job))}</span>
+          </td>
+          <td>
+            <span class="review-type review-type--${escapeAttribute(typeLabel)}">${escapeHtml(typeLabel)}</span>
+          </td>
         `;
         jobsTbody.appendChild(tr);
+
+        if (isSelected) {
+          const detailTr = document.createElement('tr');
+          detailTr.className = 'review-detail-row';
+          detailTr.innerHTML = `<td colspan="5">${renderJobDetail(job, { domainStr, isHarness, hasOutputArtifacts, status })}</td>`;
+          jobsTbody.appendChild(detailTr);
+        }
+
         syncNotesFromS3(job.job_id);
       });
+
       M.Tooltip.init(document.querySelectorAll('.tooltipped'));
+    }
+
+    function renderJobDetail(job, context) {
+      const { domainStr, isHarness, hasOutputArtifacts, status } = context;
+      const notes = getJobNotes(job.job_id);
+      const notesCount = notes.length;
+      const targetBucket = 'govuk-ai-accelerator-data-integration';
+      const encodedDomain = encodeURIComponent(domainStr);
+      const encodedRun = encodeURIComponent(job.job_runs || '');
+      const runPath = `${domainStr}/${job.job_runs || ''}`;
+      const encodedRunPath = encodeURIComponent(runPath);
+      const canStop = ['pending', 'running'].includes(status);
+      const latestNote = notesCount > 0 ? notes[notesCount - 1].text : '';
+
+      const visualiserLink = hasOutputArtifacts
+        ? `/visualizer/?run=${encodedRunPath}`
+        : '';
+      const graphDownloadLink = hasOutputArtifacts
+        ? `/viewer/bucket/download/buckets/${targetBucket}/${encodedDomain}/${encodedRun}/output/graph.json`
+        : '';
+      const ttlDownloadLink = hasOutputArtifacts
+        ? `/viewer/bucket/download/buckets/${targetBucket}/${encodedDomain}/${encodedRun}/output/ontology.ttl`
+        : '';
+      const outputLink = hasOutputArtifacts
+        ? `/viewer/bucket/${targetBucket}/${encodedDomain}/${encodedRun}/`
+        : '';
+      const reportLink = hasOutputArtifacts && isHarness
+        ? `/viewer/bucket/download/buckets/${targetBucket}/${encodedDomain}/${encodedRun}/output/regression_report.json`
+        : '';
+
+      return `
+        <div class="review-job-detail">
+          <div class="review-detail-menu" aria-label="Selected job menu">
+            ${renderDetailTab('ontology-files', 'Ontology Files')}
+            ${renderDetailTab('intermediary-files', 'Intermediary Files')}
+            ${renderDetailTab('notes', 'Notes')}
+          </div>
+          <div class="review-detail-panel">
+            ${selectedDetailSection === 'notes'
+              ? renderNotesDetail(job, domainStr, notesCount, latestNote)
+              : selectedDetailSection === 'intermediary-files'
+                ? renderIntermediaryFilesDetail(outputLink, hasOutputArtifacts, canStop, job)
+                : renderOntologyFilesDetail(visualiserLink, graphDownloadLink, ttlDownloadLink, reportLink, hasOutputArtifacts, canStop, job)}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderDetailTab(section, label) {
+      const active = selectedDetailSection === section;
+      return `
+        <button type="button" class="review-detail-tab${active ? ' is-active' : ''}" data-detail-section="${section}">
+          ${label}
+        </button>
+      `;
+    }
+
+    function renderArtifactLink(label, href, meta) {
+      if (!href) return '';
+      return `
+        <a class="review-artifact-link" href="${href}" target="_blank" rel="noopener noreferrer">
+          <span>${label}</span>
+          <span>${meta}</span>
+        </a>
+      `;
+    }
+
+    function renderUnavailableArtifacts() {
+      return '<p class="review-empty-state">No generated artefacts are available for this job yet.</p>';
+    }
+
+    function renderStopAction(canStop, job) {
+      if (!canStop) return '';
+      return `
+        <div class="review-detail-actions">
+          <button type="button" class="table-action-link stop-job-action" data-job-id="${escapeAttribute(job.job_id)}">
+            Stop<span class="govuk-visually-hidden"> job ${escapeHtml(job.job_id)}</span>
+          </button>
+        </div>
+      `;
+    }
+
+    function renderOntologyFilesDetail(visualiserLink, graphDownloadLink, ttlDownloadLink, reportLink, hasOutputArtifacts, canStop, job) {
+      return `
+        <div class="review-detail-content">
+          <h3>Ontology Files</h3>
+          ${hasOutputArtifacts ? `
+            <div class="review-artifact-list">
+              ${renderArtifactLink('Graph', visualiserLink, 'view')}
+              ${renderArtifactLink('Graph', graphDownloadLink, 'download')}
+              ${renderArtifactLink('Ontology .TTL', ttlDownloadLink, 'download')}
+              ${renderArtifactLink('Regression report', reportLink, 'download')}
+            </div>
+          ` : renderUnavailableArtifacts()}
+          ${renderStopAction(canStop, job)}
+        </div>
+      `;
+    }
+
+    function renderIntermediaryFilesDetail(outputLink, hasOutputArtifacts, canStop, job) {
+      return `
+        <div class="review-detail-content">
+          <h3>Intermediary Files</h3>
+          ${hasOutputArtifacts ? `
+            <div class="review-artifact-list">
+              ${renderArtifactLink('Output folder', outputLink, 'browse files')}
+            </div>
+          ` : renderUnavailableArtifacts()}
+          ${renderStopAction(canStop, job)}
+        </div>
+      `;
+    }
+
+    function renderNotesDetail(job, domainStr, notesCount, latestNote) {
+      const noteIcon = notesCount > 0 ? 'rate_review' : 'chat_bubble_outline';
+      const noteSummary = notesCount === 1 ? '1 note' : `${notesCount} notes`;
+      return `
+        <div class="review-detail-content">
+          <h3>Notes</h3>
+          <p class="review-note-summary">${notesCount > 0 ? escapeHtml(latestNote) : 'No notes recorded for this run.'}</p>
+          <button type="button" class="review-note-button edit-note-action tooltipped" data-job-id="${escapeAttribute(job.job_id)}" data-domain="${escapeAttribute(domainStr)}" data-position="top" data-tooltip="Add a note" aria-label="Edit notes for this job">
+            <i class="material-icons" aria-hidden="true">${noteIcon}</i>
+            <span class="notes-count">${noteSummary}</span>
+          </button>
+        </div>
+      `;
     }
 
     async function stopJob(jobId, button) {
@@ -435,7 +563,34 @@
         const jobId = noteButton.dataset.jobId;
         const domain = noteButton.dataset.domain;
         openNotesModal(jobId, domain);
+        return;
       }
+
+      const detailTab = event.target.closest('.review-detail-tab');
+      if (detailTab) {
+        selectedDetailSection = detailTab.dataset.detailSection;
+        renderJobsTable(latestJobs);
+        return;
+      }
+
+      const jobRow = event.target.closest('.review-job-row');
+      if (jobRow) {
+        selectedJobId = selectedJobId === jobRow.dataset.jobId ? null : jobRow.dataset.jobId;
+        selectedDetailSection = 'ontology-files';
+        renderJobsTable(latestJobs);
+      }
+    });
+
+    jobsTbody.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+
+      const jobRow = event.target.closest('.review-job-row');
+      if (!jobRow) return;
+
+      event.preventDefault();
+      selectedJobId = selectedJobId === jobRow.dataset.jobId ? null : jobRow.dataset.jobId;
+      selectedDetailSection = 'ontology-files';
+      renderJobsTable(latestJobs);
     });
 
     refreshBtn.addEventListener('click', fetchJobs);
@@ -444,23 +599,346 @@
   });
 </script>
 <style>
-  .btn-view {
-      height: 100%;
+  .review-jobs-page {
+      width: 100%;
+  }
+
+  .review-jobs-header {
       display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      margin: 0 0 24px;
+  }
+
+  .review-jobs-header h2 {
+      margin: 0 0 10px;
+      color: #1d70b8;
+      font-size: 28px;
+      line-height: 1.2;
+      font-weight: 700;
+      letter-spacing: 0;
+  }
+
+  .review-jobs-header p {
+      margin: 0;
+      color: #505a5f;
+      font-size: 17px;
+      line-height: 1.45;
+  }
+
+  .review-icon-button {
+      width: 40px;
+      height: 40px;
+      border: 0;
+      border-radius: 4px;
+      background: transparent;
+      color: #0b0c0c;
+      cursor: pointer;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 0 1rem;
-      font-size: 0.9rem;
-      border-radius: 4px;
-      background-color: #1d70b8;
-      color: white;
-      transition: background-color 0.3s ease;
-      text-align: center;
-      line-height: normal;
+      flex: 0 0 auto;
   }
-  .btn-view:hover {
-      background-color: #005a30;
-      color: white;
+
+  .review-icon-button:hover {
+      background: #f3f2f1;
+  }
+
+  .review-icon-button:focus,
+  .review-detail-tab:focus,
+  .review-note-button:focus {
+      outline: 3px solid #ffdd00;
+      outline-offset: 0;
+      box-shadow: 0 4px #0b0c0c;
+  }
+
+  .review-table-container {
+      width: 100%;
+      overflow-x: auto;
+      background: #ffffff;
+      border-top: 1px solid #b1b4b6;
+      border-bottom: 1px solid #b1b4b6;
+  }
+
+  .review-jobs-table {
+      width: 100%;
+      min-width: 920px;
+      border-collapse: collapse;
+      table-layout: fixed;
+      color: #0b0c0c;
+      background: #ffffff;
+  }
+
+  .review-jobs-table th,
+  .review-jobs-table td {
+      border-bottom: 1px solid #e5e7eb;
+      padding: 14px 18px;
+      vertical-align: middle;
+      font-size: 16px;
+      line-height: 1.35;
+  }
+
+  .review-jobs-table th {
+      background: #f8f9fa;
+      border-bottom: 2px solid #b1b4b6;
+      color: #374151;
+      font-size: 14px;
+      font-weight: 700;
+      text-align: left;
+      text-transform: uppercase;
+  }
+
+  .review-jobs-table th:nth-child(1) {
+      width: 30%;
+  }
+
+  .review-jobs-table th:nth-child(2) {
+      width: 28%;
+  }
+
+  .review-jobs-table th:nth-child(3) {
+      width: 18%;
+  }
+
+  .review-jobs-table th:nth-child(4) {
+      width: 12%;
+  }
+
+  .review-jobs-table th:nth-child(5) {
+      width: 12%;
+  }
+
+  .sort-icon-inactive {
+      color: #b1b4b6;
+      font-weight: 400;
+  }
+
+  .sort-icon-active {
+      color: #0b0c0c;
+      font-weight: 700;
+  }
+
+  .review-job-row {
+      cursor: pointer;
+  }
+
+  .review-job-row:hover {
+      background: #f3f8ff;
+  }
+
+  .review-job-row:focus {
+      outline: 3px solid #ffdd00;
+      outline-offset: -3px;
+  }
+
+  .review-job-row td:first-child {
+      border-left: 4px solid transparent;
+      padding-left: 14px;
+  }
+
+  .review-job-row.is-selected {
+      background: #eaf2ff;
+      border-top: 2px solid #b1b4b6;
+  }
+
+  .review-job-row.is-selected td:first-child {
+      border-left-color: #1d70b8;
+  }
+
+  .review-status,
+  .review-type {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      padding: 2px 10px;
+      border-radius: 4px;
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.2;
+      white-space: nowrap;
+  }
+
+  .review-status {
+      background: transparent;
+      color: #0b0c0c;
+  }
+
+  .review-status--failed {
+      color: #d4351c;
+  }
+
+  .review-status--running {
+      color: #1d70b8;
+  }
+
+  .review-status--pending {
+      color: #b58840;
+  }
+
+  .review-status--stopped {
+      color: #505a5f;
+  }
+
+  .review-type {
+      border: 1px solid #f3d04f;
+      background: #fff7bf;
+      color: #6b4f00;
+  }
+
+  .review-type--ingestion {
+      border-color: #99d8cf;
+      background: #d8f3ef;
+      color: #104c45;
+  }
+
+  .review-type--test {
+      border-color: #c7b7ff;
+      background: #eee9ff;
+      color: #3d2375;
+  }
+
+  .review-detail-row td {
+      padding: 0;
+      background: #ffffff;
+      border-bottom: 2px solid #b1b4b6;
+  }
+
+  .review-job-detail {
+      min-height: 230px;
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      background: #ffffff;
+  }
+
+  .review-detail-menu {
+      border-right: 1px solid #e5e7eb;
+      background: #fafafa;
+  }
+
+  .review-detail-tab {
+      width: 100%;
+      min-height: 56px;
+      display: block;
+      border: 0;
+      border-left: 4px solid transparent;
+      border-bottom: 1px solid #e5e7eb;
+      background: transparent;
+      color: #0b0c0c;
+      cursor: pointer;
+      font: inherit;
+      font-size: 16px;
+      font-weight: 600;
+      text-align: left;
+      padding: 16px 18px;
+  }
+
+  .review-detail-tab:hover {
+      background: #f3f2f1;
+  }
+
+  .review-detail-tab.is-active {
+      border-left-color: #1d70b8;
+      background: #ffffff;
+      font-weight: 700;
+  }
+
+  .review-detail-panel {
+      padding: 24px 28px;
+  }
+
+  .review-detail-content h3 {
+      margin: 0 0 16px;
+      color: #374151;
+      font-size: 15px;
+      line-height: 1.3;
+      font-weight: 700;
+      text-transform: uppercase;
+  }
+
+  .review-artifact-list {
+      max-width: 560px;
+  }
+
+  .review-artifact-link {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 20px;
+      align-items: center;
+      min-height: 44px;
+      padding: 10px 0;
+      border-bottom: 1px solid #f3f2f1;
+      color: #1d70b8;
+      text-decoration: none;
+  }
+
+  .review-artifact-link:hover span:first-child {
+      text-decoration: underline;
+  }
+
+  .review-artifact-link span:last-child {
+      color: #505a5f;
+  }
+
+  .review-empty-state,
+  .review-note-summary,
+  .review-table-empty {
+      color: #505a5f;
+  }
+
+  .review-table-empty {
+      padding: 28px;
+      text-align: center;
+  }
+
+  .review-detail-actions {
+      margin-top: 20px;
+  }
+
+  .review-note-summary {
+      margin: 0 0 18px;
+      max-width: 720px;
+      white-space: pre-wrap;
+      word-break: break-word;
+  }
+
+  .review-note-button {
+      min-height: 40px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid #1d70b8;
+      border-radius: 4px;
+      background: #ffffff;
+      color: #1d70b8;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+      padding: 8px 12px;
+  }
+
+  .review-note-button:hover {
+      background: #f3f8ff;
+  }
+
+  @media (max-width: 760px) {
+      main {
+          padding: 16px;
+      }
+
+      .review-jobs-header {
+          align-items: center;
+      }
+
+      .review-job-detail {
+          grid-template-columns: 1fr;
+      }
+
+      .review-detail-menu {
+          border-right: 0;
+          border-bottom: 1px solid #e5e7eb;
+      }
   }
 </style>
 {% endblock %}
