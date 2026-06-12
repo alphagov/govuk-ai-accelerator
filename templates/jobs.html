@@ -3,9 +3,9 @@
 {% block content %}
 <style>
   main {
-      max-width: none;
-      padding: 24px;
+      padding: 24px 0;
       display: block;
+      max-width: 960px;
   }
 
   .content-area {
@@ -16,7 +16,7 @@
   }
 </style>
 
-<div class="review-jobs-page">
+<div class="review-jobs-page govuk-width-container">
   <div class="review-jobs-header">
     <div>
       <h2>Review Ontologies</h2>
@@ -465,15 +465,18 @@
         <div class="review-job-detail">
           <div class="review-detail-menu" aria-label="Selected job menu">
             ${renderDetailTab('ontology-files', 'Ontology Files')}
-            ${renderDetailTab('intermediary-files', 'Intermediary Files')}
+            ${renderDetailTab('reports', 'Reports')}
             ${renderDetailTab('notes', 'Notes')}
+            ${renderDetailTab('intermediary-files', 'Intermediary Files')}
           </div>
           <div class="review-detail-panel">
             ${selectedDetailSection === 'notes'
               ? renderNotesDetail(job, domainStr, notesCount, latestNote)
+              : selectedDetailSection === 'reports'
+                ? renderReportsDetail(reportLink, hasOutputArtifacts, isHarness)
               : selectedDetailSection === 'intermediary-files'
                 ? renderIntermediaryFilesDetail(outputLink, hasOutputArtifacts)
-                : renderOntologyFilesDetail(visualiserLink, graphDownloadLink, ttlDownloadLink, reportLink, hasOutputArtifacts)}
+                : renderOntologyFilesDetail(visualiserLink, graphDownloadLink, ttlDownloadLink, hasOutputArtifacts)}
           </div>
         </div>
       `;
@@ -518,7 +521,7 @@
       `;
     }
 
-    function renderOntologyFilesDetail(visualiserLink, graphDownloadLink, ttlDownloadLink, reportLink, hasOutputArtifacts) {
+    function renderOntologyFilesDetail(visualiserLink, graphDownloadLink, ttlDownloadLink, hasOutputArtifacts) {
       return `
         <div class="review-detail-content">
           <h3>Ontology Files</h3>
@@ -527,9 +530,24 @@
               ${renderArtifactLink('Graph', visualiserLink, 'view')}
               ${renderArtifactLink('Graph', graphDownloadLink, 'download')}
               ${renderArtifactLink('Ontology .TTL', ttlDownloadLink, 'download')}
-              ${renderArtifactLink('Regression report', reportLink, 'download')}
             </div>
           ` : renderUnavailableArtifacts()}
+        </div>
+      `;
+    }
+
+    function renderReportsDetail(reportLink, hasOutputArtifacts, isHarness) {
+      const hasReport = Boolean(reportLink);
+      return `
+        <div class="review-detail-content">
+          <h3>Reports</h3>
+          ${hasReport ? `
+            <div class="review-artifact-list">
+              ${renderArtifactLink('Regression report', reportLink, 'download')}
+            </div>
+          ` : `<p class="review-empty-state">${hasOutputArtifacts && !isHarness
+              ? 'No reports are available for this ontology run.'
+              : 'No reports are available for this job yet.'}</p>`}
         </div>
       `;
     }
