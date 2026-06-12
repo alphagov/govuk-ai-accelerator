@@ -48,27 +48,27 @@
         <tr>
           <th scope="col" aria-sort="none">
             <button type="button" class="review-sort-button" data-sort-key="ontology">
-              <span>Ontology</span> <span class="sort-icon-inactive" data-sort-icon aria-hidden="true" hidden></span>
+              <span>Ontology</span>
             </button>
           </th>
           <th scope="col" aria-sort="none">
             <button type="button" class="review-sort-button" data-sort-key="domain">
-              <span>Domain</span> <span class="sort-icon-inactive" data-sort-icon aria-hidden="true" hidden></span>
+              <span>Domain</span>
             </button>
           </th>
           <th scope="col" aria-sort="descending">
             <button type="button" class="review-sort-button" data-sort-key="created_at">
-              <span>Created At</span> <span class="sort-icon-active" data-sort-icon aria-hidden="true">▼</span>
+              <span>Created At</span>
             </button>
           </th>
           <th scope="col" aria-sort="none">
             <button type="button" class="review-sort-button" data-sort-key="status">
-              <span>Status</span> <span class="sort-icon-inactive" data-sort-icon aria-hidden="true" hidden></span>
+              <span>Status</span>
             </button>
           </th>
           <th scope="col" aria-sort="none">
             <button type="button" class="review-sort-button" data-sort-key="type">
-              <span>Type</span> <span class="sort-icon-inactive" data-sort-icon aria-hidden="true" hidden></span>
+              <span>Type</span>
             </button>
           </th>
           <th scope="col"><span>Actions</span></th>
@@ -278,7 +278,6 @@
     function updateSortIndicators() {
       sortButtons.forEach(button => {
         const active = button.dataset.sortKey === sortKey;
-        const icon = button.querySelector('[data-sort-icon]');
         const tableHeader = button.closest('th');
 
         if (tableHeader) {
@@ -286,12 +285,6 @@
             'aria-sort',
             active ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'
           );
-        }
-
-        if (icon) {
-          icon.textContent = active ? (sortDirection === 'asc' ? '▲' : '▼') : '';
-          icon.hidden = !active;
-          icon.className = active ? 'sort-icon-active' : 'sort-icon-inactive';
         }
       });
     }
@@ -939,16 +932,6 @@
   .review-jobs-table th:nth-child(6),
   .review-jobs-table td:nth-child(6) {
       min-width: 120px;
-  }
-
-  .sort-icon-inactive {
-      color: #b1b4b6;
-      font-weight: 400;
-  }
-
-  .sort-icon-active {
-      color: #0b0c0c;
-      font-weight: 700;
   }
 
   .review-job-row {
