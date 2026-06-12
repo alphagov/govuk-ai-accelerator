@@ -19,12 +19,20 @@
 <div class="review-jobs-page">
   <div class="review-jobs-header">
     <div>
-      <h2>Historical Jobs</h2>
+      <h2>Review Ontologies</h2>
       <p>View historical ontology runs, generated artefacts, and review notes.</p>
     </div>
     <button id="refresh-jobs-btn" class="review-icon-button tooltipped" data-position="left" data-tooltip="Refresh jobs" type="button" aria-label="Refresh jobs">
       <i class="material-icons" aria-hidden="true">refresh</i>
     </button>
+  </div>
+
+  <div class="review-search-bar">
+    <label class="govuk-label govuk-visually-hidden" for="jobs-search">Search historical jobs</label>
+    <div class="review-search-input-wrapper">
+      <i class="material-icons" aria-hidden="true">search</i>
+      <input class="govuk-input review-search-input" id="jobs-search" type="search" placeholder="Search ontology, domain, status, or type...">
+    </div>
   </div>
 
   <div class="review-table-container">
@@ -46,23 +54,20 @@
   </div>
 </div>
 
-<!-- Notes Modal Structure -->
-<div id="notes-modal" class="modal" style="border-radius: 6px; max-width: 600px; border-top: 4px solid #1d70b8; overflow-y: visible;">
-    <div class="modal-content" style="padding: 24px;">
-        <h4 style="font-weight: bold; color: #1d70b8; margin: 0 0 20px 0; display: flex; align-items: center; justify-content: space-between; font-size: 1.3rem;">
-            <span id="notes-modal-title">Job Notes</span>
-            <button type="button" class="modal-close btn-flat" style="padding: 0; min-width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #505a5f; margin: 0;" title="Close">
-                <i class="material-icons" style="font-size: 1.25rem; margin: 0;">close</i>
+<div id="notes-modal" class="modal review-notes-modal" role="dialog" aria-modal="true" aria-labelledby="notes-modal-title">
+    <div class="modal-content review-notes-modal__content">
+        <div class="review-notes-modal__header">
+            <h2 class="govuk-heading-l" id="notes-modal-title">Job notes</h2>
+            <button type="button" class="modal-close review-modal-close" title="Close" aria-label="Close notes modal">
+                <i class="material-icons" aria-hidden="true">close</i>
             </button>
-        </h4>
-        <div id="notes-modal-list" style="max-height: 250px; overflow-y: auto; margin-bottom: 20px; padding-right: 5px;"></div>
-        <div style="border-top: 1px solid #b1b4b6; padding-top: 15px;">
-            <label for="notes-modal-input" style="color: #0b0c0c; font-weight: bold; font-size: 0.95rem; display: block; margin-bottom: 8px;">Add a note</label>
-            <div class="input-field" style="margin-top: 0; margin-bottom: 12px;">
-                <textarea id="notes-modal-input" class="materialize-textarea" placeholder="Type a note here..." style="min-height: 60px; margin: 0; padding: 8px; border: 1px solid #b1b4b6; border-radius: 4px; box-sizing: border-box; background-color: #ffffff;"></textarea>
-            </div>
-            <button type="button" id="notes-modal-add-btn" class="btn" style="background-color: #1d70b8; font-weight: bold; height: 36px; line-height: 36px; padding: 0 16px; border-radius: 4px; box-shadow: none;">
-                Add Note
+        </div>
+        <div id="notes-modal-list" class="review-notes-list"></div>
+        <div class="review-notes-form">
+            <label for="notes-modal-input" class="govuk-label govuk-label--s">Add a note</label>
+            <textarea id="notes-modal-input" class="govuk-textarea review-note-textarea" rows="4" placeholder="Type a note here..."></textarea>
+            <button type="button" id="notes-modal-add-btn" class="govuk-button review-add-note-button">
+                Add note
             </button>
         </div>
     </div>
@@ -74,6 +79,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     const jobsTbody = document.getElementById('jobs-tbody');
     const refreshBtn = document.getElementById('refresh-jobs-btn');
+    const jobsSearch = document.getElementById('jobs-search');
     M.Modal.init(document.getElementById('notes-modal'), { dismissible: true });
 
     async function fetchJobs() {
@@ -82,7 +88,8 @@
         const response = await fetch("{{ url_for('ontology.list_jobs') }}");
         if (!response.ok) throw new Error("Failed to fetch jobs");
         const jobs = await response.json();
-        renderJobsTable(jobs);
+        allJobs = jobs || [];
+        renderJobsTable(filterJobs());
       } catch (err) {
         console.error(err);
         jobsTbody.innerHTML = `<tr><td colspan="5" class="review-table-empty red-text">Error fetching jobs: ${err.message}</td></tr>`;
@@ -95,6 +102,7 @@
     let selectedJobId = null;
     let selectedDetailSection = 'ontology-files';
     let latestJobs = [];
+    let allJobs = [];
 
     function getJobNotes(jobId) {
       const newNotes = localStorage.getItem('job-notes-' + jobId);
@@ -159,6 +167,38 @@
       if (pipeline === 'ingestion') return 'ingestion';
       if (pipeline === 'ontology-harness') return 'test';
       return 'ontology';
+    }
+
+    function statusTagModifier(status) {
+      if (status === 'completed') return 'green';
+      if (status === 'failed') return 'red';
+      if (status === 'running') return 'blue';
+      if (status === 'pending') return 'yellow';
+      if (status === 'stopped') return 'grey';
+      return 'grey';
+    }
+
+    function pipelineTagModifier(pipeline) {
+      if (pipeline === 'ingestion') return 'turquoise';
+      if (pipeline === 'ontology-harness') return 'purple';
+      return 'yellow';
+    }
+
+    function filterJobs() {
+      const query = (jobsSearch?.value || '').trim().toLowerCase();
+      if (!query) return allJobs;
+
+      return allJobs.filter(job => {
+        const values = [
+          job.job_id,
+          job.job_runs,
+          job.domain,
+          job.status,
+          job.pipeline,
+          pipelineTypeLabel(job.pipeline)
+        ];
+        return values.some(value => String(value || '').toLowerCase().includes(query));
+      });
     }
 
     function updateNoteButtons(jobId, notes) {
@@ -247,7 +287,7 @@
       
       if (notes.length === 0) {
         listContainer.innerHTML = `
-          <div class="grey-text center-align" style="padding: 20px 0;">
+          <div class="review-notes-empty">
             No notes recorded for this run. Type a note below to get started.
           </div>
         `;
@@ -266,23 +306,19 @@
         });
         
         const noteEl = document.createElement('div');
-        noteEl.style.padding = '10px 0';
-        noteEl.style.borderBottom = '1px solid #f3f2f1';
-        noteEl.style.display = 'flex';
-        noteEl.style.flexDirection = 'column';
-        noteEl.style.position = 'relative';
+        noteEl.className = 'review-note-item';
         
         noteEl.innerHTML = `
-          <div style="font-size: 0.85rem; color: #505a5f; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; padding-right: 60px;">
+          <div class="review-note-item__meta">
             <span>${dateStr}</span>
           </div>
-          <div style="font-size: 0.95rem; color: #0b0c0c; white-space: pre-wrap; word-break: break-word; line-height: 1.4; padding-right: 60px;" id="note-text-${note.id}">${escapeHtml(note.text)}</div>
-          <div style="position: absolute; right: 0; top: 10px; display: flex; gap: 4px;">
-            <button type="button" class="btn-flat" onclick="editNoteItem('${note.id}')" style="padding: 0 4px; min-width: auto; height: 28px; line-height: 28px; color: #1d70b8;" title="Edit note">
-              <i class="material-icons" style="font-size: 1.1rem;">edit</i>
+          <div class="review-note-item__text" id="note-text-${note.id}">${escapeHtml(note.text)}</div>
+          <div class="review-note-item__actions">
+            <button type="button" class="review-note-icon-button" onclick="editNoteItem('${note.id}')" title="Edit note" aria-label="Edit note">
+              <i class="material-icons" aria-hidden="true">edit</i>
             </button>
-            <button type="button" class="btn-flat" onclick="deleteNoteItem('${note.id}')" style="padding: 0 4px; min-width: auto; height: 28px; line-height: 28px; color: #d4351c;" title="Delete note">
-              <i class="material-icons" style="font-size: 1.1rem;">delete</i>
+            <button type="button" class="review-note-icon-button review-note-icon-button--danger" onclick="deleteNoteItem('${note.id}')" title="Delete note" aria-label="Delete note">
+              <i class="material-icons" aria-hidden="true">delete</i>
             </button>
           </div>
         `;
@@ -381,10 +417,10 @@
           <td>${escapeHtml(domainStr)}</td>
           <td>${formatDateTime(job.created_at)}</td>
           <td>
-            <span class="review-status review-status--${escapeAttribute(status)}">${escapeHtml(jobStatusLabel(job))}</span>
+            <span class="govuk-tag review-tag govuk-tag--${statusTagModifier(status)}">${escapeHtml(jobStatusLabel(job))}</span>
           </td>
           <td>
-            <span class="review-type review-type--${escapeAttribute(typeLabel)}">${escapeHtml(typeLabel)}</span>
+            <span class="govuk-tag review-tag govuk-tag--${pipelineTagModifier(pipeline)}">${escapeHtml(typeLabel)}</span>
           </td>
         `;
         jobsTbody.appendChild(tr);
@@ -438,11 +474,12 @@
             ${renderDetailTab('notes', 'Notes')}
           </div>
           <div class="review-detail-panel">
+            ${renderJobActions(canStop, job)}
             ${selectedDetailSection === 'notes'
               ? renderNotesDetail(job, domainStr, notesCount, latestNote)
               : selectedDetailSection === 'intermediary-files'
-                ? renderIntermediaryFilesDetail(outputLink, hasOutputArtifacts, canStop, job)
-                : renderOntologyFilesDetail(visualiserLink, graphDownloadLink, ttlDownloadLink, reportLink, hasOutputArtifacts, canStop, job)}
+                ? renderIntermediaryFilesDetail(outputLink, hasOutputArtifacts)
+                : renderOntologyFilesDetail(visualiserLink, graphDownloadLink, ttlDownloadLink, reportLink, hasOutputArtifacts)}
           </div>
         </div>
       `;
@@ -471,18 +508,19 @@
       return '<p class="review-empty-state">No generated artefacts are available for this job yet.</p>';
     }
 
-    function renderStopAction(canStop, job) {
+    function renderJobActions(canStop, job) {
       if (!canStop) return '';
       return `
-        <div class="review-detail-actions">
-          <button type="button" class="table-action-link stop-job-action" data-job-id="${escapeAttribute(job.job_id)}">
-            Stop<span class="govuk-visually-hidden"> job ${escapeHtml(job.job_id)}</span>
+        <div class="review-job-actions">
+          <h3>Job actions</h3>
+          <button type="button" class="govuk-button govuk-button--warning stop-job-action" data-job-id="${escapeAttribute(job.job_id)}">
+            Stop job<span class="govuk-visually-hidden"> ${escapeHtml(job.job_id)}</span>
           </button>
         </div>
       `;
     }
 
-    function renderOntologyFilesDetail(visualiserLink, graphDownloadLink, ttlDownloadLink, reportLink, hasOutputArtifacts, canStop, job) {
+    function renderOntologyFilesDetail(visualiserLink, graphDownloadLink, ttlDownloadLink, reportLink, hasOutputArtifacts) {
       return `
         <div class="review-detail-content">
           <h3>Ontology Files</h3>
@@ -494,12 +532,11 @@
               ${renderArtifactLink('Regression report', reportLink, 'download')}
             </div>
           ` : renderUnavailableArtifacts()}
-          ${renderStopAction(canStop, job)}
         </div>
       `;
     }
 
-    function renderIntermediaryFilesDetail(outputLink, hasOutputArtifacts, canStop, job) {
+    function renderIntermediaryFilesDetail(outputLink, hasOutputArtifacts) {
       return `
         <div class="review-detail-content">
           <h3>Intermediary Files</h3>
@@ -508,7 +545,6 @@
               ${renderArtifactLink('Output folder', outputLink, 'browse files')}
             </div>
           ` : renderUnavailableArtifacts()}
-          ${renderStopAction(canStop, job)}
         </div>
       `;
     }
@@ -569,7 +605,7 @@
       const detailTab = event.target.closest('.review-detail-tab');
       if (detailTab) {
         selectedDetailSection = detailTab.dataset.detailSection;
-        renderJobsTable(latestJobs);
+        renderJobsTable(filterJobs());
         return;
       }
 
@@ -577,7 +613,7 @@
       if (jobRow) {
         selectedJobId = selectedJobId === jobRow.dataset.jobId ? null : jobRow.dataset.jobId;
         selectedDetailSection = 'ontology-files';
-        renderJobsTable(latestJobs);
+        renderJobsTable(filterJobs());
       }
     });
 
@@ -590,9 +626,10 @@
       event.preventDefault();
       selectedJobId = selectedJobId === jobRow.dataset.jobId ? null : jobRow.dataset.jobId;
       selectedDetailSection = 'ontology-files';
-      renderJobsTable(latestJobs);
+      renderJobsTable(filterJobs());
     });
 
+    jobsSearch.addEventListener('input', () => renderJobsTable(filterJobs()));
     refreshBtn.addEventListener('click', fetchJobs);
     fetchJobs();
     setInterval(fetchJobs, 30000); // Slower refresh for historical view
@@ -613,7 +650,7 @@
 
   .review-jobs-header h2 {
       margin: 0 0 10px;
-      color: #1d70b8;
+      color: #0b0c0c;
       font-size: 28px;
       line-height: 1.2;
       font-weight: 700;
@@ -647,10 +684,49 @@
 
   .review-icon-button:focus,
   .review-detail-tab:focus,
-  .review-note-button:focus {
+  .review-note-button:focus,
+  .review-modal-close:focus,
+  .review-note-icon-button:focus {
       outline: 3px solid #ffdd00;
       outline-offset: 0;
       box-shadow: 0 4px #0b0c0c;
+  }
+
+  .review-search-bar {
+      width: 100%;
+      margin: 0 0 18px;
+  }
+
+  .review-search-input-wrapper {
+      position: relative;
+      max-width: 560px;
+  }
+
+  .review-search-input-wrapper .material-icons {
+      position: absolute;
+      top: 50%;
+      left: 14px;
+      transform: translateY(-50%);
+      color: #6b7280;
+      font-size: 21px;
+      pointer-events: none;
+  }
+
+  .review-search-input {
+      height: 42px;
+      margin: 0;
+      padding-left: 42px !important;
+      border: 2px solid #b1b4b6 !important;
+      border-radius: 2px !important;
+      box-sizing: border-box !important;
+      color: #0b0c0c;
+      background: #ffffff;
+      font-size: 16px;
+  }
+
+  .review-search-input:focus {
+      border-color: #0b0c0c !important;
+      box-shadow: 0 0 0 3px #ffdd00 !important;
   }
 
   .review-table-container {
@@ -746,57 +822,10 @@
       border-left-color: #1d70b8;
   }
 
-  .review-status,
-  .review-type {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 28px;
-      padding: 2px 10px;
-      border-radius: 4px;
-      font-size: 15px;
-      font-weight: 600;
-      line-height: 1.2;
+  .review-tag {
+      margin: 0;
       white-space: nowrap;
-  }
-
-  .review-status {
-      background: transparent;
-      color: #0b0c0c;
-  }
-
-  .review-status--failed {
-      color: #d4351c;
-  }
-
-  .review-status--running {
-      color: #1d70b8;
-  }
-
-  .review-status--pending {
-      color: #b58840;
-  }
-
-  .review-status--stopped {
-      color: #505a5f;
-  }
-
-  .review-type {
-      border: 1px solid #f3d04f;
-      background: #fff7bf;
-      color: #6b4f00;
-  }
-
-  .review-type--ingestion {
-      border-color: #99d8cf;
-      background: #d8f3ef;
-      color: #104c45;
-  }
-
-  .review-type--test {
-      border-color: #c7b7ff;
-      background: #eee9ff;
-      color: #3d2375;
+      text-transform: lowercase;
   }
 
   .review-detail-row td {
@@ -848,6 +877,25 @@
       padding: 24px 28px;
   }
 
+  .review-job-actions {
+      margin: 0 0 22px;
+      padding: 0 0 18px;
+      border-bottom: 1px solid #f3f2f1;
+  }
+
+  .review-job-actions h3 {
+      margin: 0 0 12px;
+      color: #374151;
+      font-size: 15px;
+      line-height: 1.3;
+      font-weight: 700;
+      text-transform: uppercase;
+  }
+
+  .review-job-actions .govuk-button {
+      margin: 0;
+  }
+
   .review-detail-content h3 {
       margin: 0 0 16px;
       color: #374151;
@@ -892,10 +940,6 @@
       text-align: center;
   }
 
-  .review-detail-actions {
-      margin-top: 20px;
-  }
-
   .review-note-summary {
       margin: 0 0 18px;
       max-width: 720px;
@@ -922,6 +966,148 @@
       background: #f3f8ff;
   }
 
+  .review-notes-modal {
+      width: min(920px, calc(100% - 40px));
+      max-height: 88%;
+      border-top: 8px solid #1d70b8;
+      border-radius: 0;
+      background: #ffffff;
+  }
+
+  .review-notes-modal__content {
+      padding: 34px 40px 40px;
+      font-family: inherit;
+  }
+
+  .review-notes-modal__header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 28px;
+  }
+
+  .review-notes-modal__header h2 {
+      margin: 0;
+      color: #0b0c0c;
+  }
+
+  .review-modal-close {
+      width: 44px;
+      height: 44px;
+      border: 0;
+      background: transparent;
+      color: #0b0c0c;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+  }
+
+  .review-modal-close:hover {
+      background: #f3f2f1;
+  }
+
+  .review-notes-list {
+      max-height: 300px;
+      overflow-y: auto;
+      border-bottom: 1px solid #b1b4b6;
+      margin-bottom: 28px;
+      padding-bottom: 18px;
+  }
+
+  .review-notes-empty {
+      padding: 20px 0 22px;
+      color: #505a5f;
+      font-size: 18px;
+      line-height: 1.4;
+  }
+
+  .review-note-item {
+      position: relative;
+      padding: 14px 82px 14px 0;
+      border-bottom: 1px solid #f3f2f1;
+  }
+
+  .review-note-item__meta {
+      margin-bottom: 6px;
+      color: #505a5f;
+      font-size: 14px;
+      line-height: 1.35;
+  }
+
+  .review-note-item__text {
+      color: #0b0c0c;
+      font-size: 16px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+  }
+
+  .review-note-item__actions {
+      position: absolute;
+      top: 10px;
+      right: 0;
+      display: flex;
+      gap: 4px;
+  }
+
+  .review-note-icon-button {
+      width: 34px;
+      height: 34px;
+      border: 0;
+      background: transparent;
+      color: #1d70b8;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+  }
+
+  .review-note-icon-button:hover {
+      background: #f3f2f1;
+  }
+
+  .review-note-icon-button--danger {
+      color: #d4351c;
+  }
+
+  .review-note-icon-button .material-icons {
+      font-size: 20px;
+  }
+
+  .review-notes-form .govuk-label {
+      margin-bottom: 8px;
+      color: #0b0c0c;
+  }
+
+  .review-note-textarea {
+      min-height: 120px;
+      margin: 0 0 18px;
+      border: 2px solid #0b0c0c !important;
+      box-sizing: border-box;
+      color: #0b0c0c;
+      font-size: 16px;
+  }
+
+  .review-note-textarea:focus {
+      outline: 3px solid #ffdd00;
+      outline-offset: 0;
+      box-shadow: inset 0 0 0 2px #0b0c0c;
+  }
+
+  .review-add-note-button {
+      margin: 0;
+      background: #00703c;
+      box-shadow: 0 2px 0 #002d18;
+      color: #ffffff;
+  }
+
+  .review-add-note-button:hover {
+      background: #005a30;
+  }
+
   @media (max-width: 760px) {
       main {
           padding: 16px;
@@ -938,6 +1124,14 @@
       .review-detail-menu {
           border-right: 0;
           border-bottom: 1px solid #e5e7eb;
+      }
+
+      .review-notes-modal {
+          width: calc(100% - 24px);
+      }
+
+      .review-notes-modal__content {
+          padding: 24px 20px 28px;
       }
   }
 </style>
