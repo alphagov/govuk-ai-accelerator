@@ -109,8 +109,8 @@ def test_historical_jobs_labels_ontology_harness_pipeline_as_test():
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert "purple lighten-1" in html
-    assert 'data-badge-caption="test"' in html
+    assert "review-type--test" in html
+    assert "if (pipeline === 'ontology-harness') return 'test';" in html
     assert 'data-badge-caption="ontology-harness"' not in html
 
 
@@ -200,6 +200,9 @@ def test_jobs_template_exposes_ontology_harness_report_link():
     html = template.read_text(encoding="utf-8")
 
     assert "ontology-harness" in html
+    assert "graph.json" in html
+    assert "ontology.ttl" in html
+    assert "Output folder" in html
     assert "regression_report.json" in html
     assert "hasOutputArtifacts" in html
 
@@ -603,6 +606,26 @@ def test_header_marks_review_ontologies_active_on_all_jobs():
         '<strong class="govuk-service-navigation__active-fallback">Review Ontologies</strong>'
         in html
     )
+
+
+def test_jobs_page_renders_review_table_headings():
+    response = _client().get("/ontology/all_jobs")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert '<table class="review-jobs-table" id="jobs-table">' in html
+    for heading in ("Ontology", "Domain", "Created At", "Status", "Type"):
+        assert f"<span>{heading}</span>" in html
+
+
+def test_jobs_page_renders_expanded_review_context_sections():
+    response = _client().get("/ontology/all_jobs")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "Ontology Files" in html
+    assert "Intermediary Files" in html
+    assert "Notes" in html
 
 
 def test_left_sidebar_is_removed():
