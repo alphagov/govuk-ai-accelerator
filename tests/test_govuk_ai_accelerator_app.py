@@ -640,6 +640,16 @@ def test_jobs_page_wires_sort_controls_to_table_renderer():
     assert "renderJobsTable(sortedJobs(filterJobs()));" in html
 
 
+def test_jobs_page_prevents_mouse_click_selection_on_sort_headers():
+    response = _client().get("/ontology/review-ontologies")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "user-select: none;" in html
+    assert "-webkit-tap-highlight-color: transparent;" in html
+    assert ".review-sort-button:focus:not(:focus-visible)" in html
+
+
 def test_jobs_page_renders_expanded_review_context_sections():
     response = _client().get("/ontology/review-ontologies")
     html = response.get_data(as_text=True)
