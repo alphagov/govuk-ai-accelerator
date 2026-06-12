@@ -100,7 +100,8 @@ def test_historical_jobs_uses_link_styled_stop_job_action():
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert "table-action-link stop-job-action" in html
+    assert "review-job-actions" in html
+    assert "govuk-button govuk-button--warning stop-job-action" in html
     assert "btn-small red darken-1 stop-job-btn" not in html
 
 
@@ -109,7 +110,8 @@ def test_historical_jobs_labels_ontology_harness_pipeline_as_test():
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert "review-type--test" in html
+    assert "pipelineTagModifier(pipeline)" in html
+    assert "if (pipeline === 'ontology-harness') return 'purple';" in html
     assert "if (pipeline === 'ontology-harness') return 'test';" in html
     assert 'data-badge-caption="ontology-harness"' not in html
 
@@ -613,6 +615,7 @@ def test_jobs_page_renders_review_table_headings():
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
+    assert "<h2>Review Ontologies</h2>" in html
     assert '<table class="review-jobs-table" id="jobs-table">' in html
     for heading in ("Ontology", "Domain", "Created At", "Status", "Type"):
         assert f"<span>{heading}</span>" in html
@@ -626,6 +629,21 @@ def test_jobs_page_renders_expanded_review_context_sections():
     assert "Ontology Files" in html
     assert "Intermediary Files" in html
     assert "Notes" in html
+    assert "renderJobActions(canStop, job)" in html
+    assert "renderStopAction" not in html
+
+
+def test_jobs_page_uses_gds_tags_and_notes_modal_controls():
+    response = _client().get("/ontology/all_jobs")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "govuk-tag review-tag" in html
+    assert "if (status === 'pending') return 'yellow';" in html
+    assert "return 'yellow';" in html
+    assert 'class="govuk-button review-add-note-button"' in html
+    assert 'class="govuk-textarea review-note-textarea"' in html
+    assert 'class="govuk-label govuk-label--s"' in html
 
 
 def test_left_sidebar_is_removed():
