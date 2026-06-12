@@ -96,21 +96,24 @@ def test_ontology_dashboard_describes_default_config_flow():
 
 
 def test_historical_jobs_uses_link_styled_stop_job_action():
-    response = _client().get("/ontology/all_jobs")
+    response = _client().get("/ontology/review-ontologies")
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert "table-action-link stop-job-action" in html
+    assert "renderRowActions(canStop, job, domainStr, notesCount)" in html
+    assert "govuk-button govuk-button--warning review-row-action stop-job-action" in html
+    assert "review-job-actions" not in html
     assert "btn-small red darken-1 stop-job-btn" not in html
 
 
 def test_historical_jobs_labels_ontology_harness_pipeline_as_test():
-    response = _client().get("/ontology/all_jobs")
+    response = _client().get("/ontology/review-ontologies")
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert "purple lighten-1" in html
-    assert 'data-badge-caption="test"' in html
+    assert "pipelineTagModifier(pipeline)" in html
+    assert "if (pipeline === 'ontology-harness') return 'purple';" in html
+    assert "if (pipeline === 'ontology-harness') return 'test';" in html
     assert 'data-badge-caption="ontology-harness"' not in html
 
 
@@ -200,6 +203,9 @@ def test_jobs_template_exposes_ontology_harness_report_link():
     html = template.read_text(encoding="utf-8")
 
     assert "ontology-harness" in html
+    assert "graph.json" in html
+    assert "ontology.ttl" in html
+    assert "Output folder" in html
     assert "regression_report.json" in html
     assert "hasOutputArtifacts" in html
 
@@ -559,7 +565,7 @@ def test_header_navigation_links_map_labels_to_paths():
 
     assert '<a class="govuk-service-navigation__link" href="/ontology"' in html
     assert "Home" in html
-    assert '<a class="govuk-service-navigation__link" href="/ontology/all_jobs"' in html
+    assert '<a class="govuk-service-navigation__link" href="/ontology/review-ontologies"' in html
     assert "Review Ontologies" in html
     assert "Create Domains" in html
     assert (
@@ -592,17 +598,119 @@ def test_header_marks_create_domains_active_on_domains():
 
 
 def test_header_marks_review_ontologies_active_on_all_jobs():
-    response = _client().get("/ontology/all_jobs")
+    response = _client().get("/ontology/review-ontologies")
     html = response.get_data(as_text=True)
 
     assert (
-        '<a class="govuk-service-navigation__link" href="/ontology/all_jobs" '
+        '<a class="govuk-service-navigation__link" href="/ontology/review-ontologies" '
         'aria-current="page">' in html
     )
     assert (
         '<strong class="govuk-service-navigation__active-fallback">Review Ontologies</strong>'
         in html
     )
+
+
+def test_jobs_page_renders_review_table_headings():
+    response = _client().get("/ontology/review-ontologies")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "<h2>Review Ontologies</h2>" in html
+    assert '<table class="review-jobs-table" id="jobs-table">' in html
+    for heading in ("Ontology", "Domain", "Created At", "Status", "Type", "Actions"):
+        assert f"<span>{heading}</span>" in html
+    for sort_key in ("ontology", "domain", "created_at", "status", "type"):
+        assert f'data-sort-key="{sort_key}"' in html
+    assert '<th scope="col" aria-sort="descending">' in html
+    assert "data-sort-icon" not in html
+    assert "sort-icon-active" not in html
+    assert "sort-icon-inactive" not in html
+    assert "↕" not in html
+    assert "▲" not in html
+    assert "▼" not in html
+
+
+def test_jobs_page_wires_sort_controls_to_table_renderer():
+    response = _client().get("/ontology/review-ontologies")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "let sortKey = 'created_at';" in html
+    assert "let sortDirection = 'desc';" in html
+    assert "function sortValue(job, key)" in html
+    assert "function sortedJobs(jobs)" in html
+    assert "function renderCurrentJobs()" in html
+    assert "function updateSortIndicators()" in html
+    assert "document.querySelectorAll('.review-sort-button')" in html
+    assert "renderJobsTable(sortedJobs(filterJobs()));" in html
+
+
+def test_jobs_page_prevents_mouse_click_selection_on_sort_headers():
+    response = _client().get("/ontology/review-ontologies")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "user-select: none;" in html
+    assert "-webkit-tap-highlight-color: transparent;" in html
+    assert ".review-sort-button:focus," in html
+    assert "background: transparent !important;" in html
+    assert ".review-sort-button:focus:not(:focus-visible)" in html
+
+
+def test_jobs_page_removes_refresh_icon_from_review_header():
+    response = _client().get("/ontology/review-ontologies")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert 'id="refresh-jobs-btn"' not in html
+    assert "Refresh jobs" not in html
+    assert "refreshBtn?.classList.add('disabled');" in html
+
+
+def test_jobs_page_renders_expanded_review_context_sections():
+    response = _client().get("/ontology/review-ontologies")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "Ontology Files" in html
+    assert "Reports" in html
+    assert "Notes" in html
+    assert "renderReportsDetail(reportLink, hasOutputArtifacts, isHarness)" in html
+    assert "renderRowActions(canStop, job, domainStr, notesCount)" in html
+    assert "renderJobActions" not in html
+    assert "renderStopAction" not in html
+
+
+def test_jobs_page_orders_detail_menu_by_artifact_context():
+    response = _client().get("/ontology/review-ontologies")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert html.index("renderDetailTab('ontology-files', 'Ontology Files')") < html.index(
+        "renderDetailTab('intermediary-files', 'Intermediary Files')"
+    )
+    assert html.index("renderDetailTab('intermediary-files', 'Intermediary Files')") < html.index(
+        "renderDetailTab('reports', 'Reports')"
+    )
+    assert html.index("renderDetailTab('reports', 'Reports')") < html.index(
+        "renderDetailTab('notes', 'Notes')"
+    )
+
+
+def test_jobs_page_uses_gds_tags_and_notes_modal_controls():
+    response = _client().get("/ontology/review-ontologies")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "govuk-tag review-tag" in html
+    assert "if (status === 'pending') return 'yellow';" in html
+    assert "return 'yellow';" in html
+    assert 'class="govuk-button review-add-note-button"' in html
+    assert 'class="govuk-textarea review-note-textarea"' in html
+    assert 'class="govuk-label govuk-label--s"' in html
+    assert "review-note-button" not in html
+    assert "chat_bubble_outline" not in html
 
 
 def test_left_sidebar_is_removed():
@@ -693,8 +801,46 @@ def test_header_resets_inner_container_border_that_causes_uneven_blue_height():
 
 
 def test_active_service_navigation_link_does_not_add_text_underline_to_active_bar():
-    response = _client().get("/ontology/all_jobs")
+    response = _client().get("/ontology/review-ontologies")
     html = response.get_data(as_text=True)
 
     assert ".govuk-service-navigation__item--active .govuk-service-navigation__link" in html
     assert "text-decoration: none;" in html
+
+
+def test_old_all_jobs_url_redirects_to_review_ontologies():
+    response = _client().get("/ontology/all_jobs")
+
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/ontology/review-ontologies")
+
+
+def test_review_ontologies_page_uses_service_navigation_width():
+    response = _client().get("/ontology/review-ontologies")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert '<div class="review-jobs-page govuk-width-container">' in html
+    assert "max-width: none;" not in html
+
+
+def test_review_ontologies_page_uses_white_background():
+    response = _client().get("/ontology/review-ontologies")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "body {" in html
+    assert "body.govuk-template--rebranded {" in html
+    assert "background-color: #ffffff;" in html
+    assert ".review-jobs-page {" in html
+    assert "background: #ffffff;" in html
+
+
+def test_review_ontologies_actions_column_has_room_for_actions():
+    response = _client().get("/ontology/review-ontologies")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert ".review-jobs-table th:nth-child(6)" in html
+    assert "width: 14%;" in html
+    assert "min-width: 120px;" in html

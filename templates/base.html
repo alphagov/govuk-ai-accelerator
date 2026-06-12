@@ -255,7 +255,7 @@
                   {% if active_page == 'dashboard' %}<a class="govuk-service-navigation__link" href="/ontology" aria-current="page"><strong class="govuk-service-navigation__active-fallback">Home</strong></a>{% else %}<a class="govuk-service-navigation__link" href="/ontology">Home</a>{% endif %}
                 </li>
                 <li class="govuk-service-navigation__item {% if active_page == 'jobs' %}govuk-service-navigation__item--active{% endif %}">
-                  {% if active_page == 'jobs' %}<a class="govuk-service-navigation__link" href="{{ url_for('ontology.all_jobs') }}" aria-current="page"><strong class="govuk-service-navigation__active-fallback">Review Ontologies</strong></a>{% else %}<a class="govuk-service-navigation__link" href="{{ url_for('ontology.all_jobs') }}">Review Ontologies</a>{% endif %}
+                  {% if active_page == 'jobs' %}<a class="govuk-service-navigation__link" href="{{ url_for('ontology.review_ontologies') }}" aria-current="page"><strong class="govuk-service-navigation__active-fallback">Review Ontologies</strong></a>{% else %}<a class="govuk-service-navigation__link" href="{{ url_for('ontology.review_ontologies') }}">Review Ontologies</a>{% endif %}
                 </li>
                 <li class="govuk-service-navigation__item {% if active_page == 'domains' %}govuk-service-navigation__item--active{% endif %}">
                   {% if active_page == 'domains' %}<a class="govuk-service-navigation__link" href="{{ url_for('ontology.domains_page') }}" aria-current="page"><strong class="govuk-service-navigation__active-fallback">Create Domains</strong></a>{% else %}<a class="govuk-service-navigation__link" href="{{ url_for('ontology.domains_page') }}">Create Domains</a>{% endif %}
