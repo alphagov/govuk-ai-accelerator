@@ -760,3 +760,15 @@ def test_review_ontologies_page_uses_service_navigation_width():
     assert response.status_code == 200
     assert '<div class="review-jobs-page govuk-width-container">' in html
     assert "max-width: none;" not in html
+
+
+def test_review_ontologies_page_uses_white_background():
+    response = _client().get("/ontology/review-ontologies")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "body {" in html
+    assert "body.govuk-template--rebranded {" in html
+    assert "background-color: #ffffff;" in html
+    assert ".review-jobs-page {" in html
+    assert "background: #ffffff;" in html
