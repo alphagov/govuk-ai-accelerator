@@ -51,12 +51,12 @@
         <tr>
           <th scope="col" aria-sort="none">
             <button type="button" class="review-sort-button" data-sort-key="ontology">
-              <span>Ontology</span> <span class="sort-icon-inactive" data-sort-icon aria-hidden="true">↕</span>
+              <span>Ontology</span> <span class="sort-icon-inactive" data-sort-icon aria-hidden="true" hidden></span>
             </button>
           </th>
           <th scope="col" aria-sort="none">
             <button type="button" class="review-sort-button" data-sort-key="domain">
-              <span>Domain</span> <span class="sort-icon-inactive" data-sort-icon aria-hidden="true">↕</span>
+              <span>Domain</span> <span class="sort-icon-inactive" data-sort-icon aria-hidden="true" hidden></span>
             </button>
           </th>
           <th scope="col" aria-sort="descending">
@@ -66,12 +66,12 @@
           </th>
           <th scope="col" aria-sort="none">
             <button type="button" class="review-sort-button" data-sort-key="status">
-              <span>Status</span> <span class="sort-icon-inactive" data-sort-icon aria-hidden="true">↕</span>
+              <span>Status</span> <span class="sort-icon-inactive" data-sort-icon aria-hidden="true" hidden></span>
             </button>
           </th>
           <th scope="col" aria-sort="none">
             <button type="button" class="review-sort-button" data-sort-key="type">
-              <span>Type</span> <span class="sort-icon-inactive" data-sort-icon aria-hidden="true">↕</span>
+              <span>Type</span> <span class="sort-icon-inactive" data-sort-icon aria-hidden="true" hidden></span>
             </button>
           </th>
           <th scope="col"><span>Actions</span></th>
@@ -292,7 +292,8 @@
         }
 
         if (icon) {
-          icon.textContent = active ? (sortDirection === 'asc' ? '▲' : '▼') : '↕';
+          icon.textContent = active ? (sortDirection === 'asc' ? '▲' : '▼') : '';
+          icon.hidden = !active;
           icon.className = active ? 'sort-icon-active' : 'sort-icon-inactive';
         }
       });
