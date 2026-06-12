@@ -623,9 +623,12 @@ def test_jobs_page_renders_review_table_headings():
     for sort_key in ("ontology", "domain", "created_at", "status", "type"):
         assert f'data-sort-key="{sort_key}"' in html
     assert '<th scope="col" aria-sort="descending">' in html
-    assert 'class="sort-icon-inactive" data-sort-icon aria-hidden="true" hidden></span>' in html
-    assert "icon.textContent = active ? (sortDirection === 'asc' ? '▲' : '▼') : '';" in html
-    assert "icon.hidden = !active;" in html
+    assert "data-sort-icon" not in html
+    assert "sort-icon-active" not in html
+    assert "sort-icon-inactive" not in html
+    assert "↕" not in html
+    assert "▲" not in html
+    assert "▼" not in html
 
 
 def test_jobs_page_wires_sort_controls_to_table_renderer():
