@@ -620,6 +620,24 @@ def test_jobs_page_renders_review_table_headings():
     assert '<table class="review-jobs-table" id="jobs-table">' in html
     for heading in ("Ontology", "Domain", "Created At", "Status", "Type", "Actions"):
         assert f"<span>{heading}</span>" in html
+    for sort_key in ("ontology", "domain", "created_at", "status", "type"):
+        assert f'data-sort-key="{sort_key}"' in html
+    assert '<th scope="col" aria-sort="descending">' in html
+
+
+def test_jobs_page_wires_sort_controls_to_table_renderer():
+    response = _client().get("/ontology/review-ontologies")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "let sortKey = 'created_at';" in html
+    assert "let sortDirection = 'desc';" in html
+    assert "function sortValue(job, key)" in html
+    assert "function sortedJobs(jobs)" in html
+    assert "function renderCurrentJobs()" in html
+    assert "function updateSortIndicators()" in html
+    assert "document.querySelectorAll('.review-sort-button')" in html
+    assert "renderJobsTable(sortedJobs(filterJobs()));" in html
 
 
 def test_jobs_page_renders_expanded_review_context_sections():
