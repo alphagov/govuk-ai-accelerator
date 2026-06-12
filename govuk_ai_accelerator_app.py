@@ -386,9 +386,13 @@ def create_blueprints():
             current_app.logger.error("Error saving notes to S3: %s", e)
             return error_response(f"Failed to save notes to S3: {str(e)}", 500)
 
+    @ontology_bp.route('/review-ontologies', methods=['GET'])
+    def review_ontologies():
+        return render_template('jobs.html', active_page='jobs')
+
     @ontology_bp.route('/all_jobs', methods=['GET'])
     def all_jobs():
-        return render_template('jobs.html', active_page='jobs')
+        return redirect('/ontology/review-ontologies')
 
     @ontology_bp.route("/list_domains")
     def list_domains():
