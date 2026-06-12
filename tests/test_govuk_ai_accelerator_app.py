@@ -96,7 +96,7 @@ def test_ontology_dashboard_describes_default_config_flow():
 
 
 def test_historical_jobs_uses_link_styled_stop_job_action():
-    response = _client().get("/ontology/all_jobs")
+    response = _client().get("/ontology/review-ontologies")
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
@@ -107,7 +107,7 @@ def test_historical_jobs_uses_link_styled_stop_job_action():
 
 
 def test_historical_jobs_labels_ontology_harness_pipeline_as_test():
-    response = _client().get("/ontology/all_jobs")
+    response = _client().get("/ontology/review-ontologies")
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
@@ -565,7 +565,7 @@ def test_header_navigation_links_map_labels_to_paths():
 
     assert '<a class="govuk-service-navigation__link" href="/ontology"' in html
     assert "Home" in html
-    assert '<a class="govuk-service-navigation__link" href="/ontology/all_jobs"' in html
+    assert '<a class="govuk-service-navigation__link" href="/ontology/review-ontologies"' in html
     assert "Review Ontologies" in html
     assert "Create Domains" in html
     assert (
@@ -598,11 +598,11 @@ def test_header_marks_create_domains_active_on_domains():
 
 
 def test_header_marks_review_ontologies_active_on_all_jobs():
-    response = _client().get("/ontology/all_jobs")
+    response = _client().get("/ontology/review-ontologies")
     html = response.get_data(as_text=True)
 
     assert (
-        '<a class="govuk-service-navigation__link" href="/ontology/all_jobs" '
+        '<a class="govuk-service-navigation__link" href="/ontology/review-ontologies" '
         'aria-current="page">' in html
     )
     assert (
@@ -612,7 +612,7 @@ def test_header_marks_review_ontologies_active_on_all_jobs():
 
 
 def test_jobs_page_renders_review_table_headings():
-    response = _client().get("/ontology/all_jobs")
+    response = _client().get("/ontology/review-ontologies")
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
@@ -623,20 +623,21 @@ def test_jobs_page_renders_review_table_headings():
 
 
 def test_jobs_page_renders_expanded_review_context_sections():
-    response = _client().get("/ontology/all_jobs")
+    response = _client().get("/ontology/review-ontologies")
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
     assert "Ontology Files" in html
-    assert "Intermediary Files" in html
+    assert "Reports" in html
     assert "Notes" in html
+    assert "renderReportsDetail(reportLink, hasOutputArtifacts, isHarness)" in html
     assert "renderRowActions(canStop, job, domainStr, notesCount)" in html
     assert "renderJobActions" not in html
     assert "renderStopAction" not in html
 
 
 def test_jobs_page_uses_gds_tags_and_notes_modal_controls():
-    response = _client().get("/ontology/all_jobs")
+    response = _client().get("/ontology/review-ontologies")
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
@@ -738,8 +739,24 @@ def test_header_resets_inner_container_border_that_causes_uneven_blue_height():
 
 
 def test_active_service_navigation_link_does_not_add_text_underline_to_active_bar():
-    response = _client().get("/ontology/all_jobs")
+    response = _client().get("/ontology/review-ontologies")
     html = response.get_data(as_text=True)
 
     assert ".govuk-service-navigation__item--active .govuk-service-navigation__link" in html
     assert "text-decoration: none;" in html
+
+
+def test_old_all_jobs_url_redirects_to_review_ontologies():
+    response = _client().get("/ontology/all_jobs")
+
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/ontology/review-ontologies")
+
+
+def test_review_ontologies_page_uses_service_navigation_width():
+    response = _client().get("/ontology/review-ontologies")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert '<div class="review-jobs-page govuk-width-container">' in html
+    assert "max-width: none;" not in html
