@@ -636,6 +636,22 @@ def test_jobs_page_renders_expanded_review_context_sections():
     assert "renderStopAction" not in html
 
 
+def test_jobs_page_orders_detail_menu_by_artifact_context():
+    response = _client().get("/ontology/review-ontologies")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert html.index("renderDetailTab('ontology-files', 'Ontology Files')") < html.index(
+        "renderDetailTab('intermediary-files', 'Intermediary Files')"
+    )
+    assert html.index("renderDetailTab('intermediary-files', 'Intermediary Files')") < html.index(
+        "renderDetailTab('reports', 'Reports')"
+    )
+    assert html.index("renderDetailTab('reports', 'Reports')") < html.index(
+        "renderDetailTab('notes', 'Notes')"
+    )
+
+
 def test_jobs_page_uses_gds_tags_and_notes_modal_controls():
     response = _client().get("/ontology/review-ontologies")
     html = response.get_data(as_text=True)
