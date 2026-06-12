@@ -650,7 +650,19 @@ def test_jobs_page_prevents_mouse_click_selection_on_sort_headers():
     assert response.status_code == 200
     assert "user-select: none;" in html
     assert "-webkit-tap-highlight-color: transparent;" in html
+    assert ".review-sort-button:focus," in html
+    assert "background: transparent !important;" in html
     assert ".review-sort-button:focus:not(:focus-visible)" in html
+
+
+def test_jobs_page_removes_refresh_icon_from_review_header():
+    response = _client().get("/ontology/review-ontologies")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert 'id="refresh-jobs-btn"' not in html
+    assert "Refresh jobs" not in html
+    assert "refreshBtn?.classList.add('disabled');" in html
 
 
 def test_jobs_page_renders_expanded_review_context_sections():
