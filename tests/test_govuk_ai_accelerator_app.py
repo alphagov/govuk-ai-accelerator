@@ -772,3 +772,13 @@ def test_review_ontologies_page_uses_white_background():
     assert "background-color: #ffffff;" in html
     assert ".review-jobs-page {" in html
     assert "background: #ffffff;" in html
+
+
+def test_review_ontologies_actions_column_has_room_for_actions():
+    response = _client().get("/ontology/review-ontologies")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert ".review-jobs-table th:nth-child(6)" in html
+    assert "width: 14%;" in html
+    assert "min-width: 120px;" in html
