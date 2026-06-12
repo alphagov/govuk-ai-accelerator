@@ -31,9 +31,6 @@
       <h2>Review Ontologies</h2>
       <p>View historical ontology runs, generated artefacts, and review notes.</p>
     </div>
-    <button id="refresh-jobs-btn" class="review-icon-button tooltipped" data-position="left" data-tooltip="Refresh jobs" type="button" aria-label="Refresh jobs">
-      <i class="material-icons" aria-hidden="true">refresh</i>
-    </button>
   </div>
 
   <div class="review-search-bar">
@@ -114,7 +111,7 @@
     M.Modal.init(document.getElementById('notes-modal'), { dismissible: true });
 
     async function fetchJobs() {
-      refreshBtn.classList.add('disabled');
+      refreshBtn?.classList.add('disabled');
       try {
         const response = await fetch("{{ url_for('ontology.list_jobs') }}");
         if (!response.ok) throw new Error("Failed to fetch jobs");
@@ -125,7 +122,7 @@
         console.error(err);
         jobsTbody.innerHTML = `<tr><td colspan="6" class="review-table-empty red-text">Error fetching jobs: ${err.message}</td></tr>`;
       } finally {
-        refreshBtn.classList.remove('disabled');
+        refreshBtn?.classList.remove('disabled');
       }
     }
 
@@ -755,7 +752,7 @@
     });
 
     jobsSearch.addEventListener('input', renderCurrentJobs);
-    refreshBtn.addEventListener('click', fetchJobs);
+    refreshBtn?.addEventListener('click', fetchJobs);
     updateSortIndicators();
     fetchJobs();
     setInterval(fetchJobs, 30000); // Slower refresh for historical view
@@ -790,25 +787,6 @@
       line-height: 1.45;
   }
 
-  .review-icon-button {
-      width: 40px;
-      height: 40px;
-      border: 0;
-      border-radius: 4px;
-      background: transparent;
-      color: #0b0c0c;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex: 0 0 auto;
-  }
-
-  .review-icon-button:hover {
-      background: #f3f2f1;
-  }
-
-  .review-icon-button:focus,
   .review-sort-button:focus,
   .review-detail-tab:focus,
   .review-notes-action:focus,
@@ -921,7 +899,15 @@
       text-underline-offset: 3px;
   }
 
+  .review-sort-button:focus,
+  .review-sort-button:active {
+      background: transparent !important;
+      color: inherit;
+  }
+
   .review-sort-button:focus:not(:focus-visible) {
+      background: transparent !important;
+      color: inherit;
       outline: none;
       box-shadow: none;
   }
