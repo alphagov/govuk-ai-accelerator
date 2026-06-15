@@ -3,6 +3,7 @@
 import os
 import io
 import json
+import re
 import zipfile
 import uvicorn
 import yaml
@@ -252,8 +253,21 @@ def _folder_download_url(job_id: str, bucket_name: str, prefix: str) -> str:
     )
 
 
-def _local_file_download_url(job_id: str, path: Path) -> str:
-    return f"/ontology/jobs/{quote(job_id)}/downloads/local-file?path={quote(str(path), safe='')}"
+def _local_file_download_url(job_id: str, path: Path, filename: str | None = None) -> str:
+    url = f"/ontology/jobs/{quote(job_id)}/downloads/local-file?path={quote(str(path), safe='')}"
+    if filename:
+        url += f"&filename={quote(filename, safe='')}"
+    return url
+
+
+def _s3_file_download_url(job_id: str, bucket_name: str, key: str, filename: str | None = None) -> str:
+    url = (
+        f"/ontology/jobs/{quote(job_id)}/downloads/s3-file"
+        f"?bucket={quote(bucket_name)}&key={quote(key, safe='')}"
+    )
+    if filename:
+        url += f"&filename={quote(filename, safe='')}"
+    return url
 
 
 def _local_folder_download_url(job_id: str, path: Path) -> str:
@@ -279,6 +293,44 @@ def _artifact_row(
     if visualize_url:
         artifact["visualize_url"] = visualize_url
     return artifact
+
+
+def _slug_filename_part(value: str) -> str:
+    slug = re.sub(r"[^A-Za-z0-9]+", "-", str(value)).strip("-").lower()
+    return slug or "file"
+
+
+def _safe_extension(value: str) -> str:
+    return re.sub(r"[^A-Za-z0-9.]+", "", value)
+
+
+def _artifact_download_filename(job: ProcessingJob, artifact_name: str) -> str:
+    config_data = _job_config(job)
+    domain = _slug_filename_part(str(config_data.get("domain_name") or job.domain or "job"))
+    run_id = _slug_filename_part(str(job.job_runs or job.id))
+    path_parts = [
+        part
+        for part in str(artifact_name).replace("\\", "/").split("/")
+        if part and part not in {".", ".."}
+    ]
+    if not path_parts:
+        path_parts = ["file"]
+
+    leaf = path_parts[-1]
+    stem, extension = os.path.splitext(leaf)
+    safe_stem_parts = [_slug_filename_part(part) for part in path_parts[:-1]]
+    safe_stem_parts.append(_slug_filename_part(stem or leaf))
+    safe_stem = "-".join(part for part in safe_stem_parts if part)
+    return f"{domain}-{run_id}-{safe_stem}{_safe_extension(extension)}"
+
+
+def _download_response_filename(job: ProcessingJob, fallback_artifact_name: str) -> str:
+    requested_filename = request.args.get("filename")
+    if requested_filename:
+        requested_leaf = str(requested_filename).replace("\\", "/").rsplit("/", 1)[-1]
+        stem, extension = os.path.splitext(requested_leaf)
+        return f"{_slug_filename_part(stem or requested_leaf)}{_safe_extension(extension)}"
+    return _artifact_download_filename(job, fallback_artifact_name)
 
 
 def _visualizer_run_url(job: ProcessingJob) -> str | None:
@@ -311,11 +363,20 @@ def _ontology_download_url(job: ProcessingJob) -> str | None:
             else local_output_dir
         )
         if ontology_path.name == "ontology.ttl" and ontology_path.is_file():
-            return _local_file_download_url(job.id, ontology_path)
+            return _local_file_download_url(
+                job.id,
+                ontology_path,
+                _artifact_download_filename(job, "ontology.ttl"),
+            )
 
     if job.domain and job.job_runs:
         key = f"{job.domain}/{job.job_runs}/output/ontology.ttl"
-        return _quoted_download_url(_default_bucket_name(), key)
+        return _s3_file_download_url(
+            job.id,
+            _default_bucket_name(),
+            key,
+            _artifact_download_filename(job, "ontology.ttl"),
+        )
 
     return None
 
@@ -435,11 +496,12 @@ def _add_local_file_artifact(
     job_id: str,
     path: Path,
     label: str,
+    job: ProcessingJob,
 ) -> None:
     groups[group_name].append(
         _artifact_row(
             label,
-            _local_file_download_url(job_id, path),
+            _local_file_download_url(job_id, path, _artifact_download_filename(job, label)),
             size=path.stat().st_size,
             download_label=_download_label_for_artifact(label),
         )
@@ -464,20 +526,12 @@ def _add_local_input_artifacts(
     if not files:
         return
 
-    if input_path.is_dir():
-        _add_local_folder_artifact(
-            groups,
-            seen_folders,
-            "intermediary_files",
-            job.id,
-            input_path,
-            "input",
-        )
-        return
-
     for file_path in files:
-        label = f"input/{file_path.name}"
-        _add_local_file_artifact(groups, "intermediary_files", job.id, file_path, label)
+        if input_path.is_dir():
+            label = f"input/{file_path.relative_to(input_path).as_posix()}"
+        else:
+            label = f"input/{file_path.name}"
+        _add_local_file_artifact(groups, "intermediary_files", job.id, file_path, label, job)
 
 
 def _add_local_output_artifacts(
@@ -490,33 +544,20 @@ def _add_local_output_artifacts(
     if not files:
         return
 
-    if output_path.is_dir():
-        _add_local_folder_artifact(
-            groups,
-            seen_folders,
-            "intermediary_files",
-            job.id,
-            output_path,
-            "output",
-        )
-
     for file_path in files:
         if output_path.is_dir():
             relative_path = file_path.relative_to(output_path)
-            if len(relative_path.parts) > 1:
-                continue
-            label = relative_path.as_posix()
+            label = f"output/{relative_path.as_posix()}"
         else:
-            label = file_path.name
+            label = f"output/{file_path.name}"
         group_name = _output_artifact_group(file_path.name)
-        if output_path.is_dir() and group_name == "intermediary_files":
-            continue
         _add_local_file_artifact(
             groups,
             group_name,
             job.id,
             file_path,
             label,
+            job,
         )
 
 
@@ -538,17 +579,17 @@ def _add_run_artifact(
     if relative_path.startswith("output/"):
         output_path = relative_path.removeprefix("output/")
         parts = output_path.split("/")
-        if len(parts) > 1:
-            return
-
-        file_name = parts[0]
+        file_name = parts[-1]
         group_name = _output_artifact_group(file_name)
-        if group_name == "intermediary_files":
-            return
         groups[group_name].append(
             _artifact_row(
-                file_name,
-                _quoted_download_url(bucket_name, key),
+                relative_path,
+                _s3_file_download_url(
+                    job.id,
+                    bucket_name,
+                    key,
+                    _artifact_download_filename(job, relative_path),
+                ),
                 size=item.get("Size"),
                 download_label=_download_label_for_artifact(file_name),
                 visualize_url=_visualizer_run_url(job) if file_name == "graph.json" else None,
@@ -556,24 +597,15 @@ def _add_run_artifact(
         )
         return
 
-    parts = relative_path.split("/")
-    if len(parts) > 1:
-        folder_name = parts[0]
-        _add_folder_artifact(
-            groups,
-            seen_folders,
-            "intermediary_files",
-            job.id,
-            bucket_name,
-            f"{run_prefix}{folder_name}/",
-            folder_name,
-        )
-        return
-
     groups["intermediary_files"].append(
         _artifact_row(
             relative_path,
-            _quoted_download_url(bucket_name, key),
+            _s3_file_download_url(
+                job.id,
+                bucket_name,
+                key,
+                _artifact_download_filename(job, relative_path),
+            ),
             size=item.get("Size"),
         )
     )
@@ -592,15 +624,23 @@ def _add_input_artifacts(
 
     bucket_name, input_prefix = input_location
     items = _list_s3_objects(s3_client, bucket_name, input_prefix)
-    if items:
-        _add_folder_artifact(
-            groups,
-            seen_folders,
-            "intermediary_files",
-            job.id,
-            bucket_name,
-            input_prefix,
-            "input",
+    for item in items:
+        key = str(item["Key"])
+        relative_path = key.removeprefix(input_prefix)
+        if not relative_path:
+            continue
+        label = f"input/{relative_path}"
+        groups["intermediary_files"].append(
+            _artifact_row(
+                label,
+                _s3_file_download_url(
+                    job.id,
+                    bucket_name,
+                    key,
+                    _artifact_download_filename(job, label),
+                ),
+                size=item.get("Size"),
+            )
         )
 
 def _job_artifact_groups(job: ProcessingJob) -> dict[str, list[dict]]:
@@ -612,14 +652,20 @@ def _job_artifact_groups(job: ProcessingJob) -> dict[str, list[dict]]:
         groups["intermediary_files"].append(
             _artifact_row(
                 "config.yaml",
-                f"/ontology/jobs/{quote(job.id)}/downloads/config.yaml",
+                (
+                    f"/ontology/jobs/{quote(job.id)}/downloads/config.yaml"
+                    f"?filename={quote(_artifact_download_filename(job, 'config.yaml'), safe='')}"
+                ),
             )
         )
     if job.domain_prompt is not None:
         groups["intermediary_files"].append(
             _artifact_row(
                 "prompts.txt",
-                f"/ontology/jobs/{quote(job.id)}/downloads/prompts.txt",
+                (
+                    f"/ontology/jobs/{quote(job.id)}/downloads/prompts.txt"
+                    f"?filename={quote(_artifact_download_filename(job, 'prompts.txt'), safe='')}"
+                ),
             )
         )
 
@@ -636,16 +682,6 @@ def _job_artifact_groups(job: ProcessingJob) -> dict[str, list[dict]]:
         bucket_name = _default_bucket_name()
         run_prefix = _normalise_prefix(f"{job.domain}/{job.job_runs}")
         items = _list_s3_objects(s3_client, bucket_name, run_prefix)
-        if any(str(item["Key"]).startswith(f"{run_prefix}output/") for item in items):
-            _add_folder_artifact(
-                groups,
-                seen_folders,
-                "intermediary_files",
-                job.id,
-                bucket_name,
-                f"{run_prefix}output/",
-                "output",
-            )
         for item in items:
             _add_run_artifact(groups, seen_folders, job, bucket_name, run_prefix, item)
         _add_input_artifacts(groups, seen_folders, job, s3_client)
@@ -1092,7 +1128,40 @@ def create_blueprints():
         return Response(
             requested_path.read_bytes(),
             mimetype="application/octet-stream",
-            headers={"Content-Disposition": f"attachment; filename={requested_path.name}"},
+            headers={
+                "Content-Disposition": (
+                    f"attachment; filename={_download_response_filename(job, requested_path.name)}"
+                )
+            },
+        )
+
+    @ontology_bp.route('/jobs/<job_id>/downloads/s3-file', methods=['GET'])
+    def download_job_s3_file(job_id):
+        job = db.session.get(ProcessingJob, job_id)
+        if job is None:
+            return error_response("Job not found", 404)
+
+        bucket_name = request.args.get("bucket") or ""
+        key = request.args.get("key") or ""
+        allowed = _allowed_download_prefixes(job)
+        if not any(bucket_name == bucket and key.startswith(allowed_prefix) for bucket, allowed_prefix in allowed):
+            return error_response("File is not available for this job", 403)
+
+        s3_client = boto3.client("s3")
+        try:
+            response = s3_client.get_object(Bucket=bucket_name, Key=key)
+        except Exception:
+            return error_response("File not found", 404)
+
+        fallback_name = key.rsplit("/", 1)[-1] or "file"
+        return Response(
+            response["Body"].read(),
+            mimetype="application/octet-stream",
+            headers={
+                "Content-Disposition": (
+                    f"attachment; filename={_download_response_filename(job, fallback_name)}"
+                )
+            },
         )
 
     @ontology_bp.route('/jobs/<job_id>/downloads/local-folder', methods=['GET'])
@@ -1129,14 +1198,22 @@ def create_blueprints():
             return Response(
                 body,
                 mimetype="application/x-yaml",
-                headers={"Content-Disposition": "attachment; filename=config.yaml"},
+                headers={
+                    "Content-Disposition": (
+                        f"attachment; filename={_download_response_filename(job, 'config.yaml')}"
+                    )
+                },
             )
 
         if artifact_name in {"prompt.txt", "prompts.txt"}:
             return Response(
                 job.domain_prompt or "",
                 mimetype="text/plain",
-                headers={"Content-Disposition": "attachment; filename=prompts.txt"},
+                headers={
+                    "Content-Disposition": (
+                        f"attachment; filename={_download_response_filename(job, 'prompts.txt')}"
+                    )
+                },
             )
 
         return error_response("Artifact not found", 404)
