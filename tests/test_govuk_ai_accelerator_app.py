@@ -114,14 +114,14 @@ def test_historical_jobs_uses_review_action_set():
     assert "btn-small red darken-1 stop-job-btn" not in html
 
 
-def test_historical_jobs_labels_ontology_harness_pipeline_as_test():
+def test_historical_jobs_hides_pipeline_type_badges_in_review_table():
     response = _client().get("/ontology/review-ontologies")
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert "pipelineTagModifier(pipeline)" in html
-    assert "if (pipeline === 'ontology-harness') return 'purple';" in html
-    assert "if (pipeline === 'ontology-harness') return 'test';" in html
+    assert "pipelineTagModifier(pipeline)" not in html
+    assert "pipelineTypeLabel(pipeline)" not in html
+    assert "ontology-harness') return 'test'" not in html
     assert 'data-badge-caption="ontology-harness"' not in html
 
 
@@ -310,9 +310,11 @@ def test_review_jobs_endpoint_paginates_ontology_jobs_and_excludes_other_types(t
     assert payload["jobs"][0]["notes_count"] == 2
     assert payload["jobs"][0]["latest_note"]["text"] == "latest note"
     assert payload["jobs"][0]["visualize_url"] == "/visualizer/?run=visa/run-20260605-1"
-    assert payload["jobs"][0]["ontology_download_url"].endswith(
-        "/visa/run-20260605-1/output/ontology.ttl"
+    assert payload["jobs"][0]["ontology_download_url"].startswith(
+        "/ontology/jobs/ontology-11/downloads/s3-file"
     )
+    assert "key=visa%2Frun-20260605-1%2Foutput%2Fontology.ttl" in payload["jobs"][0]["ontology_download_url"]
+    assert "filename=visa-run-20260605-1-ontology.ttl" in payload["jobs"][0]["ontology_download_url"]
     assert {job["pipeline"] for job in payload["jobs"]} == {"ontology"}
 
 
@@ -391,14 +393,15 @@ def test_review_jobs_endpoint_adds_visualizer_url_for_local_graph_jobs(tmp_path)
     assert payload["jobs"][0]["visualize_url"] == "/visualizer/?run=review-demo/local-graph-job"
 
 
-def test_jobs_template_exposes_ontology_harness_report_link():
+def test_jobs_template_exposes_selected_job_artifact_downloads():
     template = Path(__file__).parents[1] / "templates" / "jobs.html"
     html = template.read_text(encoding="utf-8")
 
-    assert "ontology-harness" in html
     assert "/artifacts" in html
     assert "renderArtifactRows" in html
     assert "download_url" in html
+    assert "insert_drive_file" in html
+    assert "folder_zip" not in html
     assert "browse files" not in html
 
 
@@ -756,7 +759,7 @@ def test_job_notes_get_imports_legacy_s3_notes_once(tmp_path, monkeypatch):
     mock_s3_client.get_object.assert_not_called()
 
 
-def test_job_artifacts_endpoint_groups_downloadable_files_and_folders(tmp_path, monkeypatch):
+def test_job_artifacts_endpoint_groups_downloadable_flat_s3_files(tmp_path, monkeypatch):
     app_module, flask_app = _jobs_test_app(tmp_path)
 
     with flask_app.app_context():
@@ -793,6 +796,7 @@ def test_job_artifacts_endpoint_groups_downloadable_files_and_folders(tmp_path, 
                             {"Key": "visa/run-20260605-1/output/bedrock_costs.csv", "Size": 13},
                             {"Key": "visa/run-20260605-1/output/deduplication.jsonl", "Size": 14},
                             {"Key": "visa/run-20260605-1/output/checkpoints/state.json", "Size": 15},
+                            {"Key": "visa/run-20260605-1/output/term_extraction/terms.jsonl", "Size": 18},
                             {"Key": "visa/run-20260605-1/output/regression_report.json", "Size": 16},
                         ]
                     }
@@ -813,34 +817,45 @@ def test_job_artifacts_endpoint_groups_downloadable_files_and_folders(tmp_path, 
     ontology_names = {artifact["name"] for artifact in groups["ontology_files"]}
     intermediary_names = {artifact["name"] for artifact in groups["intermediary_files"]}
     report_names = {artifact["name"] for artifact in groups["reports"]}
-    assert {"graph.json", "ontology.ttl", "schema.json"} <= ontology_names
-    assert {"config.yaml", "prompts.txt", "input", "output"} <= intermediary_names
+    assert {"output/graph.json", "output/ontology.ttl", "output/schema.json"} <= ontology_names
+    assert {
+        "config.yaml",
+        "prompts.txt",
+        "input/source.md",
+        "output/bedrock_costs.csv",
+        "output/deduplication.jsonl",
+        "output/checkpoints/state.json",
+        "output/term_extraction/terms.jsonl",
+    } <= intermediary_names
     assert "Submitted config.yaml" not in intermediary_names
     assert "Prompt used" not in intermediary_names
-    assert "bedrock_costs.csv" not in intermediary_names
-    assert "deduplication.jsonl" not in intermediary_names
+    assert "input" not in intermediary_names
+    assert "output" not in intermediary_names
     assert "checkpoints" not in intermediary_names
-    assert "input/source.md" not in intermediary_names
-    assert report_names == {"regression_report.json"}
+    assert report_names == {"output/regression_report.json"}
     assert all("view" not in artifact for group in groups.values() for artifact in group)
     assert all(artifact["action"] == "download" for group in groups.values() for artifact in group)
+    assert all(artifact["kind"] == "file" for group in groups.values() for artifact in group)
+    assert all("/downloads/folder" not in artifact["download_url"] for group in groups.values() for artifact in group)
+    assert all("/downloads/s3-file" in artifact["download_url"] for artifact in groups["ontology_files"])
 
     graph_artifact = next(
         artifact
         for artifact in groups["ontology_files"]
-        if artifact["name"] == "graph.json"
+        if artifact["name"] == "output/graph.json"
     )
     ontology_artifact = next(
         artifact
         for artifact in groups["ontology_files"]
-        if artifact["name"] == "ontology.ttl"
+        if artifact["name"] == "output/ontology.ttl"
     )
     assert graph_artifact["visualize_url"] == "/visualizer/?run=visa/run-20260605-1"
     assert graph_artifact["download_label"] == "Download"
     assert ontology_artifact["download_label"] == "Download"
+    assert "filename=visa-run-20260605-1-output-ontology.ttl" in ontology_artifact["download_url"]
 
 
-def test_job_artifacts_endpoint_includes_local_input_and_output_downloads(tmp_path):
+def test_job_artifacts_endpoint_includes_flat_local_input_and_output_downloads(tmp_path):
     app_module, flask_app = _jobs_test_app(tmp_path)
     input_dir = tmp_path / "run" / "input"
     output_dir = tmp_path / "run" / "output"
@@ -851,6 +866,10 @@ def test_job_artifacts_endpoint_includes_local_input_and_output_downloads(tmp_pa
     (nested_input_dir / "nested.md").write_text("nested", encoding="utf-8")
     (output_dir / "graph.json").write_text("{}", encoding="utf-8")
     (output_dir / "bedrock_costs.csv").write_text("cost", encoding="utf-8")
+    (output_dir / "checkpoints").mkdir()
+    (output_dir / "checkpoints" / "state.json").write_text("state", encoding="utf-8")
+    (output_dir / "term_extraction").mkdir()
+    (output_dir / "term_extraction" / "terms.jsonl").write_text("terms", encoding="utf-8")
 
     with flask_app.app_context():
         app_module.db.session.add(
@@ -880,25 +899,30 @@ def test_job_artifacts_endpoint_includes_local_input_and_output_downloads(tmp_pa
     groups = response.get_json()["groups"]
     ontology_names = {artifact["name"] for artifact in groups["ontology_files"]}
     intermediary_names = {artifact["name"] for artifact in groups["intermediary_files"]}
-    assert "graph.json" in ontology_names
-    assert {"input", "output"} <= intermediary_names
-    assert "input/source.md" not in intermediary_names
-    assert "input/guidance" not in intermediary_names
-    assert "bedrock_costs.csv" not in intermediary_names
+    assert "output/graph.json" in ontology_names
+    assert {
+        "input/source.md",
+        "input/guidance/nested.md",
+        "output/bedrock_costs.csv",
+        "output/checkpoints/state.json",
+        "output/term_extraction/terms.jsonl",
+    } <= intermediary_names
+    assert "input" not in intermediary_names
+    assert "output" not in intermediary_names
 
     input_artifact = next(
         artifact
         for artifact in groups["intermediary_files"]
-        if artifact["name"] == "input"
+        if artifact["name"] == "input/guidance/nested.md"
     )
     download_response = flask_app.test_client().get(input_artifact["download_url"])
 
     assert download_response.status_code == 200
-    assert download_response.mimetype == "application/zip"
-    assert "attachment; filename=input.zip" in download_response.headers["Content-Disposition"]
+    assert download_response.mimetype == "application/octet-stream"
+    assert "attachment; filename=visa-local-artifact-job-input-guidance-nested.md" in download_response.headers["Content-Disposition"]
 
 
-def test_virtual_and_folder_download_routes(tmp_path, monkeypatch):
+def test_virtual_and_review_s3_file_download_routes(tmp_path, monkeypatch):
     app_module, flask_app = _jobs_test_app(tmp_path)
 
     with flask_app.app_context():
@@ -924,10 +948,15 @@ def test_virtual_and_folder_download_routes(tmp_path, monkeypatch):
 
     assert config_response.status_code == 200
     assert "domain_name: visa" in config_response.get_data(as_text=True)
-    assert "attachment; filename=config.yaml" in config_response.headers["Content-Disposition"]
+    assert "attachment; filename=visa-run-20260605-1-config.yaml" in config_response.headers["Content-Disposition"]
     assert prompt_response.status_code == 200
     assert prompt_response.get_data(as_text=True) == "prompt text"
-    assert "attachment; filename=prompts.txt" in prompt_response.headers["Content-Disposition"]
+    assert "attachment; filename=visa-run-20260605-1-prompts.txt" in prompt_response.headers["Content-Disposition"]
+
+    unsafe_config_response = flask_app.test_client().get(
+        "/ontology/jobs/download-job/downloads/config.yaml?filename=../../unsafe config.yaml"
+    )
+    assert "attachment; filename=unsafe-config.yaml" in unsafe_config_response.headers["Content-Disposition"]
 
     class FakePaginator:
         def paginate(self, **kwargs):
@@ -949,6 +978,29 @@ def test_virtual_and_folder_download_routes(tmp_path, monkeypatch):
     mock_body.read.return_value = b'{"state": true}'
     mock_s3_client.get_object.return_value = {"Body": mock_body}
     monkeypatch.setattr("boto3.client", lambda service_name: mock_s3_client)
+
+    file_response = flask_app.test_client().get(
+        "/ontology/jobs/download-job/downloads/s3-file"
+        "?bucket=govuk-ai-accelerator-data-integration"
+        "&key=visa/run-20260605-1/output/checkpoints/state.json"
+        "&filename=visa-run-20260605-1-output-checkpoints-state.json"
+    )
+
+    assert file_response.status_code == 200
+    assert file_response.get_data() == b'{"state": true}'
+    assert file_response.mimetype == "application/octet-stream"
+    assert "attachment; filename=visa-run-20260605-1-output-checkpoints-state.json" in file_response.headers["Content-Disposition"]
+    mock_s3_client.get_object.assert_called_with(
+        Bucket="govuk-ai-accelerator-data-integration",
+        Key="visa/run-20260605-1/output/checkpoints/state.json",
+    )
+
+    disallowed_response = flask_app.test_client().get(
+        "/ontology/jobs/download-job/downloads/s3-file"
+        "?bucket=govuk-ai-accelerator-data-integration"
+        "&key=other-domain/run/output/state.json"
+    )
+    assert disallowed_response.status_code == 403
 
     zip_response = flask_app.test_client().get(
         "/ontology/jobs/download-job/downloads/folder"
@@ -1066,10 +1118,18 @@ def test_jobs_page_renders_review_table_headings():
     assert response.status_code == 200
     assert "<h2>Review Ontologies</h2>" in html
     assert '<table class="review-jobs-table" id="jobs-table">' in html
-    for heading in ("Ontology", "Domain", "Created At", "Status", "Type", "Actions"):
+    for heading in ("Ontology", "Domain", "Created At", "Status", "Actions"):
         assert f"<span>{heading}</span>" in html
-    for sort_key in ("ontology", "domain", "created_at", "status", "type"):
+    assert "<span>Type</span>" not in html
+    assert "pipelineTypeLabel" not in html
+    assert "pipelineTagModifier" not in html
+    for sort_key in ("ontology", "domain", "created_at", "status"):
         assert f'data-sort-key="{sort_key}"' in html
+    assert 'data-sort-key="type"' not in html
+    assert 'placeholder="Search ontology, domain, or status..."' in html
+    assert "status, or type" not in html
+    assert 'colspan="5"' in html
+    assert 'colspan="6"' not in html
     assert '<th scope="col" aria-sort="descending">' in html
     assert "data-sort-icon" not in html
     assert "sort-icon-active" not in html
@@ -1386,6 +1446,7 @@ def test_review_ontologies_actions_column_has_room_for_actions():
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert ".review-jobs-table th:nth-child(6)" in html
-    assert "width: 18%;" in html
+    assert ".review-jobs-table th:nth-child(5)" in html
+    assert ".review-jobs-table th:nth-child(6)" not in html
+    assert "width: 20%;" in html
     assert "min-width: 180px;" in html
