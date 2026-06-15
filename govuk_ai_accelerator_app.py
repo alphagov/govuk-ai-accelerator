@@ -442,7 +442,15 @@ def _job_path_config(job: ProcessingJob) -> dict:
 def _output_artifact_group(file_name: str) -> str:
     if file_name in {"graph.json", "ontology.ttl", "schema.json"}:
         return "ontology_files"
-    if file_name in {"regression_report.json", "owl_ontology_metrics.csv"}:
+    if (
+        file_name == "stdout.log"
+        or file_name in {"regression_report.json", "owl_ontology_metrics.csv", "bedrock_costs.csv", "export_status.json"}
+        or "_report." in file_name
+        or "_summary." in file_name
+        or "_metrics." in file_name
+        or "_costs." in file_name
+        or "_status." in file_name
+    ):
         return "reports"
     return "intermediary_files"
 
