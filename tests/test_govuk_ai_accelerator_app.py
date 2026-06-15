@@ -74,14 +74,15 @@ def test_create_flask_app_can_disable_task_manager(monkeypatch):
 
 
 def test_ontology_dashboard_includes_stop_job_action():
-    response = _client().get("/ontology/review-ontologies")
+    response = _client().get("/ontology/")
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert '<th scope="col"><span>Actions</span></th>' in html
-    assert "stop-job-action" in html
-    assert "Stop job<span class=\"govuk-visually-hidden\">" in html
-    assert "['pending', 'running'].includes(status)" in html
+    assert "table-action-link stop-job-action" in html
+    assert "Stop<span class=\"govuk-visually-hidden\"> job" in html
+    assert "['pending', 'running'].includes(job.status.toLowerCase())" in html
+    assert "job.status.toLowerCase() === 'stopped'" in html
+
 
 
 def test_ontology_dashboard_describes_default_config_flow():
