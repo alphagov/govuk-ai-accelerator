@@ -213,7 +213,6 @@
 
                     <!-- Wizard Back Link -->
                     <div style="margin-bottom: 20px; min-height: 25px;">
-                        <a href="#" id="wizard-back-btn" style="display: none; color: #0b0c0c; text-decoration: underline; font-weight: normal; font-size: 1rem;">&lt; Back</a>
                     </div>
 
                     <form id="upload-form" enctype="multipart/form-data">
@@ -1832,10 +1831,12 @@
                 document.getElementById(`step-${stepNum}`).style.display = 'block';
                 
                 // Show/hide back button
-                if (stepNum > 1 && stepNum < 5) {
-                    backBtn.style.display = 'inline-block';
-                } else {
-                    backBtn.style.display = 'none';
+                if (backBtn) {
+                    if (stepNum > 1 && stepNum < 5) {
+                        backBtn.style.display = 'inline-block';
+                    } else {
+                        backBtn.style.display = 'none';
+                    }
                 }
                 
                 // Toggle config visibility depending on Step 4
@@ -1911,7 +1912,9 @@
                     showStep(currentStep - 1);
                 }
             };
-            backBtn.addEventListener('click', handleBackNav);
+            if (backBtn) {
+                backBtn.addEventListener('click', handleBackNav);
+            }
             document.querySelectorAll('.wizard-prev-btn-action').forEach(btn => {
                 btn.addEventListener('click', handleBackNav);
             });
