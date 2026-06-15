@@ -408,16 +408,40 @@
       return `
         <div class="review-artifact-list">
           ${artifacts.map(artifact => `
-            <a class="review-artifact-link" href="${escapeAttribute(artifact.download_url)}" download aria-label="Download ${escapeAttribute(artifact.name)}">
+            <div class="review-artifact-row">
               <span class="review-artifact-name">
                 <i class="material-icons" aria-hidden="true">${artifact.kind === 'folder' ? 'folder_zip' : 'insert_drive_file'}</i>
                 <span>${escapeHtml(artifact.name)}</span>
               </span>
-              <i class="material-icons review-artifact-download-icon" aria-hidden="true">download</i>
-              <span class="govuk-visually-hidden">Download</span>
-            </a>
+              ${renderArtifactActions(artifact)}
+            </div>
           `).join('')}
         </div>
+      `;
+    }
+
+    function renderArtifactActions(artifact) {
+      const actions = [];
+      if (artifact.visualize_url) {
+        actions.push(`
+          <li class="review-artifact-actions__item">
+            <a class="govuk-link review-artifact-action-link" href="${escapeAttribute(artifact.visualize_url)}">
+              Visualise graph
+            </a>
+          </li>
+        `);
+      }
+      actions.push(`
+        <li class="review-artifact-actions__item">
+          <a class="govuk-link review-artifact-action-link" href="${escapeAttribute(artifact.download_url)}" download aria-label="${escapeAttribute(artifact.download_label || 'Download')} ${escapeAttribute(artifact.name)}">
+            ${escapeHtml(artifact.download_label || 'Download')}
+          </a>
+        </li>
+      `);
+      return `
+        <ul class="review-artifact-actions" aria-label="Actions for ${escapeAttribute(artifact.name)}">
+          ${actions.join('')}
+        </ul>
       `;
     }
 
@@ -960,7 +984,7 @@
       max-width: 660px;
   }
 
-  .review-artifact-link {
+  .review-artifact-row {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 20px;
@@ -968,11 +992,13 @@
       min-height: 44px;
       padding: 10px 0;
       border-bottom: 1px solid #f3f2f1;
-      color: #1d70b8;
-      text-decoration: none;
   }
 
-  .review-artifact-link:hover span:first-child {
+  .review-artifact-action-link {
+      color: #1d70b8;
+  }
+
+  .review-artifact-row:hover .review-artifact-name span {
       text-decoration: underline;
   }
 
@@ -990,9 +1016,20 @@
       white-space: nowrap;
   }
 
-  .review-artifact-download-icon {
-      color: #505a5f;
-      font-size: 22px;
+  .review-artifact-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 12px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      white-space: nowrap;
+  }
+
+  .review-artifact-actions__item {
+      margin: 0;
+      padding: 0;
   }
 
   .review-empty-state,

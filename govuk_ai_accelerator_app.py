@@ -263,14 +263,32 @@ def _artifact_row(
     download_url: str,
     kind: str = "file",
     size: int | None = None,
+    download_label: str = "Download",
+    visualize_url: str | None = None,
 ) -> dict:
-    return {
+    artifact = {
         "name": name,
         "kind": kind,
         "size": size,
         "action": "download",
         "download_url": download_url,
+        "download_label": download_label,
     }
+    if visualize_url:
+        artifact["visualize_url"] = visualize_url
+    return artifact
+
+
+def _visualizer_run_url(job: ProcessingJob) -> str | None:
+    if not job.domain or not job.job_runs:
+        return None
+    return f"/visualizer/?run={quote(f'{job.domain}/{job.job_runs}', safe='/')}"
+
+
+def _download_label_for_artifact(name: str) -> str:
+    if name == "ontology.ttl":
+        return "Download ontology"
+    return "Download"
 
 
 def _normalise_prefix(prefix: str) -> str:
@@ -390,6 +408,7 @@ def _add_local_file_artifact(
             label,
             _local_file_download_url(job_id, path),
             size=path.stat().st_size,
+            download_label=_download_label_for_artifact(label),
         )
     )
 
@@ -498,6 +517,8 @@ def _add_run_artifact(
                 file_name,
                 _quoted_download_url(bucket_name, key),
                 size=item.get("Size"),
+                download_label=_download_label_for_artifact(file_name),
+                visualize_url=_visualizer_run_url(job) if file_name == "graph.json" else None,
             )
         )
         return
@@ -557,15 +578,15 @@ def _job_artifact_groups(job: ProcessingJob) -> dict[str, list[dict]]:
     if job.config_data:
         groups["intermediary_files"].append(
             _artifact_row(
-                "Submitted config.yaml",
+                "config.yaml",
                 f"/ontology/jobs/{quote(job.id)}/downloads/config.yaml",
             )
         )
     if job.domain_prompt is not None:
         groups["intermediary_files"].append(
             _artifact_row(
-                "Prompt used",
-                f"/ontology/jobs/{quote(job.id)}/downloads/prompt.txt",
+                "prompts.txt",
+                f"/ontology/jobs/{quote(job.id)}/downloads/prompts.txt",
             )
         )
 
@@ -1078,11 +1099,11 @@ def create_blueprints():
                 headers={"Content-Disposition": "attachment; filename=config.yaml"},
             )
 
-        if artifact_name == "prompt.txt":
+        if artifact_name in {"prompt.txt", "prompts.txt"}:
             return Response(
                 job.domain_prompt or "",
                 mimetype="text/plain",
-                headers={"Content-Disposition": "attachment; filename=prompt.txt"},
+                headers={"Content-Disposition": "attachment; filename=prompts.txt"},
             )
 
         return error_response("Artifact not found", 404)

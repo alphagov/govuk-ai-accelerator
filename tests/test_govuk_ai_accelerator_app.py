@@ -759,7 +759,9 @@ def test_job_artifacts_endpoint_groups_downloadable_files_and_folders(tmp_path, 
     intermediary_names = {artifact["name"] for artifact in groups["intermediary_files"]}
     report_names = {artifact["name"] for artifact in groups["reports"]}
     assert {"graph.json", "ontology.ttl", "schema.json"} <= ontology_names
-    assert {"Submitted config.yaml", "Prompt used", "input", "output"} <= intermediary_names
+    assert {"config.yaml", "prompts.txt", "input", "output"} <= intermediary_names
+    assert "Submitted config.yaml" not in intermediary_names
+    assert "Prompt used" not in intermediary_names
     assert "bedrock_costs.csv" not in intermediary_names
     assert "deduplication.jsonl" not in intermediary_names
     assert "checkpoints" not in intermediary_names
@@ -767,6 +769,20 @@ def test_job_artifacts_endpoint_groups_downloadable_files_and_folders(tmp_path, 
     assert report_names == {"regression_report.json"}
     assert all("view" not in artifact for group in groups.values() for artifact in group)
     assert all(artifact["action"] == "download" for group in groups.values() for artifact in group)
+
+    graph_artifact = next(
+        artifact
+        for artifact in groups["ontology_files"]
+        if artifact["name"] == "graph.json"
+    )
+    ontology_artifact = next(
+        artifact
+        for artifact in groups["ontology_files"]
+        if artifact["name"] == "ontology.ttl"
+    )
+    assert graph_artifact["visualize_url"] == "/visualizer/?run=visa/run-20260605-1"
+    assert graph_artifact["download_label"] == "Download"
+    assert ontology_artifact["download_label"] == "Download ontology"
 
 
 def test_job_artifacts_endpoint_includes_local_input_and_output_downloads(tmp_path):
@@ -848,7 +864,7 @@ def test_virtual_and_folder_download_routes(tmp_path, monkeypatch):
         "/ontology/jobs/download-job/downloads/config.yaml"
     )
     prompt_response = flask_app.test_client().get(
-        "/ontology/jobs/download-job/downloads/prompt.txt"
+        "/ontology/jobs/download-job/downloads/prompts.txt"
     )
 
     assert config_response.status_code == 200
@@ -856,6 +872,7 @@ def test_virtual_and_folder_download_routes(tmp_path, monkeypatch):
     assert "attachment; filename=config.yaml" in config_response.headers["Content-Disposition"]
     assert prompt_response.status_code == 200
     assert prompt_response.get_data(as_text=True) == "prompt text"
+    assert "attachment; filename=prompts.txt" in prompt_response.headers["Content-Disposition"]
 
     class FakePaginator:
         def paginate(self, **kwargs):
@@ -1099,7 +1116,10 @@ def test_jobs_page_uses_selected_job_artifact_api_and_download_only_rows():
     assert "/artifacts" in html
     assert "download_url" in html
     assert "renderArtifactRows" in html
-    assert '<span class="govuk-visually-hidden">Download</span>' in html
+    assert "renderArtifactActions" in html
+    assert "Visualise graph" in html
+    assert "artifact.download_label" in html
+    assert "review-artifact-actions" in html
     assert ">download</span>" not in html
     assert "visualiserLink" not in html
     assert "browse files" not in html
