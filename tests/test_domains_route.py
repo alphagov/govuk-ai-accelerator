@@ -44,3 +44,14 @@ def test_header_links_to_create_domains_page():
     body = response.get_data(as_text=True)
     assert "/ontology/domains" in body
     assert "Create Domains" in body
+
+
+def test_header_links_to_review_tests_after_create_domains():
+    response = _client().get("/ontology/")
+
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert "/ontology/review-tests" in body
+    assert "Review Tests" in body
+    assert body.index("Create Domains") < body.index("Review Tests")
+    assert body.index("Review Tests") < body.index("File Explorer")
