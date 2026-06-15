@@ -219,11 +219,11 @@
                         <!-- STEP 1: START -->
                         <div id="step-1" class="wizard-step">
                             <h1 class="govuk-heading-xl" style="font-weight: 800; font-size: 2.8rem; margin: 0 0 20px 0; color: #0b0c0c;">Create an Ontology</h1>
-                            <p class="govuk-body" style="font-size: 1.2rem; line-height: 1.6; color: #505a5f; margin-bottom: 30px;">
+                            <p class="govuk-body" style="font-size: 1.2rem; line-height: 1.6; color: #0b0c0c; margin-bottom: 30px;">
                                 For you to create an Ontology you have to select a domain containing the content from GOV.UK, and optionally adjust the configuration and add a domain prompt.
                             </p>
                             <button type="button" id="wizard-start-btn" style="background-color: #00703c; color: white; border: none; padding: 12px 24px; font-weight: bold; font-size: 1.25rem; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; border-radius: 4px; box-shadow: 0 2px 0 #002d18;">
-                                Start now
+                                Start
                                 <svg class="govuk-button__start-icon" xmlns="http://www.w3.org/2000/svg" width="17.5" height="19" viewBox="0 0 33 40" aria-hidden="true" focusable="false" style="margin-left: 10px; vertical-align: middle;">
                                     <path fill="currentColor" d="M0 0h13l20 20-20 20H0l20-20z"/>
                                 </svg>
@@ -234,11 +234,11 @@
                         <div id="step-2" class="wizard-step" style="display: none;">
                             <h1 class="govuk-heading-xl" style="font-weight: 800; font-size: 2.8rem; margin: 0 0 20px 0; color: #0b0c0c;">Create an Ontology</h1>
                             <div class="govuk-form-group" id="domain-form-group" style="margin-bottom: 25px;">
-                                <label class="govuk-label" for="domain-selector" style="font-size: 1.2rem; font-weight: 600; color: #0b0c0c; display: block; margin-bottom: 10px;">Select the domain for your ontology</label>
+                                <label class="govuk-label" for="domain-selector" style="font-size: 1.2rem; font-weight: 600; color: #0b0c0c; display: block; margin-bottom: 5px;">Select the domain for your ontology</label>
                                 <p id="domain-error-message" class="govuk-error-message" style="display: none; color: #d4351c; font-weight: bold; font-size: 1.15rem; margin-top: 0; margin-bottom: 15px;">
                                     <span class="govuk-visually-hidden">Error:</span> Select a domain
                                 </p>
-                                <select id="domain-selector" name="domain" class="browser-default" style="height: 44px; border: 2px solid #0b0c0c; border-radius: 0; font-family: inherit; font-size: 1.1rem; padding: 8px; background-color: #fff; display: block; width: 100%; box-sizing: border-box;" required>
+                                <select id="domain-selector" name="domain" class="browser-default" style="height: 44px; border: 2px solid #0b0c0c; border-radius: 0; font-family: inherit; font-size: 1.1rem; padding: 8px; background-color: #fff; display: block; width: 100%; max-width: 590px; box-sizing: border-box;" required>
                                     <option value="" disabled selected>Loading domains...</option>
                                 </select>
                             </div>
@@ -248,8 +248,8 @@
                             </p>
 
                             <div style="margin-top: 25px; display: flex; gap: 15px; align-items: center;">
-                                <button type="button" id="wizard-step2-next" class="btn" style="background-color: #00703c; font-weight: bold; height: 45px; padding: 0 20px;">Next</button>
-                                <button type="button" class="btn-flat wizard-prev-btn-action" style="border: 1px solid #b1b4b6; color: #0b0c0c; font-weight: bold; height: 45px; padding: 0 20px; border-radius: 4px;">Back</button>
+                                <button type="button" id="wizard-step2-next" class="btn" style="background-color: #00703c; font-weight: bold; height: 45px; padding: 0 20px; text-transform: none;">Next</button>
+                                <button type="button" class="btn-flat wizard-prev-btn-action" style="border: 1px solid #b1b4b6; color: #0b0c0c; font-weight: bold; height: 45px; padding: 0 20px; border-radius: 4px; text-transform: none;">Back</button>
                             </div>
                         </div>
 
@@ -291,8 +291,8 @@
                             </ul>
 
                             <div style="margin-top: 25px; display: flex; gap: 15px; align-items: center;">
-                                <button type="button" id="wizard-step3-next" class="btn" style="background-color: #00703c; font-weight: bold; height: 45px; padding: 0 20px;">Next</button>
-                                <button type="button" class="btn-flat wizard-prev-btn-action" style="border: 1px solid #b1b4b6; color: #0b0c0c; font-weight: bold; height: 45px; padding: 0 20px; border-radius: 4px;">Back</button>
+                                <button type="button" id="wizard-step3-next" class="btn" style="background-color: #00703c; font-weight: bold; height: 45px; padding: 0 20px; text-transform: none;">Next</button>
+                                <button type="button" class="btn-flat wizard-prev-btn-action" style="border: 1px solid #b1b4b6; color: #0b0c0c; font-weight: bold; height: 45px; padding: 0 20px; border-radius: 4px; text-transform: none;">Back</button>
                             </div>
                         </div>
 
@@ -305,7 +305,7 @@
                                     <span id="toggle-config-text">Configure Settings</span>
                                 </button>
                             </div>
-                            <p class="govuk-body" style="color: #505a5f; margin-bottom: 25px;">Review the configurations used to create your Ontology.</p>
+                            <p class="govuk-body" style="color: #0b0c0c; margin-bottom: 25px;">Review the configurations used to create your Ontology.</p>
 
                             <!-- Summary info -->
                             <div class="summary-box" style="background-color: #f3f2f1; padding: 20px; border-radius: 6px; border-left: 5px solid #1d70b8; margin-bottom: 25px;">
@@ -318,10 +318,13 @@
 
                             <div style="margin-top: 25px; display: flex; gap: 15px; align-items: center;">
                                 <button class="btn waves-effect waves-light" type="submit" id="submit-btn"
-                                        style="background-color: #00703c; height: 45px; padding: 0 20px; font-weight: bold; border-radius: 4px; box-shadow: 0 2px 0 #002d18; display: inline-flex; align-items: center; gap: 6px;">
-                                    Create Ontology <i class="material-icons right" style="margin-left: 0;">play_arrow</i>
+                                        style="background-color: #00703c; height: 45px; padding: 0 20px; font-weight: bold; border-radius: 4px; box-shadow: 0 2px 0 #002d18; display: inline-flex; align-items: center; gap: 6px; text-transform: none;">
+                                    Create Ontology
+                                    <svg class="govuk-button__start-icon" xmlns="http://www.w3.org/2000/svg" width="17.5" height="19" viewBox="0 0 33 40" aria-hidden="true" focusable="false" style="margin-left: 10px; vertical-align: middle;">
+                                        <path fill="currentColor" d="M0 0h13l20 20-20 20H0l20-20z"/>
+                                    </svg>
                                 </button>
-                                <button type="button" class="btn-flat wizard-prev-btn-action" style="border: 1px solid #b1b4b6; color: #0b0c0c; font-weight: bold; height: 45px; padding: 0 20px; border-radius: 4px;">Back</button>
+                                <button type="button" class="btn-flat wizard-prev-btn-action" style="border: 1px solid #b1b4b6; color: #0b0c0c; font-weight: bold; height: 45px; padding: 0 20px; border-radius: 4px; text-transform: none;">Back</button>
                             </div>
 
                             <div class="progress" id="upload-progress" style="display: none;">
@@ -340,12 +343,12 @@
                                 </div>
                             </div>
                             <h3 class="govuk-heading-m" style="margin-top: 20px; font-weight: bold; font-size: 1.4rem;">What happens next</h3>
-                            <p class="govuk-body" style="font-size: 1.1rem; line-height: 1.6; color: #333;">
+                            <p class="govuk-body" style="font-size: 1.1rem; line-height: 1.6; color: #0b0c0c;">
                                 Your Ontology is being created. Go to Review Ontologies to download the files, add notes, download reports and visualise the graph.
                             </p>
                             <div style="margin-top: 30px; display: flex; gap: 15px;">
-                                <button type="button" class="btn" id="wizard-reset-btn" style="background-color: #1d70b8; font-weight: bold; height: 40px;">Create another ontology</button>
-                                <a href="/ontology/review-ontologies" class="btn-flat" style="border: 1px solid #1d70b8; color: #1d70b8; font-weight: bold; text-align: center; line-height: 38px; height: 40px; border-radius: 4px;">Review Ontologies</a>
+                                <button type="button" class="btn" id="wizard-reset-btn" style="background-color: #1d70b8; font-weight: bold; height: 40px; text-transform: none;">Create another ontology</button>
+                                <a href="/ontology/review-ontologies" class="btn-flat" style="border: 1px solid #1d70b8; color: #1d70b8; font-weight: bold; text-align: center; line-height: 38px; height: 40px; border-radius: 4px; text-transform: none;">Review Ontologies</a>
                             </div>
                         </div>
                     </form>
