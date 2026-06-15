@@ -761,10 +761,65 @@ def test_job_artifacts_endpoint_groups_downloadable_files_and_folders(tmp_path, 
     assert {"graph.json", "ontology.ttl", "schema.json"} <= ontology_names
     assert {"Submitted config.yaml", "Prompt used", "bedrock_costs.csv", "deduplication.jsonl"} <= intermediary_names
     assert "checkpoints" in intermediary_names
-    assert "input/source.md" in intermediary_names
+    assert {"input", "input/source.md"} <= intermediary_names
     assert report_names == {"regression_report.json"}
     assert all("view" not in artifact for group in groups.values() for artifact in group)
     assert all(artifact["action"] == "download" for group in groups.values() for artifact in group)
+
+
+def test_job_artifacts_endpoint_includes_local_input_and_output_downloads(tmp_path):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+    input_dir = tmp_path / "run" / "input"
+    output_dir = tmp_path / "run" / "output"
+    nested_input_dir = input_dir / "guidance"
+    nested_input_dir.mkdir(parents=True)
+    output_dir.mkdir(parents=True)
+    (input_dir / "source.md").write_text("source", encoding="utf-8")
+    (nested_input_dir / "nested.md").write_text("nested", encoding="utf-8")
+    (output_dir / "graph.json").write_text("{}", encoding="utf-8")
+    (output_dir / "bedrock_costs.csv").write_text("cost", encoding="utf-8")
+
+    with flask_app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="local-artifact-job",
+                status="completed",
+                pipeline="ontology",
+                domain="visa",
+                config_data=json.dumps(
+                    {
+                        "domain_name": "visa",
+                        "path": {
+                            "input_path": input_dir.as_uri(),
+                            "output_dir": output_dir.as_uri(),
+                        },
+                    }
+                ),
+                domain_prompt="review prompt",
+                created_at=datetime.now(timezone.utc),
+            )
+        )
+        app_module.db.session.commit()
+
+    response = flask_app.test_client().get("/ontology/jobs/local-artifact-job/artifacts")
+
+    assert response.status_code == 200
+    groups = response.get_json()["groups"]
+    ontology_names = {artifact["name"] for artifact in groups["ontology_files"]}
+    intermediary_names = {artifact["name"] for artifact in groups["intermediary_files"]}
+    assert "graph.json" in ontology_names
+    assert {"input", "input/source.md", "input/guidance", "output", "bedrock_costs.csv"} <= intermediary_names
+
+    source_artifact = next(
+        artifact
+        for artifact in groups["intermediary_files"]
+        if artifact["name"] == "input/source.md"
+    )
+    download_response = flask_app.test_client().get(source_artifact["download_url"])
+
+    assert download_response.status_code == 200
+    assert download_response.get_data(as_text=True) == "source"
+    assert "attachment; filename=source.md" in download_response.headers["Content-Disposition"]
 
 
 def test_virtual_and_folder_download_routes(tmp_path, monkeypatch):
@@ -957,6 +1012,17 @@ def test_review_tests_page_renders_test_title_and_type():
     assert 'const REVIEW_PAGE_TITLE = "Review Tests";' in html
 
 
+def test_review_ontologies_page_uses_requested_subtitle():
+    response = _client().get("/ontology/review-ontologies")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert (
+        "View your available ontologies below. Click any row to see more information about it."
+        in html
+    )
+
+
 def test_review_ontologies_page_uses_paginated_review_api():
     response = _client().get("/ontology/review-ontologies")
     html = response.get_data(as_text=True)
@@ -1028,9 +1094,24 @@ def test_jobs_page_uses_selected_job_artifact_api_and_download_only_rows():
     assert "/artifacts" in html
     assert "download_url" in html
     assert "renderArtifactRows" in html
+    assert '<span class="govuk-visually-hidden">Download</span>' in html
+    assert ">download</span>" not in html
     assert "visualiserLink" not in html
     assert "browse files" not in html
     assert "renderArtifactLink('Graph', visualiserLink, 'view')" not in html
+
+
+def test_jobs_page_uses_govuk_pagination_markup_without_custom_button_tiles():
+    response = _client().get("/ontology/review-ontologies")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert 'class="govuk-pagination review-pagination"' in html
+    assert "govuk-pagination__list" in html
+    assert "govuk-pagination__prev" in html
+    assert "govuk-pagination__next" in html
+    assert "govuk-pagination__item--current" in html
+    assert "review-pagination__item" not in html
 
 
 def test_jobs_page_uses_inline_notes_without_per_row_sync_or_native_note_prompts():

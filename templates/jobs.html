@@ -80,7 +80,7 @@
     </table>
   </div>
 
-  <nav class="review-pagination" id="review-pagination" aria-label="Pagination"></nav>
+  <nav class="govuk-pagination review-pagination" id="review-pagination" aria-label="Pagination"></nav>
 </div>
 {% endblock %}
 
@@ -320,20 +320,38 @@
       for (let pageNumber = startPage; pageNumber <= endPage; pageNumber += 1) {
         const current = pageNumber === pagination.page;
         pageButtons += `
-          <button type="button" class="review-pagination__item${current ? ' is-current' : ''}" data-page="${pageNumber}" ${current ? 'aria-current="page"' : ''}>
-            ${pageNumber}
-          </button>
+          <li class="govuk-pagination__item${current ? ' govuk-pagination__item--current' : ''}">
+            <a class="govuk-link govuk-pagination__link" href="#" data-page="${pageNumber}" aria-label="Page ${pageNumber}" ${current ? 'aria-current="page"' : ''}>
+              ${pageNumber}
+            </a>
+          </li>
         `;
       }
 
       paginationContainer.innerHTML = `
-        <button type="button" class="review-pagination__item" data-page="${pagination.page - 1}" ${pagination.has_previous ? '' : 'disabled'}>
-          Previous
-        </button>
-        ${pageButtons}
-        <button type="button" class="review-pagination__item" data-page="${pagination.page + 1}" ${pagination.has_next ? '' : 'disabled'}>
-          Next
-        </button>
+        ${pagination.has_previous ? `
+          <div class="govuk-pagination__prev">
+            <a class="govuk-link govuk-pagination__link" href="#" rel="prev" data-page="${pagination.page - 1}">
+              <svg class="govuk-pagination__icon govuk-pagination__icon--prev" xmlns="http://www.w3.org/2000/svg" height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
+                <path d="m6.5938-0.0078125-6.7266 6.7266 6.7441 6.4062 1.377-1.449-4.1856-3.9768h12.896v-2h-12.984l4.2931-4.293-1.414-1.414z"></path>
+              </svg>
+              <span class="govuk-pagination__link-title">Previous<span class="govuk-visually-hidden"> page</span></span>
+            </a>
+          </div>
+        ` : ''}
+        <ul class="govuk-pagination__list">
+          ${pageButtons}
+        </ul>
+        ${pagination.has_next ? `
+          <div class="govuk-pagination__next">
+            <a class="govuk-link govuk-pagination__link" href="#" rel="next" data-page="${pagination.page + 1}">
+              <span class="govuk-pagination__link-title">Next<span class="govuk-visually-hidden"> page</span></span>
+              <svg class="govuk-pagination__icon govuk-pagination__icon--next" xmlns="http://www.w3.org/2000/svg" height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
+                <path d="m8.107-0.0078125-1.4136 1.414 4.2926 4.293h-12.986v2h12.896l-4.1855 3.9766 1.377 1.4492 6.7441-6.4062-6.7246-6.7266z"></path>
+              </svg>
+            </a>
+          </div>
+        ` : ''}
       `;
     }
 
@@ -390,12 +408,13 @@
       return `
         <div class="review-artifact-list">
           ${artifacts.map(artifact => `
-            <a class="review-artifact-link" href="${escapeAttribute(artifact.download_url)}" download>
-              <span>
-                <i class="material-icons" aria-hidden="true">${artifact.kind === 'folder' ? 'folder_zip' : 'download'}</i>
-                ${escapeHtml(artifact.name)}
+            <a class="review-artifact-link" href="${escapeAttribute(artifact.download_url)}" download aria-label="Download ${escapeAttribute(artifact.name)}">
+              <span class="review-artifact-name">
+                <i class="material-icons" aria-hidden="true">${artifact.kind === 'folder' ? 'folder_zip' : 'insert_drive_file'}</i>
+                <span>${escapeHtml(artifact.name)}</span>
               </span>
-              <span>download</span>
+              <i class="material-icons review-artifact-download-icon" aria-hidden="true">download</i>
+              <span class="govuk-visually-hidden">Download</span>
             </a>
           `).join('')}
         </div>
@@ -627,9 +646,10 @@
     });
 
     paginationContainer.addEventListener('click', event => {
-      const button = event.target.closest('[data-page]');
-      if (!button || button.disabled) return;
-      currentPage = Number(button.dataset.page);
+      const link = event.target.closest('[data-page]');
+      if (!link) return;
+      event.preventDefault();
+      currentPage = Number(link.dataset.page);
       fetchReviewJobs();
     });
 
@@ -674,7 +694,7 @@
   .review-detail-tab:focus,
   .review-row-action:focus,
   .review-note-icon-button:focus,
-  .review-pagination__item:focus {
+  .review-pagination .govuk-pagination__link:focus {
       outline: 3px solid #ffdd00;
       outline-offset: 0;
       box-shadow: 0 4px #0b0c0c;
@@ -956,15 +976,23 @@
       text-decoration: underline;
   }
 
-  .review-artifact-link span:first-child {
+  .review-artifact-name {
       display: inline-flex;
       align-items: center;
       gap: 8px;
       min-width: 0;
   }
 
-  .review-artifact-link span:last-child {
+  .review-artifact-name span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+  }
+
+  .review-artifact-download-icon {
       color: #505a5f;
+      font-size: 22px;
   }
 
   .review-empty-state,
@@ -1082,38 +1110,13 @@
   }
 
   .review-pagination {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px;
       margin: 20px 0 0;
-  }
-
-  .review-pagination__item {
-      min-width: 40px;
-      min-height: 40px;
-      border: 1px solid #b1b4b6;
+      padding: 0;
       background: #ffffff;
-      color: #1d70b8;
-      cursor: pointer;
-      font: inherit;
+  }
+
+  .review-pagination .govuk-pagination__link {
       font-weight: 700;
-  }
-
-  .review-pagination__item:hover {
-      background: #f3f2f1;
-  }
-
-  .review-pagination__item.is-current {
-      background: #1d70b8;
-      border-color: #1d70b8;
-      color: #ffffff;
-  }
-
-  .review-pagination__item:disabled {
-      color: #505a5f;
-      cursor: not-allowed;
-      opacity: 0.6;
   }
 
   @media (max-width: 760px) {

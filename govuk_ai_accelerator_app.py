@@ -10,7 +10,7 @@ import boto3
 from pathlib import Path
 from uuid import uuid4
 from datetime import datetime, timezone
-from urllib.parse import quote, urlparse
+from urllib.parse import quote, unquote, urlparse
 from flask import Flask, request, jsonify, render_template, Blueprint, Response, redirect
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, upgrade
@@ -250,6 +250,14 @@ def _folder_download_url(job_id: str, bucket_name: str, prefix: str) -> str:
     )
 
 
+def _local_file_download_url(job_id: str, path: Path) -> str:
+    return f"/ontology/jobs/{quote(job_id)}/downloads/local-file?path={quote(str(path), safe='')}"
+
+
+def _local_folder_download_url(job_id: str, path: Path) -> str:
+    return f"/ontology/jobs/{quote(job_id)}/downloads/local-folder?path={quote(str(path), safe='')}"
+
+
 def _artifact_row(
     name: str,
     download_url: str,
@@ -278,6 +286,19 @@ def _parse_s3_uri(uri: str | None) -> tuple[str, str] | None:
     return parsed.netloc, _normalise_prefix(parsed.path.lstrip("/"))
 
 
+def _parse_local_path(uri: str | None) -> Path | None:
+    if not uri:
+        return None
+    parsed = urlparse(uri)
+    if parsed.scheme == "s3":
+        return None
+    if parsed.scheme == "file":
+        return Path(unquote(parsed.path)).expanduser().resolve()
+    if parsed.scheme:
+        return None
+    return Path(uri).expanduser().resolve()
+
+
 def _job_config(job: ProcessingJob) -> dict:
     if not job.config_data:
         return {}
@@ -300,6 +321,20 @@ def _list_s3_objects(s3_client, bucket_name: str, prefix: str) -> list[dict]:
     return objects
 
 
+def _job_path_config(job: ProcessingJob) -> dict:
+    config_data = _job_config(job)
+    path_config = config_data.get("path") if isinstance(config_data.get("path"), dict) else {}
+    return path_config if isinstance(path_config, dict) else {}
+
+
+def _output_artifact_group(file_name: str) -> str:
+    if file_name in {"graph.json", "ontology.ttl", "schema.json"}:
+        return "ontology_files"
+    if file_name in {"regression_report.json", "owl_ontology_metrics.csv"}:
+        return "reports"
+    return "intermediary_files"
+
+
 def _add_folder_artifact(
     groups: dict[str, list[dict]],
     seen_folders: set[tuple[str, str, str]],
@@ -320,6 +355,135 @@ def _add_folder_artifact(
             kind="folder",
         )
     )
+
+
+def _add_local_folder_artifact(
+    groups: dict[str, list[dict]],
+    seen_folders: set[tuple[str, str, str]],
+    group_name: str,
+    job_id: str,
+    path: Path,
+    label: str,
+) -> None:
+    key = (group_name, "local", str(path))
+    if key in seen_folders:
+        return
+    seen_folders.add(key)
+    groups[group_name].append(
+        _artifact_row(
+            label,
+            _local_folder_download_url(job_id, path),
+            kind="folder",
+        )
+    )
+
+
+def _add_local_file_artifact(
+    groups: dict[str, list[dict]],
+    group_name: str,
+    job_id: str,
+    path: Path,
+    label: str,
+) -> None:
+    groups[group_name].append(
+        _artifact_row(
+            label,
+            _local_file_download_url(job_id, path),
+            size=path.stat().st_size,
+        )
+    )
+
+
+def _iter_local_files(path: Path) -> list[Path]:
+    if path.is_file():
+        return [path]
+    if path.is_dir():
+        return sorted(file_path for file_path in path.rglob("*") if file_path.is_file())
+    return []
+
+
+def _add_local_input_artifacts(
+    groups: dict[str, list[dict]],
+    seen_folders: set[tuple[str, str, str]],
+    job: ProcessingJob,
+    input_path: Path,
+) -> None:
+    files = _iter_local_files(input_path)
+    if not files:
+        return
+
+    if input_path.is_dir():
+        _add_local_folder_artifact(
+            groups,
+            seen_folders,
+            "intermediary_files",
+            job.id,
+            input_path,
+            "input",
+        )
+
+    for file_path in files:
+        if input_path.is_dir():
+            relative_path = file_path.relative_to(input_path)
+            if len(relative_path.parts) > 1:
+                _add_local_folder_artifact(
+                    groups,
+                    seen_folders,
+                    "intermediary_files",
+                    job.id,
+                    input_path / relative_path.parts[0],
+                    f"input/{relative_path.parts[0]}",
+                )
+                continue
+            label = f"input/{relative_path.as_posix()}"
+        else:
+            label = f"input/{file_path.name}"
+        _add_local_file_artifact(groups, "intermediary_files", job.id, file_path, label)
+
+
+def _add_local_output_artifacts(
+    groups: dict[str, list[dict]],
+    seen_folders: set[tuple[str, str, str]],
+    job: ProcessingJob,
+    output_path: Path,
+) -> None:
+    files = _iter_local_files(output_path)
+    if not files:
+        return
+
+    if output_path.is_dir():
+        _add_local_folder_artifact(
+            groups,
+            seen_folders,
+            "intermediary_files",
+            job.id,
+            output_path,
+            "output",
+        )
+
+    for file_path in files:
+        if output_path.is_dir():
+            relative_path = file_path.relative_to(output_path)
+            if len(relative_path.parts) > 1:
+                _add_local_folder_artifact(
+                    groups,
+                    seen_folders,
+                    "intermediary_files",
+                    job.id,
+                    output_path / relative_path.parts[0],
+                    relative_path.parts[0],
+                )
+                continue
+            label = relative_path.as_posix()
+        else:
+            label = file_path.name
+        _add_local_file_artifact(
+            groups,
+            _output_artifact_group(file_path.name),
+            job.id,
+            file_path,
+            label,
+        )
 
 
 def _add_run_artifact(
@@ -352,12 +516,7 @@ def _add_run_artifact(
             return
 
         file_name = parts[0]
-        if file_name in {"graph.json", "ontology.ttl", "schema.json"}:
-            group_name = "ontology_files"
-        elif file_name in {"regression_report.json", "owl_ontology_metrics.csv"}:
-            group_name = "reports"
-        else:
-            group_name = "intermediary_files"
+        group_name = _output_artifact_group(file_name)
         groups[group_name].append(
             _artifact_row(
                 file_name,
@@ -396,14 +555,25 @@ def _add_input_artifacts(
     job: ProcessingJob,
     s3_client,
 ) -> None:
-    config_data = _job_config(job)
-    path_config = config_data.get("path") if isinstance(config_data.get("path"), dict) else {}
+    path_config = _job_path_config(job)
     input_location = _parse_s3_uri(path_config.get("input_path"))
     if not input_location:
         return
 
     bucket_name, input_prefix = input_location
-    for item in _list_s3_objects(s3_client, bucket_name, input_prefix):
+    items = _list_s3_objects(s3_client, bucket_name, input_prefix)
+    if items:
+        _add_folder_artifact(
+            groups,
+            seen_folders,
+            "intermediary_files",
+            job.id,
+            bucket_name,
+            input_prefix,
+            "input",
+        )
+
+    for item in items:
         key = str(item["Key"])
         relative_path = key.removeprefix(input_prefix)
         if not relative_path:
@@ -432,6 +602,7 @@ def _add_input_artifacts(
 def _job_artifact_groups(job: ProcessingJob) -> dict[str, list[dict]]:
     groups = {"ontology_files": [], "intermediary_files": [], "reports": []}
     seen_folders: set[tuple[str, str, str]] = set()
+    path_config = _job_path_config(job)
 
     if job.config_data:
         groups["intermediary_files"].append(
@@ -448,11 +619,30 @@ def _job_artifact_groups(job: ProcessingJob) -> dict[str, list[dict]]:
             )
         )
 
+    local_input_path = _parse_local_path(path_config.get("input_path"))
+    if local_input_path:
+        _add_local_input_artifacts(groups, seen_folders, job, local_input_path)
+
+    local_output_path = _parse_local_path(path_config.get("output_dir"))
+    if local_output_path:
+        _add_local_output_artifacts(groups, seen_folders, job, local_output_path)
+
     if job.domain and job.job_runs:
         s3_client = boto3.client("s3")
         bucket_name = _default_bucket_name()
         run_prefix = _normalise_prefix(f"{job.domain}/{job.job_runs}")
-        for item in _list_s3_objects(s3_client, bucket_name, run_prefix):
+        items = _list_s3_objects(s3_client, bucket_name, run_prefix)
+        if any(str(item["Key"]).startswith(f"{run_prefix}output/") for item in items):
+            _add_folder_artifact(
+                groups,
+                seen_folders,
+                "intermediary_files",
+                job.id,
+                bucket_name,
+                f"{run_prefix}output/",
+                "output",
+            )
+        for item in items:
             _add_run_artifact(groups, seen_folders, job, bucket_name, run_prefix, item)
         _add_input_artifacts(groups, seen_folders, job, s3_client)
 
@@ -464,12 +654,28 @@ def _allowed_download_prefixes(job: ProcessingJob) -> set[tuple[str, str]]:
     if job.domain and job.job_runs:
         allowed.add((_default_bucket_name(), _normalise_prefix(f"{job.domain}/{job.job_runs}")))
 
-    config_data = _job_config(job)
-    path_config = config_data.get("path") if isinstance(config_data.get("path"), dict) else {}
+    path_config = _job_path_config(job)
     input_location = _parse_s3_uri(path_config.get("input_path"))
     if input_location:
         allowed.add(input_location)
     return allowed
+
+
+def _allowed_local_paths(job: ProcessingJob) -> set[Path]:
+    allowed: set[Path] = set()
+    path_config = _job_path_config(job)
+    for path_name in ("input_path", "output_dir"):
+        local_path = _parse_local_path(path_config.get(path_name))
+        if local_path:
+            allowed.add(local_path)
+    return allowed
+
+
+def _is_allowed_local_path(job: ProcessingJob, requested_path: Path) -> bool:
+    for allowed_path in _allowed_local_paths(job):
+        if requested_path == allowed_path or requested_path.is_relative_to(allowed_path):
+            return True
+    return False
 
 
 def _apply_selected_domain_to_config(config_data: dict, selected_domain: str | None) -> dict:
@@ -867,6 +1073,47 @@ def create_blueprints():
             return error_response("Job not found", 404)
         return jsonify({"job_id": job.id, "groups": _job_artifact_groups(job)})
 
+    @ontology_bp.route('/jobs/<job_id>/downloads/local-file', methods=['GET'])
+    def download_job_local_file(job_id):
+        job = db.session.get(ProcessingJob, job_id)
+        if job is None:
+            return error_response("Job not found", 404)
+
+        requested_path = Path(unquote(request.args.get("path") or "")).expanduser().resolve()
+        if not _is_allowed_local_path(job, requested_path):
+            return error_response("File is not available for this job", 403)
+        if not requested_path.is_file():
+            return error_response("File not found", 404)
+
+        return Response(
+            requested_path.read_bytes(),
+            mimetype="application/octet-stream",
+            headers={"Content-Disposition": f"attachment; filename={requested_path.name}"},
+        )
+
+    @ontology_bp.route('/jobs/<job_id>/downloads/local-folder', methods=['GET'])
+    def download_job_local_folder(job_id):
+        job = db.session.get(ProcessingJob, job_id)
+        if job is None:
+            return error_response("Job not found", 404)
+
+        requested_path = Path(unquote(request.args.get("path") or "")).expanduser().resolve()
+        if not _is_allowed_local_path(job, requested_path):
+            return error_response("Folder is not available for this job", 403)
+        if not requested_path.is_dir():
+            return error_response("Folder not found", 404)
+
+        archive_bytes = io.BytesIO()
+        with zipfile.ZipFile(archive_bytes, "w", zipfile.ZIP_DEFLATED) as archive:
+            for file_path in sorted(path for path in requested_path.rglob("*") if path.is_file()):
+                archive.write(file_path, file_path.relative_to(requested_path).as_posix())
+
+        return Response(
+            archive_bytes.getvalue(),
+            mimetype="application/zip",
+            headers={"Content-Disposition": f"attachment; filename={requested_path.name}.zip"},
+        )
+
     @ontology_bp.route('/jobs/<job_id>/downloads/<path:artifact_name>', methods=['GET'])
     def download_job_virtual_artifact(job_id, artifact_name):
         job = db.session.get(ProcessingJob, job_id)
@@ -925,7 +1172,7 @@ def create_blueprints():
             active_page='jobs',
             review_job_type='ontology',
             review_page_title='Review Ontologies',
-            review_page_description='View historical ontology runs, generated artefacts, and review notes.',
+            review_page_description='View your available ontologies below. Click any row to see more information about it.',
         )
 
     @ontology_bp.route('/review-tests', methods=['GET'])
