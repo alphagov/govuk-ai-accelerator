@@ -282,9 +282,17 @@ def _artifact_row(
 
 
 def _visualizer_run_url(job: ProcessingJob) -> str | None:
-    if not job.domain or not job.job_runs:
+    if not job.domain:
         return None
-    return f"/visualizer/?run={quote(f'{job.domain}/{job.job_runs}', safe='/')}"
+    if job.job_runs:
+        return f"/visualizer/?run={quote(f'{job.domain}/{job.job_runs}', safe='/')}"
+
+    path_config = _job_path_config(job)
+    local_output_dir = _parse_local_path(path_config.get("output_dir"))
+    if local_output_dir and (local_output_dir / "graph.json").is_file():
+        return f"/visualizer/?run={quote(f'{job.domain}/{job.id}', safe='/')}"
+
+    return None
 
 
 def _ontology_download_url(job: ProcessingJob) -> str | None:

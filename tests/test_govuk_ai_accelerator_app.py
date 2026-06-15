@@ -343,6 +343,38 @@ def test_review_jobs_endpoint_filters_harness_jobs_for_review_tests(tmp_path):
     assert payload["jobs"][0]["pipeline"] == "ontology-harness"
 
 
+def test_review_jobs_endpoint_adds_visualizer_url_for_local_graph_jobs(tmp_path):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+    output_dir = tmp_path / "review-demo" / "local-graph-job" / "output"
+    output_dir.mkdir(parents=True)
+    (output_dir / "graph.json").write_text(
+        '{"entities": [], "relationships": []}',
+        encoding="utf-8",
+    )
+
+    with flask_app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="local-graph-job",
+                status="completed",
+                pipeline="ontology",
+                domain="review-demo",
+                config_data=json.dumps({"path": {"output_dir": output_dir.as_uri()}}),
+                created_at=datetime(2026, 5, 11, 14, 0, tzinfo=timezone.utc),
+            )
+        )
+        app_module.db.session.commit()
+
+    response = flask_app.test_client().get(
+        "/ontology/jobs/review?type=ontology&page=1&per_page=10"
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["jobs"][0]["job_id"] == "local-graph-job"
+    assert payload["jobs"][0]["visualize_url"] == "/visualizer/?run=review-demo/local-graph-job"
+
+
 def test_jobs_template_exposes_ontology_harness_report_link():
     template = Path(__file__).parents[1] / "templates" / "jobs.html"
     html = template.read_text(encoding="utf-8")
