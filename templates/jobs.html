@@ -298,18 +298,9 @@
 
     function renderJobActions(job, notesLabel) {
       const actions = [];
-      if (job.visualize_url) {
-        actions.push(`
-          <li class="review-row-actions__item">
-            <a class="govuk-button govuk-button--secondary review-row-action-button visualise-job-action" href="${escapeAttribute(job.visualize_url)}" target="_blank" rel="noopener noreferrer">
-              Visualise<span class="govuk-visually-hidden"> ${escapeHtml(job.job_id)}</span>
-            </a>
-          </li>
-        `);
-      }
       actions.push(`
         <li class="review-row-actions__item">
-          <button type="button" class="govuk-button govuk-button--secondary review-row-action-button open-notes-action" data-job-id="${escapeAttribute(job.job_id)}" aria-label="${escapeAttribute(notesLabel)} for this job">
+          <button type="button" class="review-row-action-link open-notes-action" data-job-id="${escapeAttribute(job.job_id)}" aria-label="${escapeAttribute(notesLabel)} for this job">
             ${escapeHtml(notesLabel)}
           </button>
         </li>
@@ -317,8 +308,17 @@
       if (job.ontology_download_url) {
         actions.push(`
           <li class="review-row-actions__item">
-            <a class="govuk-button govuk-button--secondary review-row-action-button download-ontology-action" href="${escapeAttribute(job.ontology_download_url)}" download aria-label="Download ontology ${escapeAttribute(job.job_id)}">
-              Download<span class="govuk-visually-hidden"> ontology ${escapeHtml(job.job_id)}</span>
+            <a class="review-row-action-link download-ontology-action" href="${escapeAttribute(job.ontology_download_url)}" download aria-label="Download TTL ${escapeAttribute(job.job_id)}">
+              Download TTL<span class="govuk-visually-hidden"> ${escapeHtml(job.job_id)}</span>
+            </a>
+          </li>
+        `);
+      }
+      if (job.visualize_url) {
+        actions.push(`
+          <li class="review-row-actions__item">
+            <a class="review-row-action-link visualise-job-action" href="${escapeAttribute(job.visualize_url)}" target="_blank" rel="noopener noreferrer">
+              Visualise<span class="govuk-visually-hidden"> ${escapeHtml(job.job_id)}</span>
             </a>
           </li>
         `);
@@ -495,12 +495,8 @@
             <label class="govuk-visually-hidden" for="edit-note-${note.id}">Edit note</label>
             <textarea id="edit-note-${note.id}" class="govuk-textarea review-note-textarea" rows="3">${escapeHtml(note.text)}</textarea>
             <div class="review-note-item__actions">
-              <button type="button" class="review-note-icon-button save-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}" aria-label="Save note">
-                <i class="material-icons" aria-hidden="true">check</i>
-              </button>
-              <button type="button" class="review-note-icon-button cancel-inline-note-action" data-job-id="${escapeAttribute(jobId)}" aria-label="Cancel edit">
-                <i class="material-icons" aria-hidden="true">close</i>
-              </button>
+              <button type="button" class="review-note-action-link save-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}">Save</button>
+              <button type="button" class="review-note-action-link cancel-inline-note-action" data-job-id="${escapeAttribute(jobId)}">Cancel</button>
             </div>
           </div>
         `;
@@ -511,12 +507,8 @@
           <div class="review-note-item__meta">${formatDateTime(note.created_at)}</div>
           <div class="review-note-item__text">${escapeHtml(note.text)}</div>
           <div class="review-note-item__actions">
-            <button type="button" class="review-note-icon-button edit-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}" aria-label="Edit note">
-              <i class="material-icons" aria-hidden="true">edit</i>
-            </button>
-            <button type="button" class="review-note-icon-button review-note-icon-button--danger delete-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}" aria-label="Delete note">
-              <i class="material-icons" aria-hidden="true">delete</i>
-            </button>
+            <button type="button" class="review-note-action-link edit-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}">Edit</button>
+            <button type="button" class="review-note-action-link review-note-action-link--destructive delete-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}">Delete</button>
           </div>
         </div>
       `;
@@ -575,7 +567,7 @@
         return;
       }
 
-      if (event.target.closest('a.review-row-action-button')) {
+      if (event.target.closest('a.review-row-action-link')) {
         return;
       }
 
@@ -720,8 +712,8 @@
   .review-sort-button:focus,
   .review-detail-tab:focus,
   .review-row-action:focus,
-  .review-row-action-button:focus,
-  .review-note-icon-button:focus,
+  .review-row-action-link:focus,
+  .review-note-action-link:focus,
   .review-pagination .govuk-pagination__link:focus {
       outline: 3px solid #ffdd00;
       outline-offset: 0;
@@ -1047,9 +1039,10 @@
   }
 
   .review-row-actions {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
-      gap: 7px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
       margin: 0;
       padding: 0;
       list-style: none;
@@ -1060,35 +1053,29 @@
       padding: 0;
   }
 
-  .review-row-action-button,
-  .review-row-action-button:link,
-  .review-row-action-button:visited {
-      width: 100%;
-      min-height: 34px;
+  .review-row-action-link,
+  .review-row-action-link:link,
+  .review-row-action-link:visited {
       margin: 0;
-      padding: 6px 9px;
-      box-sizing: border-box;
-      border: 2px solid transparent;
-      background: #f3f2f1;
-      box-shadow: 0 2px 0 #929191;
-      color: #0b0c0c;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: #1d70b8;
       cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
       font-family: inherit;
       font-size: 15px;
-      font-weight: 700;
-      line-height: 1.2;
-      text-align: center;
-      text-decoration: none;
+      font-weight: 400;
+      line-height: 1.25;
+      text-align: left;
+      text-decoration: underline;
+      text-decoration-thickness: max(1px, 0.0625rem);
+      text-underline-offset: 0.1em;
       white-space: nowrap;
   }
 
-  .review-row-action-button:hover {
-      background: #dbdad9;
-      color: #0b0c0c;
-      text-decoration: none;
+  .review-row-action-link:hover {
+      color: #003078;
+      text-decoration-thickness: max(3px, 0.1875rem);
   }
 
   .review-inline-notes {
@@ -1122,39 +1109,35 @@
       top: 12px;
       right: 0;
       display: flex;
-      gap: 6px;
+      gap: 12px;
   }
 
-  .review-note-icon-button {
-      width: 32px;
-      height: 32px;
-      border: 1px solid #b1b4b6;
-      border-radius: 2px;
-      background: #ffffff;
+  .review-note-action-link {
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
       color: #1d70b8;
       cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
+      font: inherit;
+      font-size: 15px;
+      line-height: 1.25;
+      text-decoration: underline;
+      text-decoration-thickness: max(1px, 0.0625rem);
+      text-underline-offset: 0.1em;
   }
 
-  .review-note-icon-button:hover {
-      background: #f3f2f1;
+  .review-note-action-link:hover {
       color: #003078;
+      text-decoration-thickness: max(3px, 0.1875rem);
   }
 
-  .review-note-icon-button--danger {
+  .review-note-action-link--destructive {
       color: #d4351c;
   }
 
-  .review-note-icon-button--danger:hover {
+  .review-note-action-link--destructive:hover {
       color: #942514;
-  }
-
-  .review-note-icon-button .material-icons {
-      font-size: 18px;
-      line-height: 1;
   }
 
   .review-inline-note-form {
