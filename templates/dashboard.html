@@ -2,6 +2,33 @@
 
 {% block content %}
     <style>
+        body,
+        body.govuk-template--rebranded {
+            background-color: #ffffff;
+        }
+
+        main {
+            padding: 24px 0 !important;
+            display: block !important;
+            max-width: 960px !important;
+        }
+
+        .content-area {
+            background: transparent;
+            box-shadow: none;
+            border-radius: 0;
+            padding: 0;
+        }
+
+        /* GOV.UK Validation/Error Styling overrides */
+        .govuk-form-group--error {
+            border-left: 5px solid #d4351c !important;
+            padding-left: 15px !important;
+        }
+        select.govuk-select--error {
+            border: 4px solid #d4351c !important;
+        }
+
         /* Refined Configuration Accordion Styling */
         #advanced-collapsible {
             border: 1px solid #b1b4b6 !important;
@@ -102,125 +129,236 @@
         input[type=range] + .thumb .value {
             color: #ffffff !important;
         }
+        /* Wizard Step alignment and max-width (matches GOV.UK 2/3 column layout width) */
+        .wizard-step {
+            max-width: 660px;
+            margin-bottom: 20px;
+        }
+
+        /* Configuration Panel Input Styling overrides (GOV.UK style) */
+        #right-column .input-field {
+            margin-top: 20px !important;
+            margin-bottom: 20px !important;
+            position: static !important;
+        }
+
+        #right-column .input-field label:not(.label-icon) {
+            position: static !important;
+            font-size: 1rem !important;
+            color: #0b0c0c !important;
+            font-weight: bold !important;
+            transform: none !important;
+            display: block !important;
+            margin-bottom: 8px !important;
+            height: auto !important;
+            pointer-events: auto !important;
+        }
+
+        #right-column input[type="text"],
+        #right-column input[type="number"],
+        #right-column textarea,
+        #right-column select {
+            height: 40px !important;
+            border: 2px solid #0b0c0c !important;
+            border-radius: 0 !important;
+            background-color: #ffffff !important;
+            padding: 8px 12px !important;
+            box-shadow: none !important;
+            font-family: inherit !important;
+            box-sizing: border-box !important;
+            color: #0b0c0c !important;
+            display: block !important;
+            width: 100% !important;
+            margin-top: 5px !important;
+            transition: none !important;
+        }
+
+        #right-column input[type="text"]:focus,
+        #right-column input[type="number"]:focus,
+        #right-column textarea:focus,
+        #right-column select:focus {
+            border: 2px solid #0b0c0c !important;
+            outline: 3px solid #fd0 !important;
+            outline-offset: 0 !important;
+            box-shadow: none !important;
+        }
+
+        #right-column textarea {
+            min-height: 80px !important;
+            height: auto !important;
+        }
+
+        #right-column select {
+            appearance: auto !important;
+            -webkit-appearance: auto !important;
+            -moz-appearance: auto !important;
+        }
+
+        /* Hide Materialize extra select components inside Configuration Panel */
+        #right-column .select-wrapper {
+            display: block !important;
+        }
+        #right-column .select-wrapper input.select-dropdown,
+        #right-column .select-wrapper .caret {
+            display: none !important;
+        }
+        #right-column .select-wrapper select {
+            display: block !important;
+        }
     </style>
-    <div class="row" style="margin-top: 10px;">
+    <div class="govuk-width-container">
+        <div class="row" style="margin-top: 10px;">
         <!-- Left Column: Core Run Controller and Job History -->
         <div class="col s12 l8" id="left-column">
-            <div class="card" style="box-shadow: 0 4px 10px rgba(0,0,0,0.08); border-radius: 6px;">
-                <div class="card-content">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
-                        <span class="card-title" style="font-weight: bold; color: #1d70b8; margin: 0;">Run Pipeline</span>
-                        <button type="button" id="toggle-config-btn" class="btn-flat waves-effect" style="border: 1px solid #1d70b8; border-radius: 4px; display: inline-flex; align-items: center; gap: 6px; font-weight: bold; height: 36px; padding: 0 12px; color: #1d70b8; transition: all 0.2s ease-in-out; background-color: transparent;">
-                            <i class="material-icons" style="font-size: 1.2rem; margin: 0;">settings</i>
-                            <span id="toggle-config-text">Configure Settings</span>
-                        </button>
+
+                    <!-- Wizard Back Link -->
+                    <div style="margin-bottom: 20px; min-height: 25px;">
+                        <a href="#" id="wizard-back-btn" style="display: none; color: #0b0c0c; text-decoration: underline; font-weight: normal; font-size: 1rem;">&lt; Back</a>
                     </div>
 
-                    <p><b>Step 1</b> - Select the target domain from the dropdown.</p>
-                    <p><b>Step 2</b> - Optionally click <strong style="color: #1d70b8;">Configure Settings</strong> to customize settings in the <strong>Configuration Panel</strong> (or upload a domain prompt to override defaults).</p>
-                    <p><b>Step 3</b> - Click "START PIPELINE".</p>
-
-                    <p class="grey-text text-darken-1" style="margin-top: 10px; margin-bottom: 20px;">
-                        The default domain prompt is <code>#</code>. You can download the 
-                        <a href="{{ url_for('static', filename='assets/templates/example-prompt-template.txt') }}" download>📄domain prompt template</a> if you want to override it.
-                    </p>
-
                     <form id="upload-form" enctype="multipart/form-data">
-                        <!-- Simplified Upload Zone for Prompts -->
-                        <div id="drop-zone" class="drop-zone"
-                             style="border: 2px dashed var(--gov-border); border-radius: 8px; padding: 1.5rem; text-align: center; margin-bottom: 1.5rem; transition: background-color 0.2s; cursor: pointer;">
-                            <i class="material-icons" style="font-size: 2.5rem; color: #1d70b8;">cloud_upload</i>
-                            <h6 style="margin: 5px 0; font-weight: bold; font-size: 1rem;">Drag & Drop Domain Prompt (.txt)</h6>
-                            <p class="grey-text" style="font-size: 0.85em; margin-top: 5px;">or click to browse</p>
-
-                            <input type="file" id="file" name="file" accept=".yaml,.yml" style="display: none;">
-                            <input type="file" id="text_file" name="text_file" accept=".txt" style="display: none;">
-                        </div>
-
-                        <ul class="collection" id="file-list"
-                             style="border: none; margin-bottom: 1.5rem; display: none;">
-                            <li class="collection-item avatar" id="yaml-file-item"
-                                style="display: none; min-height: auto; padding-left: 50px;">
-                                <i class="material-icons circle green"
-                                   style="width: 30px; height: 30px; line-height: 30px; left: 10px;">insert_drive_file</i>
-                                <span class="title" id="yaml-file-name" style="font-weight: 500;"></span>
-                                <p class="grey-text" style="font-size: 0.8rem;">Config File</p>
-                            </li>
-                            <li class="collection-item avatar" id="txt-file-item"
-                                style="display: none; min-height: auto; padding-left: 50px;">
-                                <i class="material-icons circle blue"
-                                   style="width: 30px; height: 30px; line-height: 30px; left: 10px;">description</i>
-                                <span class="title" id="txt-file-name" style="font-weight: 500;"></span>
-                                <p class="grey-text" style="font-size: 0.8rem;">Domain Prompt</p>
-                            </li>
-                        </ul>
-
-                        <div class="input-field col s12" style="padding-left: 0; padding-right: 0;">
-                            <select id="domain-selector" name="domain" required>
-                                <option value="" disabled selected>Loading domains...</option>
-                            </select>
-                            <label>Select a domain</label>
-                        </div>
-
-                        <div id="upload-status"
-                             style="display: none; margin-bottom: 1rem; padding: 10px; border-radius: 4px;"></div>
-
-                        <button class="btn waves-effect waves-light" type="submit" id="submit-btn"
-                                style="width: 100%; background-color: #1d70b8; height: 45px; font-weight: bold;">
-                            Start Pipeline <i class="material-icons right">play_arrow</i>
-                        </button>
-
-                        <div class="progress" id="upload-progress" style="display: none;">
-                            <div class="indeterminate"></div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            
-            <div id="recent-jobs-column" style="display: none;">
-                <div class="card">
-                    <div class="card-content">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                            <span class="card-title" style="font-weight: bold; margin: 0;">Recent Jobs</span>
-                            <button id="refresh-jobs-btn" class="btn-flat waves-effect waves-teal" style="padding: 0 10px;">
-                                <i class="material-icons">refresh</i>
+                        <!-- STEP 1: START -->
+                        <div id="step-1" class="wizard-step">
+                            <h1 class="govuk-heading-xl" style="font-weight: 800; font-size: 2.8rem; margin: 0 0 20px 0; color: #0b0c0c;">Create an Ontology</h1>
+                            <p class="govuk-body" style="font-size: 1.2rem; line-height: 1.6; color: #505a5f; margin-bottom: 30px;">
+                                For you to create an Ontology you have to select a domain containing the content from GOV.UK, and optionally adjust the configuration and add a domain prompt.
+                            </p>
+                            <button type="button" id="wizard-start-btn" style="background-color: #00703c; color: white; border: none; padding: 12px 24px; font-weight: bold; font-size: 1.25rem; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; border-radius: 4px; box-shadow: 0 2px 0 #002d18;">
+                                Start now
+                                <svg class="govuk-button__start-icon" xmlns="http://www.w3.org/2000/svg" width="17.5" height="19" viewBox="0 0 33 40" aria-hidden="true" focusable="false" style="margin-left: 10px; vertical-align: middle;">
+                                    <path fill="currentColor" d="M0 0h13l20 20-20 20H0l20-20z"/>
+                                </svg>
                             </button>
                         </div>
 
-                        <table class="striped highlight responsive-table" id="jobs-table">
-                            <caption class="govuk-visually-hidden">Recent jobs</caption>
-                            <thead>
-                            <tr>
-                                <th scope="col" style="width: 50px;">#</th>
-                                <th scope="col">Domain</th>
-                                <th scope="col">Time of Run</th>
-                                <th scope="col">Status</th>
-                                <th scope="col">Pipeline</th>
-                                <th scope="col">TTL File</th>
-                                <th scope="col">Output</th>
-                                <th scope="col">Visualise</th>
-                                <th scope="col">Report</th>
-                                <th scope="col" id="actions-header">Actions</th>
-                                <th scope="col">Notes</th>
-                            </tr>
-                            </thead>
-                            <tbody id="jobs-tbody">
-                            <!-- Jobs populated via JS -->
-                            <tr>
-                                <td colspan="11" class="center-align grey-text">Loading jobs...</td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                        <!-- STEP 2: SELECT DOMAIN -->
+                        <div id="step-2" class="wizard-step" style="display: none;">
+                            <h1 class="govuk-heading-xl" style="font-weight: 800; font-size: 2.8rem; margin: 0 0 20px 0; color: #0b0c0c;">Create an Ontology</h1>
+                            <div class="govuk-form-group" id="domain-form-group" style="margin-bottom: 25px;">
+                                <label class="govuk-label" for="domain-selector" style="font-size: 1.2rem; font-weight: 600; color: #0b0c0c; display: block; margin-bottom: 10px;">Select the domain for your ontology</label>
+                                <p id="domain-error-message" class="govuk-error-message" style="display: none; color: #d4351c; font-weight: bold; font-size: 1.15rem; margin-top: 0; margin-bottom: 15px;">
+                                    <span class="govuk-visually-hidden">Error:</span> Select a domain
+                                </p>
+                                <select id="domain-selector" name="domain" class="browser-default" style="height: 44px; border: 2px solid #0b0c0c; border-radius: 0; font-family: inherit; font-size: 1.1rem; padding: 8px; background-color: #fff; display: block; width: 100%; box-sizing: border-box;" required>
+                                    <option value="" disabled selected>Loading domains...</option>
+                                </select>
+                            </div>
+
+                            <p class="govuk-body" style="font-size: 1rem; color: #505a5f; margin-top: 10px; margin-bottom: 25px;">
+                                If there is not a domain created for this ontology, go <a href="{{ url_for('ontology.domains_page') }}" style="color: #1d70b8; text-decoration: underline; font-weight: bold;">here</a> to create a domain.
+                            </p>
+
+                            <div style="margin-top: 25px; display: flex; gap: 15px; align-items: center;">
+                                <button type="button" id="wizard-step2-next" class="btn" style="background-color: #00703c; font-weight: bold; height: 45px; padding: 0 20px;">Next</button>
+                                <button type="button" class="btn-flat wizard-prev-btn-action" style="border: 1px solid #b1b4b6; color: #0b0c0c; font-weight: bold; height: 45px; padding: 0 20px; border-radius: 4px;">Back</button>
+                            </div>
+                        </div>
+
+                        <!-- STEP 3: ADD PROMPT -->
+                        <div id="step-3" class="wizard-step" style="display: none;">
+                            <h1 class="govuk-heading-xl" style="font-weight: 800; font-size: 2.8rem; margin: 0 0 20px 0; color: #0b0c0c;">Create an Ontology</h1>
+                            <p class="govuk-body" style="color: #0b0c0c; font-size: 1.15rem; line-height: 1.5; margin-bottom: 20px;">
+                                Add a domain prompt. This is optional, and the generator will be able to create an ontology without one. By adding a domain specific prompt you might get a more specialised ontology.
+                            </p>
+
+                            <!-- Text area prompt input -->
+                            <div style="margin-bottom: 25px;">
+                                <label for="custom-prompt-text" style="display: none;">Domain prompt text box</label>
+                                <textarea id="custom-prompt-text" class="materialize-textarea" style="min-height: 120px; border: 2px solid #0b0c0c; border-radius: 0; padding: 12px; background-color: #fff; font-family: inherit; font-size: 1rem; box-sizing: border-box;" placeholder="Type or paste your domain prompt here..."></textarea>
+                            </div>
+
+                            <!-- Hidden file inputs for compatibility with form scripts -->
+                            <div style="display: none;">
+                                <input type="file" id="file" name="file" accept=".yaml,.yml" style="display: none;">
+                                <input type="file" id="text_file" name="text_file" accept=".txt" style="display: none;">
+                            </div>
+
+                            <ul class="collection" id="file-list"
+                                 style="border: none; margin-bottom: 1.5rem; display: none;">
+                                <li class="collection-item avatar" id="yaml-file-item"
+                                    style="display: none; min-height: auto; padding-left: 50px;">
+                                    <i class="material-icons circle green"
+                                       style="width: 30px; height: 30px; line-height: 30px; left: 10px;">insert_drive_file</i>
+                                    <span class="title" id="yaml-file-name" style="font-weight: 500;"></span>
+                                    <p class="grey-text" style="font-size: 0.8rem;">Config File</p>
+                                </li>
+                                <li class="collection-item avatar" id="txt-file-item"
+                                    style="display: none; min-height: auto; padding-left: 50px;">
+                                    <i class="material-icons circle blue"
+                                       style="width: 30px; height: 30px; line-height: 30px; left: 10px;">description</i>
+                                    <span class="title" id="txt-file-name" style="font-weight: 500;"></span>
+                                    <p class="grey-text" style="font-size: 0.8rem;">Domain Prompt</p>
+                                </li>
+                            </ul>
+
+                            <div style="margin-top: 25px; display: flex; gap: 15px; align-items: center;">
+                                <button type="button" id="wizard-step3-next" class="btn" style="background-color: #00703c; font-weight: bold; height: 45px; padding: 0 20px;">Next</button>
+                                <button type="button" class="btn-flat wizard-prev-btn-action" style="border: 1px solid #b1b4b6; color: #0b0c0c; font-weight: bold; height: 45px; padding: 0 20px; border-radius: 4px;">Back</button>
+                            </div>
+                        </div>
+
+                        <!-- STEP 4: MAKE CONFIGURATION -->
+                        <div id="step-4" class="wizard-step" style="display: none;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h2 class="govuk-heading-l" style="font-weight: 700; font-size: 1.8rem; margin: 0; color: #0b0c0c;">Configure pipeline settings</h2>
+                                <button type="button" id="toggle-config-btn" class="btn-flat waves-effect" style="border: 2px solid #0b0c0c; border-radius: 0; display: inline-flex; align-items: center; gap: 6px; font-weight: bold; height: 40px; padding: 0 16px; color: #0b0c0c; transition: all 0.2s ease-in-out; background-color: #f3f2f1;">
+                                    <i class="material-icons" style="font-size: 1.2rem; margin: 0;">settings</i>
+                                    <span id="toggle-config-text">Configure Settings</span>
+                                </button>
+                            </div>
+                            <p class="govuk-body" style="color: #505a5f; margin-bottom: 25px;">Review the configurations used to create your Ontology.</p>
+
+                            <!-- Summary info -->
+                            <div class="summary-box" style="background-color: #f3f2f1; padding: 20px; border-radius: 6px; border-left: 5px solid #1d70b8; margin-bottom: 25px;">
+                                <p style="margin: 0 0 10px 0;"><strong>Selected Domain:</strong> <span id="summary-domain" style="font-weight: bold;">None</span></p>
+                                <p style="margin: 0 0 10px 0;"><strong>LLM Model:</strong> <span id="summary-model" style="font-weight: bold;">Claude 4.6 Sonnet</span></p>
+                                <p style="margin: 0;"><strong>Temperature:</strong> <span id="summary-temp" style="font-weight: bold;">0.00</span></p>
+                            </div>
+
+                            <div id="upload-status" style="display: none; margin-bottom: 1.5rem; padding: 15px; border-radius: 4px;"></div>
+
+                            <div style="margin-top: 25px; display: flex; gap: 15px; align-items: center;">
+                                <button class="btn waves-effect waves-light" type="submit" id="submit-btn"
+                                        style="background-color: #00703c; height: 45px; padding: 0 20px; font-weight: bold; border-radius: 4px; box-shadow: 0 2px 0 #002d18; display: inline-flex; align-items: center; gap: 6px;">
+                                    Create Ontology <i class="material-icons right" style="margin-left: 0;">play_arrow</i>
+                                </button>
+                                <button type="button" class="btn-flat wizard-prev-btn-action" style="border: 1px solid #b1b4b6; color: #0b0c0c; font-weight: bold; height: 45px; padding: 0 20px; border-radius: 4px;">Back</button>
+                            </div>
+
+                            <div class="progress" id="upload-progress" style="display: none;">
+                                <div class="indeterminate"></div>
+                            </div>
+                        </div>
+
+                        <!-- STEP 5: SUCCESS / KICK OFF -->
+                        <div id="step-5" class="wizard-step" style="display: none;">
+                            <div class="govuk-panel govuk-panel--confirmation" style="background-color: #00703c; color: white; padding: 35px; text-align: center; border-radius: 4px; margin-bottom: 30px;">
+                                <h1 class="govuk-panel__title" style="font-size: 2.5rem; font-weight: bold; margin-bottom: 15px; color: white;">
+                                    Ontology creation started
+                                </h1>
+                                <div class="govuk-panel__body" style="font-size: 1.5rem; color: white;">
+                                    Your job ID is<br><strong id="success-job-id" style="font-weight: 800; font-size: 2rem;"></strong>
+                                </div>
+                            </div>
+                            <h3 class="govuk-heading-m" style="margin-top: 20px; font-weight: bold; font-size: 1.4rem;">What happens next</h3>
+                            <p class="govuk-body" style="font-size: 1.1rem; line-height: 1.6; color: #333;">
+                                Your Ontology is being created. Go to Review Ontologies to download the files, add notes, download reports and visualise the graph.
+                            </p>
+                            <div style="margin-top: 30px; display: flex; gap: 15px;">
+                                <button type="button" class="btn" id="wizard-reset-btn" style="background-color: #1d70b8; font-weight: bold; height: 40px;">Create another ontology</button>
+                                <a href="/ontology/review-ontologies" class="btn-flat" style="border: 1px solid #1d70b8; color: #1d70b8; font-weight: bold; text-align: center; line-height: 38px; height: 40px; border-radius: 4px;">Review Ontologies</a>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
 
         <!-- Right Column: Interactive Configuration Sidebar -->
         <div class="col s12 l4" id="right-column">
-            <div class="card" id="config-sidebar-card" style="box-shadow: 0 4px 10px rgba(0,0,0,0.08); border-radius: 6px; border-top: 4px solid #1d70b8;">
+            <div class="card" id="config-sidebar-card" style="box-shadow: none; border: 2px solid #0b0c0c; border-radius: 0; background-color: #fff; margin: 0;">
                 <div class="card-content" style="padding: 1.5rem;">
-                    <span class="card-title" style="font-weight: bold; color: #1d70b8; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; font-size: 1.3rem;">
+                    <span class="card-title" style="font-weight: bold; color: #0b0c0c; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; font-size: 1.35rem;">
                         <span>Configuration Panel</span>
                         <button type="button" id="close-config-btn" class="btn-flat waves-effect" style="padding: 0; min-width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #505a5f; margin: 0;" title="Minimize settings">
                             <i class="material-icons" style="font-size: 1.25rem; margin: 0;">close</i>
@@ -230,7 +368,7 @@
                     <!-- LLM Model Selection -->
                     <div class="input-field" style="margin-bottom: 1.5rem;">
                         <label style="font-weight: bold; color: #0b0c0c; position: static; font-size: 0.95rem;">LLM Model <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Select the Large Language Model to use for generating the ontology.">info_outline</i></label>
-                        <select id="model-selector">
+                        <select id="model-selector" class="browser-default">
                             <option value="bedrock:eu.anthropic.claude-sonnet-4-6" selected>Claude 4.6 Sonnet</option>
                             <option value="custom">-- Custom Model --</option>
                         </select>
@@ -425,7 +563,7 @@
                                         <input type="range" id="config-min-label-similarity" min="0.5" max="1.0" step="0.05" value="0.75" style="margin-top: 8px; border: none;">
                                     </div>
                                     <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <select id="config-conflict-strat">
+                                        <select id="config-conflict-strat" class="browser-default">
                                             <option value="confidence">Higher Confidence</option>
                                             <option value="latest">Latest Value</option>
                                         </select>
@@ -487,14 +625,14 @@
                                         <label for="config-export-uri" class="active">Base Ontology URI <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="The base URI for the generated OWL ontology metadata.">info_outline</i></label>
                                     </div>
                                     <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <select id="config-export-format">
+                                        <select id="config-export-format" class="browser-default">
                                             <option value="turtle">Turtle (.ttl)</option>
                                             <option value="rdfxml">RDF/XML (.rdf)</option>
                                         </select>
                                         <label style="position: static; font-size: 0.9rem;">Export Format <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="File format for the exported ontology (Turtle or RDF/XML).">info_outline</i></label>
                                     </div>
                                     <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <select id="config-spelling-variant">
+                                        <select id="config-spelling-variant" class="browser-default">
                                             <option value="US">US Spelling</option>
                                             <option value="UK">UK Spelling</option>
                                             <option value="preserve">Preserve Original</option>
@@ -502,7 +640,7 @@
                                         <label style="position: static; font-size: 0.9rem;">Spelling Variant <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Standard spelling convention for generated terms (US or UK).">info_outline</i></label>
                                     </div>
                                     <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <select id="config-label-casing">
+                                        <select id="config-label-casing" class="browser-default">
                                             <option value="UpperCamelCase">UpperCamelCase</option>
                                             <option value="lowerCamelCase">lowerCamelCase</option>
                                             <option value="snake_case">snake_case</option>
@@ -511,7 +649,7 @@
                                         <label style="position: static; font-size: 0.9rem;">Entity Casing Style <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Casing format applied to generated ontology entity labels.">info_outline</i></label>
                                     </div>
                                     <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <select id="config-entity-type-casing">
+                                        <select id="config-entity-type-casing" class="browser-default">
                                             <option value="UpperCamelCase">UpperCamelCase</option>
                                             <option value="lowerCamelCase">lowerCamelCase</option>
                                             <option value="snake_case">snake_case</option>
@@ -520,7 +658,7 @@
                                         <label style="position: static; font-size: 0.9rem;">Entity Type Casing <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Casing style for entity types (e.g. MedicalConcept).">info_outline</i></label>
                                     </div>
                                     <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <select id="config-property-casing">
+                                        <select id="config-property-casing" class="browser-default">
                                             <option value="lowerCamelCase">lowerCamelCase</option>
                                             <option value="UpperCamelCase">UpperCamelCase</option>
                                             <option value="snake_case">snake_case</option>
@@ -529,7 +667,7 @@
                                         <label style="position: static; font-size: 0.9rem;">Property Casing <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Casing style for property keys (e.g. startDate).">info_outline</i></label>
                                     </div>
                                     <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <select id="config-relationship-type-casing">
+                                        <select id="config-relationship-type-casing" class="browser-default">
                                             <option value="lowerCamelCase">lowerCamelCase</option>
                                             <option value="UpperCamelCase">UpperCamelCase</option>
                                             <option value="snake_case">snake_case</option>
@@ -564,7 +702,7 @@
                                         <label for="config-export-min-property-frequency" class="active">Min Property Frequency <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Only export DatatypeProperty for keys seen at least N times.">info_outline</i></label>
                                     </div>
                                     <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <select id="config-naming-entity-label-spelling">
+                                        <select id="config-naming-entity-label-spelling" class="browser-default">
                                             <option value="UK">UK Spelling</option>
                                             <option value="US">US Spelling</option>
                                             <option value="preserve">Preserve Original</option>
@@ -572,7 +710,7 @@
                                         <label style="position: static; font-size: 0.9rem;">Entity Label Spelling Variant <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Spelling variant style for human-readable labels.">info_outline</i></label>
                                     </div>
                                     <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <select id="config-naming-entity-iri-spelling">
+                                        <select id="config-naming-entity-iri-spelling" class="browser-default">
                                             <option value="US">US Spelling</option>
                                             <option value="UK">UK Spelling</option>
                                             <option value="preserve">Preserve Original</option>
@@ -758,7 +896,7 @@
                                         </label>
                                     </div>
                                     <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <select id="config-retry-strategy-type">
+                                        <select id="config-retry-strategy-type" class="browser-default">
                                             <option value="exponential">Exponential</option>
                                             <option value="linear">Linear</option>
                                             <option value="constant">Constant</option>
@@ -921,7 +1059,7 @@
                                 <div class="collapsible-header"><i class="material-icons">text_fields</i>Text Normalization<i class="material-icons chevron-icon">expand_more</i></div>
                                 <div class="collapsible-body">
                                     <div class="input-field" style="margin: 5px 0 15px 0;">
-                                        <select id="config-norm-casing">
+                                        <select id="config-norm-casing" class="browser-default">
                                             <option value="lowercase">lowercase</option>
                                             <option value="uppercase">uppercase</option>
                                             <option value="preserve">preserve</option>
@@ -929,7 +1067,7 @@
                                         <label style="position: static; font-size: 0.9rem;">Text Casing <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Standard casing normalization strategy.">info_outline</i></label>
                                     </div>
                                     <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <select id="config-norm-punctuation">
+                                        <select id="config-norm-punctuation" class="browser-default">
                                             <option value="remove">remove</option>
                                             <option value="preserve">preserve</option>
                                             <option value="normalize">normalize</option>
@@ -964,7 +1102,7 @@
                                         <label for="config-schema-similarity-threshold" class="active">Type Similarity Threshold <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Threshold above which similar schemas are merged together.">info_outline</i></label>
                                     </div>
                                     <div class="input-field" style="margin: 15px 0 5px 0;">
-                                        <select id="config-schema-version-increment">
+                                        <select id="config-schema-version-increment" class="browser-default">
                                             <option value="patch">patch</option>
                                             <option value="minor">minor</option>
                                             <option value="major">major</option>
@@ -1065,6 +1203,7 @@
                 </div>
             </div>
         </div>
+    </div>
 {% endblock %}
 
 {% block extra_js %}
@@ -1615,41 +1754,43 @@
             // Initial Sync
             syncUIFromConfig(activeConfig);
 
-            dropZone.addEventListener('click', () => {
-                const tempInput = document.createElement('input');
-                tempInput.type = 'file';
-                tempInput.multiple = true;
-                tempInput.accept = '.yaml,.yml,.txt';
-                tempInput.onchange = e => handleFiles(e.target.files);
-                tempInput.click();
-            });
+            if (dropZone) {
+                dropZone.addEventListener('click', () => {
+                    const tempInput = document.createElement('input');
+                    tempInput.type = 'file';
+                    tempInput.multiple = true;
+                    tempInput.accept = '.yaml,.yml,.txt';
+                    tempInput.onchange = e => handleFiles(e.target.files);
+                    tempInput.click();
+                });
 
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, preventDefaults, false);
-            });
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, preventDefaults, false);
+                });
+
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, () => {
+                        dropZone.style.backgroundColor = 'rgba(29, 112, 184, 0.05)';
+                        dropZone.style.borderColor = '#1d70b8';
+                    }, false);
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, () => {
+                        dropZone.style.backgroundColor = '';
+                        dropZone.style.borderColor = 'var(--gov-border)';
+                    }, false);
+                });
+
+                dropZone.addEventListener('drop', (e) => {
+                    handleFiles(e.dataTransfer.files);
+                });
+            }
 
             function preventDefaults(e) {
                 e.preventDefault();
                 e.stopPropagation();
             }
-
-            ['dragenter', 'dragover'].forEach(eventName => {
-                dropZone.addEventListener(eventName, () => {
-                    dropZone.style.backgroundColor = 'rgba(29, 112, 184, 0.05)';
-                    dropZone.style.borderColor = '#1d70b8';
-                }, false);
-            });
-
-            ['dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, () => {
-                    dropZone.style.backgroundColor = '';
-                    dropZone.style.borderColor = 'var(--gov-border)';
-                }, false);
-            });
-
-            dropZone.addEventListener('drop', (e) => {
-                handleFiles(e.dataTransfer.files);
-            });
 
             function handleFiles(files) {
                 const dtYaml = new DataTransfer();
@@ -1680,6 +1821,109 @@
                 }
             }
 
+            // ---- Wizard Step Navigation ----
+            let currentStep = 1;
+            const backBtn = document.getElementById('wizard-back-btn');
+            
+            function showStep(stepNum) {
+                document.querySelectorAll('.wizard-step').forEach(el => {
+                    el.style.display = 'none';
+                });
+                document.getElementById(`step-${stepNum}`).style.display = 'block';
+                
+                // Show/hide back button
+                if (stepNum > 1 && stepNum < 5) {
+                    backBtn.style.display = 'inline-block';
+                } else {
+                    backBtn.style.display = 'none';
+                }
+                
+                // Toggle config visibility depending on Step 4
+                if (stepNum !== 4) {
+                    setConfigVisibility(false);
+                    // Hide the toggle button
+                    toggleConfigBtn.style.setProperty('display', 'none', 'important');
+                } else {
+                    const savedPref = localStorage.getItem('showConfig') === 'true';
+                    setConfigVisibility(savedPref);
+                }
+                
+                currentStep = stepNum;
+            }
+
+            // Step 1 -> 2
+            document.getElementById('wizard-start-btn').addEventListener('click', () => {
+                showStep(2);
+            });
+
+            // Step 2 -> 3
+            document.getElementById('wizard-step2-next').addEventListener('click', () => {
+                const domainSel = document.getElementById('domain-selector');
+                const formGroup = document.getElementById('domain-form-group');
+                const errMsg = document.getElementById('domain-error-message');
+                if (!domainSel.value) {
+                    formGroup.classList.add('govuk-form-group--error');
+                    domainSel.classList.add('govuk-select--error');
+                    errMsg.style.display = 'block';
+                    return;
+                }
+                formGroup.classList.remove('govuk-form-group--error');
+                domainSel.classList.remove('govuk-select--error');
+                errMsg.style.display = 'none';
+                showStep(3);
+            });
+
+            document.getElementById('domain-selector').addEventListener('change', () => {
+                const domainSel = document.getElementById('domain-selector');
+                const formGroup = document.getElementById('domain-form-group');
+                const errMsg = document.getElementById('domain-error-message');
+                if (domainSel.value) {
+                    formGroup.classList.remove('govuk-form-group--error');
+                    domainSel.classList.remove('govuk-select--error');
+                    errMsg.style.display = 'none';
+                }
+            });
+
+            // Step 3 -> 4
+            document.getElementById('wizard-step3-next').addEventListener('click', () => {
+                const domainSel = document.getElementById('domain-selector');
+                const modelSel = document.getElementById('model-selector');
+                const tempSlider = document.getElementById('temp-slider');
+                
+                document.getElementById('summary-domain').textContent = domainSel.options[domainSel.selectedIndex]?.text || 'None';
+                
+                let selectedModel = modelSel.value;
+                if (selectedModel === 'custom') {
+                    selectedModel = document.getElementById('custom-model-input').value || 'Custom';
+                } else {
+                    selectedModel = modelSel.options[modelSel.selectedIndex]?.text || selectedModel;
+                }
+                document.getElementById('summary-model').textContent = selectedModel;
+                document.getElementById('summary-temp').textContent = parseFloat(tempSlider.value).toFixed(2);
+                
+                showStep(4);
+            });
+
+            // Back button and inline Back button actions
+            const handleBackNav = (e) => {
+                if (e) e.preventDefault();
+                if (currentStep > 1) {
+                    showStep(currentStep - 1);
+                }
+            };
+            backBtn.addEventListener('click', handleBackNav);
+            document.querySelectorAll('.wizard-prev-btn-action').forEach(btn => {
+                btn.addEventListener('click', handleBackNav);
+            });
+
+            // Reset/Restart Wizard button
+            document.getElementById('wizard-reset-btn').addEventListener('click', () => {
+                const customPromptText = document.getElementById('custom-prompt-text');
+                if (customPromptText) customPromptText.value = '';
+                M.textareaAutoResize(customPromptText);
+                showStep(1);
+            });
+
             // ---- Form Submission ----
             const uploadForm = document.getElementById('upload-form');
             const submitBtn = document.getElementById('submit-btn');
@@ -1701,9 +1945,17 @@
                     syncConfigFromUI(activeConfig);
 
                     const formData = new FormData(uploadForm);
+                    
                     // Only send config_json if NO custom yaml config file is uploaded
                     if (!fileInput.files.length) {
                         formData.append('config_json', JSON.stringify(activeConfig));
+                    }
+
+                    // Append custom prompt text if typed directly and file isn't uploaded
+                    const customPromptText = document.getElementById('custom-prompt-text').value;
+                    if (!txtFileInput.files.length && customPromptText.trim() !== '') {
+                        const blob = new Blob([customPromptText], { type: 'text/plain' });
+                        formData.append('text_file', blob, 'domain_prompt.txt');
                     }
 
                     const response = await fetch("{{ url_for('ontology.upload_file') }}", {
@@ -1714,8 +1966,11 @@
                     const data = await response.json();
 
                     if (response.ok) {
-                        showStatus(`Pipeline started! Job ID: ${data.job_id.substring(0, 8)}...`, 'green');
-                        uploadForm.reset(); // Clear hidden files
+                        // Show confirmation Step 5 and set the job ID
+                        document.getElementById('success-job-id').textContent = data.job_id;
+                        showStep(5);
+
+                        uploadForm.reset(); // Clear form fields
                         fileInput.value = '';
                         txtFileInput.value = '';
                         fileList.style.display = 'none';
@@ -1726,7 +1981,7 @@
                         activeConfig = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
                         syncUIFromConfig(activeConfig);
 
-                        // Collapse configuration panel and reveal the recent jobs column
+                        // Collapse configuration panel
                         setConfigVisibility(false);
 
                         fetchJobs(); // Instant refresh
@@ -2124,9 +2379,9 @@
             async function initialLoad() {
                 await fetchJobs();
                 // If there are rows in the table (other than the "No jobs" message), show it
-                if (jobsTbody.querySelectorAll('tr').length > 0 && jobsTbody.textContent.indexOf('No jobs found') === -1) {
+                if (jobsTbody && jobsTbody.querySelectorAll('tr').length > 0 && jobsTbody.textContent.indexOf('No jobs found') === -1) {
                     if (document.getElementById('right-column').style.display === 'none') {
-                        recentJobsCol.style.display = 'block';
+                        if (recentJobsCol) recentJobsCol.style.display = 'block';
                     }
                 }
             }
@@ -2151,8 +2406,6 @@
                     const option = new Option(domain, domain);
                     selectEl.add(option);
                 })
-
-                selectEl.add(new Option('📄 Take the domain from the config file', 'config_file'));
 
                 M.FormSelect.init(selectEl);
 
