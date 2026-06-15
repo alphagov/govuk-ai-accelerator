@@ -105,6 +105,9 @@ def test_historical_jobs_uses_review_action_set():
     assert "open-notes-action" in html
     assert "download-ontology-action" in html
     assert "visualise-job-action" in html
+    assert "review-row-action-button" in html
+    assert "review-row-action-link" not in html
+    assert 'Download<span class="govuk-visually-hidden"> ontology' in html
     assert "review-job-actions" not in html
     assert "btn-small red darken-1 stop-job-btn" not in html
 
@@ -1180,6 +1183,9 @@ def test_jobs_page_uses_govuk_pagination_markup_without_custom_button_tiles():
     assert "govuk-pagination__next" in html
     assert "govuk-pagination__item--current" in html
     assert "review-pagination__item" not in html
+    assert "box-shadow: none;" in html
+    assert "height: auto;" in html
+    assert "line-height: normal;" in html
 
 
 def test_jobs_page_uses_inline_notes_without_per_row_sync_or_native_note_prompts():
