@@ -316,6 +316,12 @@ def test_review_jobs_endpoint_paginates_ontology_jobs_and_excludes_other_types(t
 
 def test_review_jobs_endpoint_filters_harness_jobs_for_review_tests(tmp_path):
     app_module, flask_app = _jobs_test_app(tmp_path)
+    output_dir = tmp_path / "ontology-harness-baseline" / "test-job" / "output"
+    output_dir.mkdir(parents=True)
+    (output_dir / "ontology.ttl").write_text(
+        "@prefix ex: <http://example.com/> .",
+        encoding="utf-8",
+    )
 
     with flask_app.app_context():
         app_module.db.session.add_all(
@@ -332,6 +338,7 @@ def test_review_jobs_endpoint_filters_harness_jobs_for_review_tests(tmp_path):
                     status="failed",
                     pipeline="ontology-harness",
                     domain="ontology-harness-baseline",
+                    config_data=json.dumps({"path": {"output_dir": output_dir.as_uri()}}),
                     created_at=datetime(2026, 5, 11, 14, 0, tzinfo=timezone.utc),
                 ),
             ]
@@ -344,6 +351,10 @@ def test_review_jobs_endpoint_filters_harness_jobs_for_review_tests(tmp_path):
     payload = response.get_json()
     assert [job["job_id"] for job in payload["jobs"]] == ["test-job"]
     assert payload["jobs"][0]["pipeline"] == "ontology-harness"
+    assert (
+        payload["jobs"][0]["visualize_url"]
+        == "/visualizer/?run=ontology-harness-baseline/test-job"
+    )
 
 
 def test_review_jobs_endpoint_adds_visualizer_url_for_local_graph_jobs(tmp_path):
@@ -1148,6 +1159,8 @@ def test_jobs_page_renders_expanded_review_context_sections():
     assert "renderInlineNotes(job, state.notes || [], state.editingNoteId)" in html
     assert "renderJobActions(job, notesLabel)" in html
     assert "Visualise" in html
+    assert 'target="_blank"' in html
+    assert 'rel="noopener noreferrer"' in html
     assert "Download ontology" in html
     assert "job.ontology_download_url" in html
     assert "job.visualize_url" in html

@@ -301,7 +301,7 @@
       if (job.visualize_url) {
         actions.push(`
           <li class="review-row-actions__item">
-            <a class="govuk-button govuk-button--secondary review-row-action-button visualise-job-action" href="${escapeAttribute(job.visualize_url)}">
+            <a class="govuk-button govuk-button--secondary review-row-action-button visualise-job-action" href="${escapeAttribute(job.visualize_url)}" target="_blank" rel="noopener noreferrer">
               Visualise<span class="govuk-visually-hidden"> ${escapeHtml(job.job_id)}</span>
             </a>
           </li>
