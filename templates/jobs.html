@@ -1028,7 +1028,7 @@
 
   .review-note-item {
       position: relative;
-      padding: 14px 82px 14px 0;
+      padding: 14px 92px 14px 0;
       border-bottom: 1px solid #f3f2f1;
   }
 
@@ -1049,34 +1049,42 @@
 
   .review-note-item__actions {
       position: absolute;
-      top: 10px;
+      top: 12px;
       right: 0;
       display: flex;
-      gap: 4px;
+      gap: 6px;
   }
 
   .review-note-icon-button {
-      width: 34px;
-      height: 34px;
-      border: 0;
-      background: transparent;
+      width: 32px;
+      height: 32px;
+      border: 1px solid #b1b4b6;
+      border-radius: 2px;
+      background: #ffffff;
       color: #1d70b8;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      padding: 0;
   }
 
   .review-note-icon-button:hover {
       background: #f3f2f1;
+      color: #003078;
   }
 
   .review-note-icon-button--danger {
       color: #d4351c;
   }
 
+  .review-note-icon-button--danger:hover {
+      color: #942514;
+  }
+
   .review-note-icon-button .material-icons {
-      font-size: 20px;
+      font-size: 18px;
+      line-height: 1;
   }
 
   .review-inline-note-form {
