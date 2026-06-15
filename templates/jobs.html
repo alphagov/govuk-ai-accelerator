@@ -301,7 +301,7 @@
       if (job.visualize_url) {
         actions.push(`
           <li class="review-row-actions__item">
-            <a class="govuk-link review-row-action-link visualise-job-action" href="${escapeAttribute(job.visualize_url)}">
+            <a class="govuk-button govuk-button--secondary review-row-action-button visualise-job-action" href="${escapeAttribute(job.visualize_url)}">
               Visualise<span class="govuk-visually-hidden"> ${escapeHtml(job.job_id)}</span>
             </a>
           </li>
@@ -309,7 +309,7 @@
       }
       actions.push(`
         <li class="review-row-actions__item">
-          <button type="button" class="review-row-action-link open-notes-action" data-job-id="${escapeAttribute(job.job_id)}" aria-label="${escapeAttribute(notesLabel)} for this job">
+          <button type="button" class="govuk-button govuk-button--secondary review-row-action-button open-notes-action" data-job-id="${escapeAttribute(job.job_id)}" aria-label="${escapeAttribute(notesLabel)} for this job">
             ${escapeHtml(notesLabel)}
           </button>
         </li>
@@ -317,8 +317,8 @@
       if (job.ontology_download_url) {
         actions.push(`
           <li class="review-row-actions__item">
-            <a class="govuk-link review-row-action-link download-ontology-action" href="${escapeAttribute(job.ontology_download_url)}" download>
-              Download ontology<span class="govuk-visually-hidden"> ${escapeHtml(job.job_id)}</span>
+            <a class="govuk-button govuk-button--secondary review-row-action-button download-ontology-action" href="${escapeAttribute(job.ontology_download_url)}" download aria-label="Download ontology ${escapeAttribute(job.job_id)}">
+              Download<span class="govuk-visually-hidden"> ontology ${escapeHtml(job.job_id)}</span>
             </a>
           </li>
         `);
@@ -575,7 +575,7 @@
         return;
       }
 
-      if (event.target.closest('a.review-row-action-link')) {
+      if (event.target.closest('a.review-row-action-button')) {
         return;
       }
 
@@ -720,7 +720,7 @@
   .review-sort-button:focus,
   .review-detail-tab:focus,
   .review-row-action:focus,
-  .review-row-action-link:focus,
+  .review-row-action-button:focus,
   .review-note-icon-button:focus,
   .review-pagination .govuk-pagination__link:focus {
       outline: 3px solid #ffdd00;
@@ -1047,10 +1047,9 @@
   }
 
   .review-row-actions {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+      gap: 7px;
       margin: 0;
       padding: 0;
       list-style: none;
@@ -1061,26 +1060,35 @@
       padding: 0;
   }
 
-  .review-row-action-link {
-      border: 0;
-      background: transparent;
-      color: #1d70b8;
+  .review-row-action-button,
+  .review-row-action-button:link,
+  .review-row-action-button:visited {
+      width: 100%;
+      min-height: 34px;
+      margin: 0;
+      padding: 6px 9px;
+      box-sizing: border-box;
+      border: 2px solid transparent;
+      background: #f3f2f1;
+      box-shadow: 0 2px 0 #929191;
+      color: #0b0c0c;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       font-family: inherit;
       font-size: 15px;
-      line-height: 1.35;
-      margin: 0;
-      padding: 0;
-      text-align: left;
-      text-decoration: underline;
-      text-decoration-thickness: max(1px, .0625rem);
-      text-underline-offset: .1578em;
+      font-weight: 700;
+      line-height: 1.2;
+      text-align: center;
+      text-decoration: none;
       white-space: nowrap;
   }
 
-  .review-row-action-link:hover {
-      color: #003078;
-      text-decoration-thickness: max(3px, .1875rem, .12em);
+  .review-row-action-button:hover {
+      background: #dbdad9;
+      color: #0b0c0c;
+      text-decoration: none;
   }
 
   .review-inline-notes {
@@ -1183,6 +1191,11 @@
       margin: 20px 0 0;
       padding: 0;
       background: #ffffff;
+      box-shadow: none;
+      color: #0b0c0c;
+      height: auto;
+      line-height: normal;
+      min-height: 0;
   }
 
   .review-pagination .govuk-pagination__link {
