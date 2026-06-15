@@ -798,6 +798,7 @@ def test_job_artifacts_endpoint_groups_downloadable_flat_s3_files(tmp_path, monk
                             {"Key": "visa/run-20260605-1/output/checkpoints/state.json", "Size": 15},
                             {"Key": "visa/run-20260605-1/output/term_extraction/terms.jsonl", "Size": 18},
                             {"Key": "visa/run-20260605-1/output/regression_report.json", "Size": 16},
+                            {"Key": "visa/run-20260605-1/output/stdout.log", "Size": 19},
                         ]
                     }
                 ]
@@ -822,7 +823,6 @@ def test_job_artifacts_endpoint_groups_downloadable_flat_s3_files(tmp_path, monk
         "config.yaml",
         "prompts.txt",
         "input/source.md",
-        "output/bedrock_costs.csv",
         "output/deduplication.jsonl",
         "output/checkpoints/state.json",
         "output/term_extraction/terms.jsonl",
@@ -832,7 +832,11 @@ def test_job_artifacts_endpoint_groups_downloadable_flat_s3_files(tmp_path, monk
     assert "input" not in intermediary_names
     assert "output" not in intermediary_names
     assert "checkpoints" not in intermediary_names
-    assert report_names == {"output/regression_report.json"}
+    assert report_names == {
+        "output/bedrock_costs.csv",
+        "output/regression_report.json",
+        "output/stdout.log",
+    }
     assert all("view" not in artifact for group in groups.values() for artifact in group)
     assert all(artifact["action"] == "download" for group in groups.values() for artifact in group)
     assert all(artifact["kind"] == "file" for group in groups.values() for artifact in group)
@@ -866,6 +870,7 @@ def test_job_artifacts_endpoint_includes_flat_local_input_and_output_downloads(t
     (nested_input_dir / "nested.md").write_text("nested", encoding="utf-8")
     (output_dir / "graph.json").write_text("{}", encoding="utf-8")
     (output_dir / "bedrock_costs.csv").write_text("cost", encoding="utf-8")
+    (output_dir / "stdout.log").write_text("log", encoding="utf-8")
     (output_dir / "checkpoints").mkdir()
     (output_dir / "checkpoints" / "state.json").write_text("state", encoding="utf-8")
     (output_dir / "term_extraction").mkdir()
@@ -899,14 +904,15 @@ def test_job_artifacts_endpoint_includes_flat_local_input_and_output_downloads(t
     groups = response.get_json()["groups"]
     ontology_names = {artifact["name"] for artifact in groups["ontology_files"]}
     intermediary_names = {artifact["name"] for artifact in groups["intermediary_files"]}
+    report_names = {artifact["name"] for artifact in groups["reports"]}
     assert "output/graph.json" in ontology_names
     assert {
         "input/source.md",
         "input/guidance/nested.md",
-        "output/bedrock_costs.csv",
         "output/checkpoints/state.json",
         "output/term_extraction/terms.jsonl",
     } <= intermediary_names
+    assert {"output/bedrock_costs.csv", "output/stdout.log"} <= report_names
     assert "input" not in intermediary_names
     assert "output" not in intermediary_names
 
