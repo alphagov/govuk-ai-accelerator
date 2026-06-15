@@ -759,9 +759,11 @@ def test_job_artifacts_endpoint_groups_downloadable_files_and_folders(tmp_path, 
     intermediary_names = {artifact["name"] for artifact in groups["intermediary_files"]}
     report_names = {artifact["name"] for artifact in groups["reports"]}
     assert {"graph.json", "ontology.ttl", "schema.json"} <= ontology_names
-    assert {"Submitted config.yaml", "Prompt used", "bedrock_costs.csv", "deduplication.jsonl"} <= intermediary_names
-    assert "checkpoints" in intermediary_names
-    assert {"input", "input/source.md"} <= intermediary_names
+    assert {"Submitted config.yaml", "Prompt used", "input", "output"} <= intermediary_names
+    assert "bedrock_costs.csv" not in intermediary_names
+    assert "deduplication.jsonl" not in intermediary_names
+    assert "checkpoints" not in intermediary_names
+    assert "input/source.md" not in intermediary_names
     assert report_names == {"regression_report.json"}
     assert all("view" not in artifact for group in groups.values() for artifact in group)
     assert all(artifact["action"] == "download" for group in groups.values() for artifact in group)
@@ -808,18 +810,21 @@ def test_job_artifacts_endpoint_includes_local_input_and_output_downloads(tmp_pa
     ontology_names = {artifact["name"] for artifact in groups["ontology_files"]}
     intermediary_names = {artifact["name"] for artifact in groups["intermediary_files"]}
     assert "graph.json" in ontology_names
-    assert {"input", "input/source.md", "input/guidance", "output", "bedrock_costs.csv"} <= intermediary_names
+    assert {"input", "output"} <= intermediary_names
+    assert "input/source.md" not in intermediary_names
+    assert "input/guidance" not in intermediary_names
+    assert "bedrock_costs.csv" not in intermediary_names
 
-    source_artifact = next(
+    input_artifact = next(
         artifact
         for artifact in groups["intermediary_files"]
-        if artifact["name"] == "input/source.md"
+        if artifact["name"] == "input"
     )
-    download_response = flask_app.test_client().get(source_artifact["download_url"])
+    download_response = flask_app.test_client().get(input_artifact["download_url"])
 
     assert download_response.status_code == 200
-    assert download_response.get_data(as_text=True) == "source"
-    assert "attachment; filename=source.md" in download_response.headers["Content-Disposition"]
+    assert download_response.mimetype == "application/zip"
+    assert "attachment; filename=input.zip" in download_response.headers["Content-Disposition"]
 
 
 def test_virtual_and_folder_download_routes(tmp_path, monkeypatch):
@@ -1155,6 +1160,18 @@ def test_jobs_page_uses_gds_tags_and_notes_modal_controls():
     assert 'class="govuk-label govuk-label--s"' in html
     assert "review-note-button" not in html
     assert "chat_bubble_outline" not in html
+
+
+def test_jobs_page_styles_note_actions_as_compact_icon_buttons():
+    response = _client().get("/ontology/review-ontologies")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "width: 32px;" in html
+    assert "height: 32px;" in html
+    assert "border: 1px solid #b1b4b6;" in html
+    assert "background: #ffffff;" in html
+    assert "line-height: 1;" in html
 
 
 def test_left_sidebar_is_removed():

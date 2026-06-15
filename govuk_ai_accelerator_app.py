@@ -421,23 +421,10 @@ def _add_local_input_artifacts(
             input_path,
             "input",
         )
+        return
 
     for file_path in files:
-        if input_path.is_dir():
-            relative_path = file_path.relative_to(input_path)
-            if len(relative_path.parts) > 1:
-                _add_local_folder_artifact(
-                    groups,
-                    seen_folders,
-                    "intermediary_files",
-                    job.id,
-                    input_path / relative_path.parts[0],
-                    f"input/{relative_path.parts[0]}",
-                )
-                continue
-            label = f"input/{relative_path.as_posix()}"
-        else:
-            label = f"input/{file_path.name}"
+        label = f"input/{file_path.name}"
         _add_local_file_artifact(groups, "intermediary_files", job.id, file_path, label)
 
 
@@ -465,21 +452,16 @@ def _add_local_output_artifacts(
         if output_path.is_dir():
             relative_path = file_path.relative_to(output_path)
             if len(relative_path.parts) > 1:
-                _add_local_folder_artifact(
-                    groups,
-                    seen_folders,
-                    "intermediary_files",
-                    job.id,
-                    output_path / relative_path.parts[0],
-                    relative_path.parts[0],
-                )
                 continue
             label = relative_path.as_posix()
         else:
             label = file_path.name
+        group_name = _output_artifact_group(file_path.name)
+        if output_path.is_dir() and group_name == "intermediary_files":
+            continue
         _add_local_file_artifact(
             groups,
-            _output_artifact_group(file_path.name),
+            group_name,
             job.id,
             file_path,
             label,
@@ -498,25 +480,19 @@ def _add_run_artifact(
     relative_path = key.removeprefix(run_prefix)
     if not relative_path:
         return
+    if relative_path == "config.yaml":
+        return
 
     if relative_path.startswith("output/"):
         output_path = relative_path.removeprefix("output/")
         parts = output_path.split("/")
         if len(parts) > 1:
-            folder_name = parts[0]
-            _add_folder_artifact(
-                groups,
-                seen_folders,
-                "intermediary_files",
-                job.id,
-                bucket_name,
-                f"{run_prefix}output/{folder_name}/",
-                folder_name,
-            )
             return
 
         file_name = parts[0]
         group_name = _output_artifact_group(file_name)
+        if group_name == "intermediary_files":
+            return
         groups[group_name].append(
             _artifact_row(
                 file_name,
@@ -572,32 +548,6 @@ def _add_input_artifacts(
             input_prefix,
             "input",
         )
-
-    for item in items:
-        key = str(item["Key"])
-        relative_path = key.removeprefix(input_prefix)
-        if not relative_path:
-            continue
-        parts = relative_path.split("/")
-        if len(parts) > 1:
-            _add_folder_artifact(
-                groups,
-                seen_folders,
-                "intermediary_files",
-                job.id,
-                bucket_name,
-                f"{input_prefix}{parts[0]}/",
-                f"input/{parts[0]}",
-            )
-            continue
-        groups["intermediary_files"].append(
-            _artifact_row(
-                f"input/{relative_path}",
-                _quoted_download_url(bucket_name, key),
-                size=item.get("Size"),
-            )
-        )
-
 
 def _job_artifact_groups(job: ProcessingJob) -> dict[str, list[dict]]:
     groups = {"ontology_files": [], "intermediary_files": [], "reports": []}
