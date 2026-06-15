@@ -163,6 +163,8 @@ def _serialize_job(job: ProcessingJob, note_metadata: dict[str, dict] | None = N
         "created_at": _serialize_job_datetime(job.created_at),
         "notes_count": metadata["notes_count"],
         "latest_note": metadata["latest_note"],
+        "visualize_url": _visualizer_run_url(job),
+        "ontology_download_url": _ontology_download_url(job),
     }
 
 
@@ -285,9 +287,26 @@ def _visualizer_run_url(job: ProcessingJob) -> str | None:
     return f"/visualizer/?run={quote(f'{job.domain}/{job.job_runs}', safe='/')}"
 
 
+def _ontology_download_url(job: ProcessingJob) -> str | None:
+    path_config = _job_path_config(job)
+    local_output_dir = _parse_local_path(path_config.get("output_dir"))
+    if local_output_dir:
+        ontology_path = (
+            local_output_dir / "ontology.ttl"
+            if local_output_dir.is_dir()
+            else local_output_dir
+        )
+        if ontology_path.name == "ontology.ttl" and ontology_path.is_file():
+            return _local_file_download_url(job.id, ontology_path)
+
+    if job.domain and job.job_runs:
+        key = f"{job.domain}/{job.job_runs}/output/ontology.ttl"
+        return _quoted_download_url(_default_bucket_name(), key)
+
+    return None
+
+
 def _download_label_for_artifact(name: str) -> str:
-    if name == "ontology.ttl":
-        return "Download ontology"
     return "Download"
 
 

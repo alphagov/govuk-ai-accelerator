@@ -96,13 +96,15 @@ def test_ontology_dashboard_describes_default_config_flow():
     assert "domain prompt template" in html
 
 
-def test_historical_jobs_uses_link_styled_stop_job_action():
+def test_historical_jobs_uses_review_action_set():
     response = _client().get("/ontology/review-ontologies")
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert "govuk-button govuk-button--warning review-row-action stop-job-action" in html
+    assert "stop-job-action" not in html
     assert "open-notes-action" in html
+    assert "download-ontology-action" in html
+    assert "visualise-job-action" in html
     assert "review-job-actions" not in html
     assert "btn-small red darken-1 stop-job-btn" not in html
 
@@ -244,6 +246,7 @@ def test_review_jobs_endpoint_paginates_ontology_jobs_and_excludes_other_types(t
                 status="completed",
                 pipeline="ontology",
                 domain="visa",
+                job_runs="run-20260605-1" if index == 11 else None,
                 created_at=created_at + timedelta(minutes=index),
             )
             app_module.db.session.add(job)
@@ -301,6 +304,10 @@ def test_review_jobs_endpoint_paginates_ontology_jobs_and_excludes_other_types(t
     assert payload["jobs"][0]["job_id"] == "ontology-11"
     assert payload["jobs"][0]["notes_count"] == 2
     assert payload["jobs"][0]["latest_note"]["text"] == "latest note"
+    assert payload["jobs"][0]["visualize_url"] == "/visualizer/?run=visa/run-20260605-1"
+    assert payload["jobs"][0]["ontology_download_url"].endswith(
+        "/visa/run-20260605-1/output/ontology.ttl"
+    )
     assert {job["pipeline"] for job in payload["jobs"]} == {"ontology"}
 
 
@@ -782,7 +789,7 @@ def test_job_artifacts_endpoint_groups_downloadable_files_and_folders(tmp_path, 
     )
     assert graph_artifact["visualize_url"] == "/visualizer/?run=visa/run-20260605-1"
     assert graph_artifact["download_label"] == "Download"
-    assert ontology_artifact["download_label"] == "Download ontology"
+    assert ontology_artifact["download_label"] == "Download"
 
 
 def test_job_artifacts_endpoint_includes_local_input_and_output_downloads(tmp_path):
@@ -1104,7 +1111,11 @@ def test_jobs_page_renders_expanded_review_context_sections():
     assert "Notes" in html
     assert "renderArtifactSection('Reports', groups.reports)" in html
     assert "renderInlineNotes(job, state.notes || [], state.editingNoteId)" in html
-    assert "renderJobActions" not in html
+    assert "renderJobActions(job, notesLabel)" in html
+    assert "Visualise" in html
+    assert "Download ontology" in html
+    assert "job.ontology_download_url" in html
+    assert "job.visualize_url" in html
     assert "renderStopAction" not in html
 
 
@@ -1323,5 +1334,5 @@ def test_review_ontologies_actions_column_has_room_for_actions():
 
     assert response.status_code == 200
     assert ".review-jobs-table th:nth-child(6)" in html
-    assert "width: 14%;" in html
-    assert "min-width: 120px;" in html
+    assert "width: 18%;" in html
+    assert "min-width: 180px;" in html

@@ -260,7 +260,6 @@
         const typeLabel = pipelineTypeLabel(pipeline);
         const notesCount = Number(job.notes_count || 0);
         const notesLabel = notesCount > 0 ? `Notes (${notesCount})` : 'Add note';
-        const canStop = ['pending', 'running'].includes(status);
 
         const tr = document.createElement('tr');
         tr.className = `review-job-row${isSelected ? ' is-selected' : ''}`;
@@ -283,16 +282,7 @@
             <span class="govuk-tag review-tag govuk-tag--${pipelineTagModifier(pipeline)}">${escapeHtml(typeLabel)}</span>
           </td>
           <td>
-            <div class="review-row-actions" aria-label="Actions for ${escapeAttribute(job.job_id)}">
-              <button type="button" class="govuk-button govuk-button--secondary review-row-action open-notes-action" data-job-id="${escapeAttribute(job.job_id)}" aria-label="${escapeAttribute(notesLabel)} for this job">
-                ${escapeHtml(notesLabel)}
-              </button>
-              ${canStop ? `
-                <button type="button" class="govuk-button govuk-button--warning review-row-action stop-job-action" data-job-id="${escapeAttribute(job.job_id)}">
-                  Stop job<span class="govuk-visually-hidden"> ${escapeHtml(job.job_id)}</span>
-                </button>
-              ` : ''}
-            </div>
+            ${renderJobActions(job, notesLabel)}
           </td>
         `;
         jobsTbody.appendChild(tr);
@@ -304,6 +294,40 @@
           jobsTbody.appendChild(detailTr);
         }
       });
+    }
+
+    function renderJobActions(job, notesLabel) {
+      const actions = [];
+      if (job.visualize_url) {
+        actions.push(`
+          <li class="review-row-actions__item">
+            <a class="govuk-link review-row-action-link visualise-job-action" href="${escapeAttribute(job.visualize_url)}">
+              Visualise<span class="govuk-visually-hidden"> ${escapeHtml(job.job_id)}</span>
+            </a>
+          </li>
+        `);
+      }
+      actions.push(`
+        <li class="review-row-actions__item">
+          <button type="button" class="review-row-action-link open-notes-action" data-job-id="${escapeAttribute(job.job_id)}" aria-label="${escapeAttribute(notesLabel)} for this job">
+            ${escapeHtml(notesLabel)}
+          </button>
+        </li>
+      `);
+      if (job.ontology_download_url) {
+        actions.push(`
+          <li class="review-row-actions__item">
+            <a class="govuk-link review-row-action-link download-ontology-action" href="${escapeAttribute(job.ontology_download_url)}" download>
+              Download ontology<span class="govuk-visually-hidden"> ${escapeHtml(job.job_id)}</span>
+            </a>
+          </li>
+        `);
+      }
+      return `
+        <ul class="review-row-actions" aria-label="Actions for ${escapeAttribute(job.job_id)}">
+          ${actions.join('')}
+        </ul>
+      `;
     }
 
     function renderPagination(pagination) {
@@ -535,32 +559,7 @@
       }
     }
 
-    async function stopJob(jobId, button) {
-      if (!window.confirm(`Stop job ${jobId}?`)) return;
-
-      button.disabled = true;
-      button.setAttribute('aria-disabled', 'true');
-      button.innerHTML = `Stopping<span class="govuk-visually-hidden"> job ${escapeHtml(jobId)}</span>`;
-
-      try {
-        await fetchJson(`/ontology/jobs/${encodeURIComponent(jobId)}/stop`, { method: 'POST' });
-        M.toast({ html: `Job ${escapeHtml(jobId)} stopped` });
-        fetchReviewJobs();
-      } catch (err) {
-        M.toast({ html: `Could not stop job: ${escapeHtml(err.message)}` });
-        button.disabled = false;
-        button.removeAttribute('aria-disabled');
-        button.innerHTML = `Stop job<span class="govuk-visually-hidden"> ${escapeHtml(jobId)}</span>`;
-      }
-    }
-
     jobsTbody.addEventListener('click', async event => {
-      const stopButton = event.target.closest('.stop-job-action');
-      if (stopButton) {
-        stopJob(stopButton.dataset.jobId, stopButton);
-        return;
-      }
-
       const tabButton = event.target.closest('.review-detail-tab');
       if (tabButton) {
         selectedDetailSection = tabButton.dataset.detailSection;
@@ -573,6 +572,10 @@
         selectedJobId = openNotesButton.dataset.jobId;
         selectedDetailSection = 'notes';
         loadSelectedJobData(selectedJobId);
+        return;
+      }
+
+      if (event.target.closest('a.review-row-action-link')) {
         return;
       }
 
@@ -717,6 +720,7 @@
   .review-sort-button:focus,
   .review-detail-tab:focus,
   .review-row-action:focus,
+  .review-row-action-link:focus,
   .review-note-icon-button:focus,
   .review-pagination .govuk-pagination__link:focus {
       outline: 3px solid #ffdd00;
@@ -840,11 +844,11 @@
   }
 
   .review-jobs-table th:nth-child(1) {
-      width: 25%;
+      width: 23%;
   }
 
   .review-jobs-table th:nth-child(2) {
-      width: 22%;
+      width: 20%;
   }
 
   .review-jobs-table th:nth-child(3) {
@@ -860,12 +864,12 @@
   }
 
   .review-jobs-table th:nth-child(6) {
-      width: 14%;
+      width: 18%;
   }
 
   .review-jobs-table th:nth-child(6),
   .review-jobs-table td:nth-child(6) {
-      min-width: 120px;
+      min-width: 180px;
   }
 
   .review-job-row {
@@ -1047,15 +1051,36 @@
       flex-wrap: wrap;
       align-items: center;
       gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
   }
 
-  .review-row-action {
-      min-height: 34px;
+  .review-row-actions__item {
       margin: 0;
-      padding: 6px 10px;
+      padding: 0;
+  }
+
+  .review-row-action-link {
+      border: 0;
+      background: transparent;
+      color: #1d70b8;
+      cursor: pointer;
+      font-family: inherit;
       font-size: 15px;
-      line-height: 1.2;
+      line-height: 1.35;
+      margin: 0;
+      padding: 0;
+      text-align: left;
+      text-decoration: underline;
+      text-decoration-thickness: max(1px, .0625rem);
+      text-underline-offset: .1578em;
       white-space: nowrap;
+  }
+
+  .review-row-action-link:hover {
+      color: #003078;
+      text-decoration-thickness: max(3px, .1875rem, .12em);
   }
 
   .review-inline-notes {
