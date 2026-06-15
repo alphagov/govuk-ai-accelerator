@@ -105,9 +105,11 @@ def test_historical_jobs_uses_review_action_set():
     assert "open-notes-action" in html
     assert "download-ontology-action" in html
     assert "visualise-job-action" in html
-    assert "review-row-action-button" in html
-    assert "review-row-action-link" not in html
-    assert 'Download<span class="govuk-visually-hidden"> ontology' in html
+    assert "review-row-action-link" in html
+    assert "review-row-action-button" not in html
+    assert html.index("open-notes-action") < html.index("download-ontology-action")
+    assert html.index("download-ontology-action") < html.index("visualise-job-action")
+    assert 'Download TTL<span class="govuk-visually-hidden">' in html
     assert "review-job-actions" not in html
     assert "btn-small red darken-1 stop-job-btn" not in html
 
@@ -1161,7 +1163,7 @@ def test_jobs_page_renders_expanded_review_context_sections():
     assert "Visualise" in html
     assert 'target="_blank"' in html
     assert 'rel="noopener noreferrer"' in html
-    assert "Download ontology" in html
+    assert "Download TTL" in html
     assert "job.ontology_download_url" in html
     assert "job.visualize_url" in html
     assert "renderStopAction" not in html
@@ -1244,16 +1246,16 @@ def test_jobs_page_uses_gds_tags_and_notes_modal_controls():
     assert "chat_bubble_outline" not in html
 
 
-def test_jobs_page_styles_note_actions_as_compact_icon_buttons():
+def test_jobs_page_styles_note_actions_as_gds_text_actions():
     response = _client().get("/ontology/review-ontologies")
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert "width: 32px;" in html
-    assert "height: 32px;" in html
-    assert "border: 1px solid #b1b4b6;" in html
-    assert "background: #ffffff;" in html
-    assert "line-height: 1;" in html
+    assert "review-note-action-link edit-inline-note-action" in html
+    assert "review-note-action-link review-note-action-link--destructive delete-inline-note-action" in html
+    assert ">Edit</button>" in html
+    assert ">Delete</button>" in html
+    assert "review-note-icon-button" not in html
 
 
 def test_left_sidebar_is_removed():
