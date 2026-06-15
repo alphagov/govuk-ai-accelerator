@@ -1,17 +1,20 @@
 """GOV.UK AI Accelerator Flask Application."""
 
 import os
+import io
 import json
+import zipfile
 import uvicorn
 import yaml
 import boto3
 from pathlib import Path
 from uuid import uuid4
 from datetime import datetime, timezone
+from urllib.parse import quote, urlparse
 from flask import Flask, request, jsonify, render_template, Blueprint, Response, redirect
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, upgrade
-from sqlalchemy import DateTime, Integer, String
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func, or_
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.exc import OperationalError
 from starlette.applications import Starlette
@@ -75,6 +78,26 @@ class ProcessingJob(db.Model):
     )
 
 
+class ProcessingJobNote(db.Model):
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    job_id: Mapped[str] = mapped_column(
+        String,
+        ForeignKey("processing_job.id"),
+        nullable=False,
+        index=True,
+    )
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
 def _serialize_job_datetime(value: datetime | None) -> str | None:
     """Return job datetimes as explicit UTC instants for browser parsing."""
     if value is None:
@@ -84,6 +107,369 @@ def _serialize_job_datetime(value: datetime | None) -> str | None:
     else:
         value = value.astimezone(timezone.utc)
     return value.isoformat().replace("+00:00", "Z")
+
+
+def _parse_note_datetime(value: str | None) -> datetime:
+    if not value:
+        return datetime.now(timezone.utc)
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return datetime.now(timezone.utc)
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _serialize_job_note(note: ProcessingJobNote) -> dict:
+    return {
+        "id": note.id,
+        "job_id": note.job_id,
+        "text": note.text,
+        "created_at": _serialize_job_datetime(note.created_at),
+        "updated_at": _serialize_job_datetime(note.updated_at),
+    }
+
+
+def _note_metadata_for_jobs(job_ids: list[str]) -> dict[str, dict]:
+    metadata = {
+        job_id: {"notes_count": 0, "latest_note": None}
+        for job_id in job_ids
+    }
+    if not job_ids:
+        return metadata
+
+    notes = (
+        db.session.query(ProcessingJobNote)
+        .filter(ProcessingJobNote.job_id.in_(job_ids))
+        .order_by(ProcessingJobNote.created_at.asc(), ProcessingJobNote.id.asc())
+        .all()
+    )
+    for note in notes:
+        metadata[note.job_id]["notes_count"] += 1
+        metadata[note.job_id]["latest_note"] = _serialize_job_note(note)
+    return metadata
+
+
+def _serialize_job(job: ProcessingJob, note_metadata: dict[str, dict] | None = None) -> dict:
+    metadata = (note_metadata or {}).get(job.id, {"notes_count": 0, "latest_note": None})
+    return {
+        "job_id": job.id,
+        "pipeline": job.pipeline,
+        "domain": job.domain,
+        "status": job.status,
+        "job_runs": job.job_runs,
+        "error": job.error_message,
+        "created_at": _serialize_job_datetime(job.created_at),
+        "notes_count": metadata["notes_count"],
+        "latest_note": metadata["latest_note"],
+    }
+
+
+def _legacy_notes_key(job: ProcessingJob) -> str | None:
+    if job.job_runs and job.domain:
+        return f"{job.domain}/{job.job_runs}/notes.json"
+    return None
+
+
+def _read_legacy_s3_notes(job: ProcessingJob) -> list[dict]:
+    key = _legacy_notes_key(job)
+    if not key:
+        return []
+
+    s3_client = boto3.client("s3")
+    try:
+        response = s3_client.get_object(
+            Bucket="govuk-ai-accelerator-data-integration",
+            Key=key,
+        )
+        raw_notes = response["Body"].read().decode("utf-8")
+        notes = json.loads(raw_notes)
+    except Exception as exc:
+        current_app.logger.info("No legacy notes imported for %s: %s", job.id, exc)
+        return []
+
+    if not isinstance(notes, list):
+        return []
+    return [note for note in notes if isinstance(note, dict) and str(note.get("text", "")).strip()]
+
+
+def _import_legacy_notes_if_empty(job: ProcessingJob) -> None:
+    existing_count = (
+        db.session.query(ProcessingJobNote)
+        .filter(ProcessingJobNote.job_id == job.id)
+        .count()
+    )
+    if existing_count:
+        return
+
+    for legacy_note in _read_legacy_s3_notes(job):
+        created_at = _parse_note_datetime(
+            legacy_note.get("created_at") or legacy_note.get("timestamp")
+        )
+        db.session.add(
+            ProcessingJobNote(
+                job_id=job.id,
+                text=str(legacy_note["text"]).strip(),
+                created_at=created_at,
+                updated_at=created_at,
+            )
+        )
+    db.session.commit()
+
+
+def _notes_for_job(job: ProcessingJob) -> list[ProcessingJobNote]:
+    _import_legacy_notes_if_empty(job)
+    return (
+        db.session.query(ProcessingJobNote)
+        .filter(ProcessingJobNote.job_id == job.id)
+        .order_by(ProcessingJobNote.created_at.asc(), ProcessingJobNote.id.asc())
+        .all()
+    )
+
+
+def _note_text_from_payload(payload: dict | None) -> str | None:
+    if not isinstance(payload, dict):
+        return None
+    text = str(payload.get("text", "")).strip()
+    return text or None
+
+
+def _default_bucket_name() -> str:
+    return os.getenv("S3_BUCKET_NAME", DEFAULT_S3_BUCKET)
+
+
+def _quoted_download_url(bucket_name: str, key: str) -> str:
+    return f"/viewer/bucket/download/buckets/{quote(bucket_name)}/{quote(key, safe='/')}"
+
+
+def _folder_download_url(job_id: str, bucket_name: str, prefix: str) -> str:
+    return (
+        f"/ontology/jobs/{quote(job_id)}/downloads/folder"
+        f"?bucket={quote(bucket_name)}&prefix={quote(prefix, safe='')}"
+    )
+
+
+def _artifact_row(
+    name: str,
+    download_url: str,
+    kind: str = "file",
+    size: int | None = None,
+) -> dict:
+    return {
+        "name": name,
+        "kind": kind,
+        "size": size,
+        "action": "download",
+        "download_url": download_url,
+    }
+
+
+def _normalise_prefix(prefix: str) -> str:
+    return prefix if prefix.endswith("/") else f"{prefix}/"
+
+
+def _parse_s3_uri(uri: str | None) -> tuple[str, str] | None:
+    if not uri:
+        return None
+    parsed = urlparse(uri)
+    if parsed.scheme != "s3" or not parsed.netloc:
+        return None
+    return parsed.netloc, _normalise_prefix(parsed.path.lstrip("/"))
+
+
+def _job_config(job: ProcessingJob) -> dict:
+    if not job.config_data:
+        return {}
+    try:
+        config_data = json.loads(job.config_data)
+    except json.JSONDecodeError:
+        return {}
+    return config_data if isinstance(config_data, dict) else {}
+
+
+def _list_s3_objects(s3_client, bucket_name: str, prefix: str) -> list[dict]:
+    paginator = s3_client.get_paginator("list_objects_v2")
+    objects = []
+    for page in paginator.paginate(Bucket=bucket_name, Prefix=prefix):
+        objects.extend(
+            item
+            for item in page.get("Contents", [])
+            if not str(item.get("Key", "")).endswith("/")
+        )
+    return objects
+
+
+def _add_folder_artifact(
+    groups: dict[str, list[dict]],
+    seen_folders: set[tuple[str, str, str]],
+    group_name: str,
+    job_id: str,
+    bucket_name: str,
+    prefix: str,
+    label: str,
+) -> None:
+    key = (group_name, bucket_name, prefix)
+    if key in seen_folders:
+        return
+    seen_folders.add(key)
+    groups[group_name].append(
+        _artifact_row(
+            label,
+            _folder_download_url(job_id, bucket_name, prefix),
+            kind="folder",
+        )
+    )
+
+
+def _add_run_artifact(
+    groups: dict[str, list[dict]],
+    seen_folders: set[tuple[str, str, str]],
+    job: ProcessingJob,
+    bucket_name: str,
+    run_prefix: str,
+    item: dict,
+) -> None:
+    key = str(item["Key"])
+    relative_path = key.removeprefix(run_prefix)
+    if not relative_path:
+        return
+
+    if relative_path.startswith("output/"):
+        output_path = relative_path.removeprefix("output/")
+        parts = output_path.split("/")
+        if len(parts) > 1:
+            folder_name = parts[0]
+            _add_folder_artifact(
+                groups,
+                seen_folders,
+                "intermediary_files",
+                job.id,
+                bucket_name,
+                f"{run_prefix}output/{folder_name}/",
+                folder_name,
+            )
+            return
+
+        file_name = parts[0]
+        if file_name in {"graph.json", "ontology.ttl", "schema.json"}:
+            group_name = "ontology_files"
+        elif file_name in {"regression_report.json", "owl_ontology_metrics.csv"}:
+            group_name = "reports"
+        else:
+            group_name = "intermediary_files"
+        groups[group_name].append(
+            _artifact_row(
+                file_name,
+                _quoted_download_url(bucket_name, key),
+                size=item.get("Size"),
+            )
+        )
+        return
+
+    parts = relative_path.split("/")
+    if len(parts) > 1:
+        folder_name = parts[0]
+        _add_folder_artifact(
+            groups,
+            seen_folders,
+            "intermediary_files",
+            job.id,
+            bucket_name,
+            f"{run_prefix}{folder_name}/",
+            folder_name,
+        )
+        return
+
+    groups["intermediary_files"].append(
+        _artifact_row(
+            relative_path,
+            _quoted_download_url(bucket_name, key),
+            size=item.get("Size"),
+        )
+    )
+
+
+def _add_input_artifacts(
+    groups: dict[str, list[dict]],
+    seen_folders: set[tuple[str, str, str]],
+    job: ProcessingJob,
+    s3_client,
+) -> None:
+    config_data = _job_config(job)
+    path_config = config_data.get("path") if isinstance(config_data.get("path"), dict) else {}
+    input_location = _parse_s3_uri(path_config.get("input_path"))
+    if not input_location:
+        return
+
+    bucket_name, input_prefix = input_location
+    for item in _list_s3_objects(s3_client, bucket_name, input_prefix):
+        key = str(item["Key"])
+        relative_path = key.removeprefix(input_prefix)
+        if not relative_path:
+            continue
+        parts = relative_path.split("/")
+        if len(parts) > 1:
+            _add_folder_artifact(
+                groups,
+                seen_folders,
+                "intermediary_files",
+                job.id,
+                bucket_name,
+                f"{input_prefix}{parts[0]}/",
+                f"input/{parts[0]}",
+            )
+            continue
+        groups["intermediary_files"].append(
+            _artifact_row(
+                f"input/{relative_path}",
+                _quoted_download_url(bucket_name, key),
+                size=item.get("Size"),
+            )
+        )
+
+
+def _job_artifact_groups(job: ProcessingJob) -> dict[str, list[dict]]:
+    groups = {"ontology_files": [], "intermediary_files": [], "reports": []}
+    seen_folders: set[tuple[str, str, str]] = set()
+
+    if job.config_data:
+        groups["intermediary_files"].append(
+            _artifact_row(
+                "Submitted config.yaml",
+                f"/ontology/jobs/{quote(job.id)}/downloads/config.yaml",
+            )
+        )
+    if job.domain_prompt is not None:
+        groups["intermediary_files"].append(
+            _artifact_row(
+                "Prompt used",
+                f"/ontology/jobs/{quote(job.id)}/downloads/prompt.txt",
+            )
+        )
+
+    if job.domain and job.job_runs:
+        s3_client = boto3.client("s3")
+        bucket_name = _default_bucket_name()
+        run_prefix = _normalise_prefix(f"{job.domain}/{job.job_runs}")
+        for item in _list_s3_objects(s3_client, bucket_name, run_prefix):
+            _add_run_artifact(groups, seen_folders, job, bucket_name, run_prefix, item)
+        _add_input_artifacts(groups, seen_folders, job, s3_client)
+
+    return groups
+
+
+def _allowed_download_prefixes(job: ProcessingJob) -> set[tuple[str, str]]:
+    allowed: set[tuple[str, str]] = set()
+    if job.domain and job.job_runs:
+        allowed.add((_default_bucket_name(), _normalise_prefix(f"{job.domain}/{job.job_runs}")))
+
+    config_data = _job_config(job)
+    path_config = config_data.get("path") if isinstance(config_data.get("path"), dict) else {}
+    input_location = _parse_s3_uri(path_config.get("input_path"))
+    if input_location:
+        allowed.add(input_location)
+    return allowed
 
 
 def _apply_selected_domain_to_config(config_data: dict, selected_domain: str | None) -> dict:
@@ -295,19 +681,81 @@ def create_blueprints():
             query = query.limit(limit)
 
         jobs = query.all()
-        job_list = [
-            {
-                "job_id": job.id,
-                "pipeline": job.pipeline,
-                "domain": job.domain,
-                "status": job.status,
-                "job_runs": job.job_runs,
-                "error": job.error_message,
-                "created_at": _serialize_job_datetime(job.created_at),
-            }
-            for job in jobs
-        ]
+        note_metadata = _note_metadata_for_jobs([job.id for job in jobs])
+        job_list = [_serialize_job(job, note_metadata) for job in jobs]
         return jsonify(job_list)
+
+    @ontology_bp.route('/jobs/review', methods=['GET'])
+    def review_jobs():
+        today_start = datetime(2026, 3, 13, tzinfo=timezone.utc)
+        job_type = request.args.get("type", "ontology")
+        page = max(request.args.get("page", default=1, type=int) or 1, 1)
+        per_page = request.args.get("per_page", default=10, type=int) or 10
+        per_page = min(max(per_page, 1), 50)
+        search = (request.args.get("search") or "").strip()
+        sort_key = request.args.get("sort", "created_at")
+        sort_direction = request.args.get("direction", "desc")
+
+        query = db.session.query(ProcessingJob).filter(ProcessingJob.created_at >= today_start)
+        if job_type == "test":
+            query = query.filter(ProcessingJob.pipeline == "ontology-harness")
+        else:
+            query = query.filter(
+                or_(
+                    ProcessingJob.pipeline.is_(None),
+                    ProcessingJob.pipeline == "ontology",
+                )
+            )
+
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(
+                or_(
+                    ProcessingJob.id.ilike(search_term),
+                    ProcessingJob.job_runs.ilike(search_term),
+                    ProcessingJob.domain.ilike(search_term),
+                    ProcessingJob.status.ilike(search_term),
+                    ProcessingJob.pipeline.ilike(search_term),
+                )
+            )
+
+        sort_expressions = {
+            "ontology": func.coalesce(ProcessingJob.job_runs, ProcessingJob.id),
+            "domain": ProcessingJob.domain,
+            "created_at": ProcessingJob.created_at,
+            "status": ProcessingJob.status,
+            "type": ProcessingJob.pipeline,
+        }
+        sort_expression = sort_expressions.get(sort_key, ProcessingJob.created_at)
+        order_expression = (
+            sort_expression.asc()
+            if sort_direction == "asc"
+            else sort_expression.desc()
+        )
+
+        total_items = query.count()
+        jobs = (
+            query.order_by(order_expression, ProcessingJob.id.asc())
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+            .all()
+        )
+        total_pages = (total_items + per_page - 1) // per_page if total_items else 0
+        note_metadata = _note_metadata_for_jobs([job.id for job in jobs])
+
+        return jsonify(
+            {
+                "jobs": [_serialize_job(job, note_metadata) for job in jobs],
+                "pagination": {
+                    "page": page,
+                    "per_page": per_page,
+                    "total_items": total_items,
+                    "total_pages": total_pages,
+                    "has_next": page < total_pages,
+                    "has_previous": page > 1 and total_pages > 0,
+                },
+            }
+        )
 
     @ontology_bp.route('/jobs/<job_id>/stop', methods=['POST'])
     def stop_job(job_id):
@@ -334,24 +782,7 @@ def create_blueprints():
         if job is None:
             return error_response("Job not found", 404)
 
-        bucket_name = 'govuk-ai-accelerator-data-integration'
-        if job.job_runs and job.domain:
-            key = f"{job.domain}/{job.job_runs}/notes.json"
-        elif job.domain:
-            key = f"{job.domain}/pending-notes/{job.id}.json"
-        else:
-            return jsonify([])
-
-        s3_client = boto3.client("s3")
-        try:
-            response = s3_client.get_object(Bucket=bucket_name, Key=key)
-            notes_data = response['Body'].read().decode('utf-8')
-            return Response(notes_data, mimetype='application/json')
-        except s3_client.exceptions.NoSuchKey:
-            return jsonify([])
-        except Exception as e:
-            current_app.logger.error("Error reading notes from S3: %s", e)
-            return jsonify([])
+        return jsonify([_serialize_job_note(note) for note in _notes_for_job(job)])
 
     @ontology_bp.route('/jobs/<job_id>/notes', methods=['POST'])
     def save_job_notes(job_id):
@@ -359,36 +790,153 @@ def create_blueprints():
         if job is None:
             return error_response("Job not found", 404)
 
-        bucket_name = 'govuk-ai-accelerator-data-integration'
-        if job.job_runs and job.domain:
-            key = f"{job.domain}/{job.job_runs}/notes.json"
-        elif job.domain:
-            key = f"{job.domain}/pending-notes/{job.id}.json"
-        else:
-            return error_response("Domain not specified for job", 400)
+        payload = request.get_json(silent=True)
+        if isinstance(payload, list):
+            db.session.query(ProcessingJobNote).filter(
+                ProcessingJobNote.job_id == job.id
+            ).delete()
+            for note_payload in payload:
+                text = _note_text_from_payload(note_payload)
+                if not text:
+                    continue
+                created_at = _parse_note_datetime(
+                    note_payload.get("created_at") or note_payload.get("timestamp")
+                )
+                db.session.add(
+                    ProcessingJobNote(
+                        job_id=job.id,
+                        text=text,
+                        created_at=created_at,
+                        updated_at=created_at,
+                    )
+                )
+            db.session.commit()
+            return jsonify(
+                {
+                    "status": "success",
+                    "notes": [_serialize_job_note(note) for note in _notes_for_job(job)],
+                }
+            )
 
-        notes_json = request.get_data(as_text=True)
-        try:
-            json.loads(notes_json)
-        except json.JSONDecodeError:
-            return error_response("Invalid JSON payload", 400)
+        text = _note_text_from_payload(payload)
+        if not text:
+            return error_response("Note text is required", 400)
+
+        note = ProcessingJobNote(job_id=job.id, text=text)
+        db.session.add(note)
+        db.session.commit()
+        return jsonify(_serialize_job_note(note)), 201
+
+    @ontology_bp.route('/jobs/<job_id>/notes/<int:note_id>', methods=['PATCH'])
+    def update_job_note(job_id, note_id):
+        job = db.session.get(ProcessingJob, job_id)
+        if job is None:
+            return error_response("Job not found", 404)
+
+        note = db.session.get(ProcessingJobNote, note_id)
+        if note is None or note.job_id != job.id:
+            return error_response("Note not found", 404)
+
+        text = _note_text_from_payload(request.get_json(silent=True))
+        if not text:
+            return error_response("Note text is required", 400)
+
+        note.text = text
+        note.updated_at = datetime.now(timezone.utc)
+        db.session.commit()
+        return jsonify(_serialize_job_note(note))
+
+    @ontology_bp.route('/jobs/<job_id>/notes/<int:note_id>', methods=['DELETE'])
+    def delete_job_note(job_id, note_id):
+        job = db.session.get(ProcessingJob, job_id)
+        if job is None:
+            return error_response("Job not found", 404)
+
+        note = db.session.get(ProcessingJobNote, note_id)
+        if note is None or note.job_id != job.id:
+            return error_response("Note not found", 404)
+
+        db.session.delete(note)
+        db.session.commit()
+        return Response(status=204)
+
+    @ontology_bp.route('/jobs/<job_id>/artifacts', methods=['GET'])
+    def job_artifacts(job_id):
+        job = db.session.get(ProcessingJob, job_id)
+        if job is None:
+            return error_response("Job not found", 404)
+        return jsonify({"job_id": job.id, "groups": _job_artifact_groups(job)})
+
+    @ontology_bp.route('/jobs/<job_id>/downloads/<path:artifact_name>', methods=['GET'])
+    def download_job_virtual_artifact(job_id, artifact_name):
+        job = db.session.get(ProcessingJob, job_id)
+        if job is None:
+            return error_response("Job not found", 404)
+
+        if artifact_name == "config.yaml":
+            body = yaml.safe_dump(_job_config(job), sort_keys=False)
+            return Response(
+                body,
+                mimetype="application/x-yaml",
+                headers={"Content-Disposition": "attachment; filename=config.yaml"},
+            )
+
+        if artifact_name == "prompt.txt":
+            return Response(
+                job.domain_prompt or "",
+                mimetype="text/plain",
+                headers={"Content-Disposition": "attachment; filename=prompt.txt"},
+            )
+
+        return error_response("Artifact not found", 404)
+
+    @ontology_bp.route('/jobs/<job_id>/downloads/folder', methods=['GET'])
+    def download_job_folder(job_id):
+        job = db.session.get(ProcessingJob, job_id)
+        if job is None:
+            return error_response("Job not found", 404)
+
+        bucket_name = request.args.get("bucket") or ""
+        prefix = request.args.get("prefix") or ""
+        allowed = _allowed_download_prefixes(job)
+        if not any(bucket_name == bucket and prefix.startswith(allowed_prefix) for bucket, allowed_prefix in allowed):
+            return error_response("Folder is not available for this job", 403)
 
         s3_client = boto3.client("s3")
-        try:
-            s3_client.put_object(
-                Bucket=bucket_name,
-                Key=key,
-                Body=notes_json.encode('utf-8'),
-                ContentType='application/json'
-            )
-            return jsonify({"status": "success", "key": key})
-        except Exception as e:
-            current_app.logger.error("Error saving notes to S3: %s", e)
-            return error_response(f"Failed to save notes to S3: {str(e)}", 500)
+        archive_bytes = io.BytesIO()
+        with zipfile.ZipFile(archive_bytes, "w", zipfile.ZIP_DEFLATED) as archive:
+            for item in _list_s3_objects(s3_client, bucket_name, prefix):
+                key = str(item["Key"])
+                response = s3_client.get_object(Bucket=bucket_name, Key=key)
+                archive_name = key.removeprefix(prefix) or key.rsplit("/", 1)[-1]
+                archive.writestr(archive_name, response["Body"].read())
+
+        folder_name = prefix.rstrip("/").rsplit("/", 1)[-1] or "files"
+        return Response(
+            archive_bytes.getvalue(),
+            mimetype="application/zip",
+            headers={"Content-Disposition": f"attachment; filename={folder_name}.zip"},
+        )
 
     @ontology_bp.route('/review-ontologies', methods=['GET'])
     def review_ontologies():
-        return render_template('jobs.html', active_page='jobs')
+        return render_template(
+            'jobs.html',
+            active_page='jobs',
+            review_job_type='ontology',
+            review_page_title='Review Ontologies',
+            review_page_description='View historical ontology runs, generated artefacts, and review notes.',
+        )
+
+    @ontology_bp.route('/review-tests', methods=['GET'])
+    def review_tests():
+        return render_template(
+            'jobs.html',
+            active_page='tests',
+            review_job_type='test',
+            review_page_title='Review Tests',
+            review_page_description='View ontology harness test runs, regression reports, and review notes.',
+        )
 
     @ontology_bp.route('/all_jobs', methods=['GET'])
     def all_jobs():
