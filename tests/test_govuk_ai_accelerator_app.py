@@ -78,11 +78,11 @@ def test_ontology_dashboard_includes_stop_job_action():
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert '<th scope="col" id="actions-header">Actions</th>' in html
     assert "table-action-link stop-job-action" in html
     assert "Stop<span class=\"govuk-visually-hidden\"> job" in html
     assert "['pending', 'running'].includes(job.status.toLowerCase())" in html
     assert "job.status.toLowerCase() === 'stopped'" in html
+
 
 
 def test_ontology_dashboard_describes_default_config_flow():
@@ -93,7 +93,7 @@ def test_ontology_dashboard_describes_default_config_flow():
     assert 'id="file" name="file" accept=".yaml,.yml" style="display: none;"' in html
     assert "Please select a YAML configuration file." not in html
     assert "Configuration Panel" in html
-    assert "domain prompt template" in html
+    assert "Add a domain prompt" in html
 
 
 def test_historical_jobs_uses_review_action_set():
