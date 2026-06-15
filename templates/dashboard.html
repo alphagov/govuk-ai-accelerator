@@ -2301,16 +2301,15 @@
                         actionsHtml = `<button type="button" class="table-action-link stop-job-action" data-job-id="${job.job_id}">Stop<span class="govuk-visually-hidden"> job ${job.job_id}</span></button>`;
                     }
 
-                    // Retrieve existing notes
-                    const notes = getJobNotes(job.job_id);
-                    const noteIcon = notes.length > 0 ? 'rate_review' : 'chat_bubble_outline';
-                    const noteColor = notes.length > 0 ? '#1d70b8' : '#b0bec5';
+                    const notesCount = Number(job.notes_count || 0);
+                    const latestNote = job.latest_note && job.latest_note.text ? job.latest_note.text : '';
+                    const noteIcon = notesCount > 0 ? 'rate_review' : 'chat_bubble_outline';
+                    const noteColor = notesCount > 0 ? '#1d70b8' : '#b0bec5';
                     
                     let noteTooltip = 'Add a note';
-                    if (notes.length > 0) {
-                        const countText = notes.length === 1 ? '1 note' : `${notes.length} notes`;
-                        const latestText = notes[notes.length - 1].text;
-                        noteTooltip = `${countText}. Latest: "${latestText.substring(0, 50)}${latestText.length > 50 ? '...' : ''}"`;
+                    if (notesCount > 0) {
+                        const countText = notesCount === 1 ? '1 note' : `${notesCount} notes`;
+                        noteTooltip = `${countText}. Latest: "${latestNote.substring(0, 50)}${latestNote.length > 50 ? '...' : ''}"`;
                     }
 
                     const noteBtnHtml = `
@@ -2333,7 +2332,6 @@
                       <td style="vertical-align: middle;">${noteBtnHtml}</td>
                     `;
                     jobsTbody.appendChild(tr);
-                    syncNotesFromS3(job.job_id);
                 });
                 M.Tooltip.init(document.querySelectorAll('.tooltipped'));
             }
