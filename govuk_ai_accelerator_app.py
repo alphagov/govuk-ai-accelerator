@@ -291,6 +291,12 @@ def _visualizer_run_url(job: ProcessingJob) -> str | None:
     local_output_dir = _parse_local_path(path_config.get("output_dir"))
     if local_output_dir and (local_output_dir / "graph.json").is_file():
         return f"/visualizer/?run={quote(f'{job.domain}/{job.id}', safe='/')}"
+    if (
+        job.pipeline == "ontology-harness"
+        and local_output_dir
+        and (local_output_dir / "ontology.ttl").is_file()
+    ):
+        return f"/visualizer/?run={quote(f'{job.domain}/{job.id}', safe='/')}"
 
     return None
 
