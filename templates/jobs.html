@@ -28,48 +28,48 @@
 <div class="review-jobs-page govuk-width-container">
   <div class="review-jobs-header">
     <div>
-      <h2>{{ review_page_title }}</h2>
-      <p>{{ review_page_description }}</p>
+      <h1 class="govuk-heading-l">{{ review_page_title }}</h1>
+      <p class="govuk-body">{{ review_page_description }}</p>
     </div>
   </div>
 
-  <div class="review-search-bar">
+  <div class="govuk-form-group">
     <label class="govuk-label govuk-visually-hidden" for="jobs-search">Search historical jobs</label>
-    <div class="review-search-input-wrapper">
+    <div>
       <input class="govuk-input" id="jobs-search" type="search" placeholder="Search ontology, domain, or status...">
     </div>
   </div>
 
   <div class="review-table-container">
-    <table class="review-jobs-table" id="jobs-table">
+    <table class="govuk-table review-jobs-table" id="jobs-table">
       <caption class="govuk-visually-hidden">Historical jobs</caption>
       <thead>
-        <tr>
-          <th scope="col" aria-sort="none">
+        <tr class="govuk-table__row">
+          <th scope="col" class="govuk-table__header" aria-sort="none">
             <button type="button" class="review-sort-button" data-sort-key="ontology">
               <span>Ontology</span>
             </button>
           </th>
-          <th scope="col" aria-sort="none">
+          <th scope="col" class="govuk-table__header" aria-sort="none">
             <button type="button" class="review-sort-button" data-sort-key="domain">
               <span>Domain</span>
             </button>
           </th>
-          <th scope="col" aria-sort="descending">
+          <th scope="col" class="govuk-table__header" aria-sort="descending">
             <button type="button" class="review-sort-button" data-sort-key="created_at">
-              <span>Created At</span>
+              <span>Created at</span>
             </button>
           </th>
-          <th scope="col" aria-sort="none">
+          <th scope="col" class="govuk-table__header" aria-sort="none">
             <button type="button" class="review-sort-button" data-sort-key="status">
               <span>Status</span>
             </button>
           </th>
-          <th scope="col"><span>Actions</span></th>
+          <th scope="col" class="govuk-table__header"><span>Actions</span></th>
         </tr>
       </thead>
       <tbody id="jobs-tbody">
-        <tr><td colspan="5" class="review-table-empty">Loading jobs...</td></tr>
+        <tr class="govuk-table__row"><td colspan="5" class="govuk-table__cell review-table-empty">Loading jobs...</td></tr>
       </tbody>
     </table>
   </div>
@@ -203,7 +203,7 @@
         renderCurrentJobs();
         renderPagination(currentPagination);
       } catch (err) {
-        jobsTbody.innerHTML = `<tr><td colspan="5" class="review-table-empty red-text">Error fetching jobs: ${escapeHtml(err.message)}</td></tr>`;
+        jobsTbody.innerHTML = `<tr class="govuk-table__row"><td colspan="5" class="govuk-table__cell review-table-empty">Error fetching jobs: ${escapeHtml(err.message)}</td></tr>`;
         paginationContainer.innerHTML = '';
       }
     }
@@ -229,7 +229,7 @@
       updateSortIndicators();
 
       if (!jobs.length) {
-        jobsTbody.innerHTML = '<tr><td colspan="5" class="review-table-empty">No jobs found.</td></tr>';
+        jobsTbody.innerHTML = '<tr class="govuk-table__row"><td colspan="5" class="govuk-table__cell review-table-empty">No jobs found.</td></tr>';
         return;
       }
 
@@ -242,23 +242,23 @@
         const notesLabel = notesCount > 0 ? `Notes (${notesCount})` : 'Add note';
 
         const tr = document.createElement('tr');
-        tr.className = `review-job-row${isSelected ? ' is-selected' : ''}`;
+        tr.className = `govuk-table__row review-job-row${isSelected ? ' is-selected' : ''}`;
         tr.dataset.jobId = job.job_id;
         tr.tabIndex = 0;
         tr.setAttribute('aria-expanded', isSelected ? 'true' : 'false');
         tr.innerHTML = `
-          <td>
+          <td class="govuk-table__cell">
             <span class="review-job-label" title="${escapeAttribute(job.job_runs || job.job_id)}">
               <strong>${escapeHtml(formatOntologyLabel(job))}</strong>
-              <span class="review-job-id" title="${escapeAttribute(job.job_id)}">${escapeHtml(formatJobIdLabel(job.job_id))}</span>
+              <span class="govuk-body-s review-job-id" title="${escapeAttribute(job.job_id)}">${escapeHtml(formatJobIdLabel(job.job_id))}</span>
             </span>
           </td>
-          <td>${escapeHtml(domainStr)}</td>
-          <td>${formatDateTime(job.created_at)}</td>
-          <td>
-            <span class="govuk-tag review-tag govuk-tag--${statusTagModifier(status)}">${escapeHtml(jobStatusLabel(job))}</span>
+          <td class="govuk-table__cell">${escapeHtml(domainStr)}</td>
+          <td class="govuk-table__cell">${formatDateTime(job.created_at)}</td>
+          <td class="govuk-table__cell">
+            <span class="govuk-tag govuk-tag--${statusTagModifier(status)}">${escapeHtml(jobStatusLabel(job))}</span>
           </td>
-          <td>
+          <td class="govuk-table__cell">
             ${renderJobActions(job, notesLabel)}
           </td>
         `;
@@ -266,8 +266,8 @@
 
         if (isSelected) {
           const detailTr = document.createElement('tr');
-          detailTr.className = 'review-detail-row';
-          detailTr.innerHTML = `<td colspan="5">${renderJobDetail(job)}</td>`;
+          detailTr.className = 'govuk-table__row review-detail-row';
+          detailTr.innerHTML = `<td class="govuk-table__cell" colspan="5">${renderJobDetail(job)}</td>`;
           jobsTbody.appendChild(detailTr);
         }
       });
@@ -277,7 +277,7 @@
       const actions = [];
       actions.push(`
         <li class="review-row-actions__item">
-          <button type="button" class="review-row-action-link open-notes-action" data-job-id="${escapeAttribute(job.job_id)}" aria-label="${escapeAttribute(notesLabel)} for this job">
+          <button type="button" class="govuk-link review-row-action-link open-notes-action" data-job-id="${escapeAttribute(job.job_id)}" aria-label="${escapeAttribute(notesLabel)} for this job">
             ${escapeHtml(notesLabel)}
           </button>
         </li>
@@ -285,7 +285,7 @@
       if (job.ontology_download_url) {
         actions.push(`
           <li class="review-row-actions__item">
-            <a class="review-row-action-link download-ontology-action" href="${escapeAttribute(job.ontology_download_url)}" download aria-label="Download TTL ${escapeAttribute(job.job_id)}">
+            <a class="govuk-link review-row-action-link download-ontology-action" href="${escapeAttribute(job.ontology_download_url)}" download aria-label="Download TTL ${escapeAttribute(job.job_id)}">
               Download TTL<span class="govuk-visually-hidden"> ${escapeHtml(job.job_id)}</span>
             </a>
           </li>
@@ -294,7 +294,7 @@
       if (job.visualize_url) {
         actions.push(`
           <li class="review-row-actions__item">
-            <a class="review-row-action-link visualise-job-action" href="${escapeAttribute(job.visualize_url)}" target="_blank" rel="noopener noreferrer">
+            <a class="govuk-link review-row-action-link visualise-job-action" href="${escapeAttribute(job.visualize_url)}" target="_blank" rel="noopener noreferrer">
               Visualise<span class="govuk-visually-hidden"> ${escapeHtml(job.job_id)}</span>
             </a>
           </li>
@@ -368,8 +368,8 @@
             ${renderDetailTab('notes', 'Notes')}
           </div>
           <div class="review-detail-panel">
-            ${state.loading ? '<p class="review-empty-state">Loading job details...</p>' : ''}
-            ${state.error ? `<p class="review-empty-state red-text">${escapeHtml(state.error)}</p>` : ''}
+            ${state.loading ? '<p class="govuk-body review-empty-state">Loading job details...</p>' : ''}
+            ${state.error ? `<p class="govuk-body review-empty-state">${escapeHtml(state.error)}</p>` : ''}
             ${!state.loading && selectedDetailSection === 'notes'
               ? renderInlineNotes(job, state.notes || [], state.editingNoteId)
               : !state.loading && selectedDetailSection === 'reports'
@@ -396,7 +396,7 @@
     function renderArtifactSection(title, artifacts) {
       return `
         <div class="review-detail-content">
-          <h3>${escapeHtml(title)}</h3>
+          <h2 class="govuk-heading-s">${escapeHtml(title)}</h2>
           ${renderArtifactRows(artifacts || [])}
         </div>
       `;
@@ -404,7 +404,7 @@
 
     function renderArtifactRows(artifacts) {
       if (!artifacts.length) {
-        return '<p class="review-empty-state">No downloadable files are available for this section.</p>';
+        return '<p class="govuk-body review-empty-state">No downloadable files are available for this section.</p>';
       }
       return `
         <div class="review-artifact-list">
@@ -448,14 +448,14 @@
     function renderInlineNotes(job, notes, editingNoteId) {
       return `
         <div class="review-detail-content">
-          <h3>Notes</h3>
+          <h2 class="govuk-heading-s">Notes</h2>
           <div class="review-inline-notes">
-            ${notes.length ? notes.map(note => renderNoteItem(job.job_id, note, editingNoteId)).join('') : '<p class="review-empty-state">No notes recorded for this run.</p>'}
+            ${notes.length ? notes.map(note => renderNoteItem(job.job_id, note, editingNoteId)).join('') : '<p class="govuk-body review-empty-state">No notes recorded for this run.</p>'}
           </div>
           <div class="review-inline-note-form">
             <label for="new-note-${escapeAttribute(job.job_id)}" class="govuk-label govuk-label--s">Add a note</label>
-            <textarea id="new-note-${escapeAttribute(job.job_id)}" class="govuk-textarea review-note-textarea" rows="4"></textarea>
-            <button type="button" class="govuk-button review-add-note-button add-inline-note-action" data-job-id="${escapeAttribute(job.job_id)}">
+            <textarea id="new-note-${escapeAttribute(job.job_id)}" class="govuk-textarea" rows="4"></textarea>
+            <button type="button" class="govuk-button add-inline-note-action" data-job-id="${escapeAttribute(job.job_id)}">
               Add note
             </button>
           </div>
@@ -469,10 +469,10 @@
         return `
           <div class="review-note-item">
             <label class="govuk-visually-hidden" for="edit-note-${note.id}">Edit note</label>
-            <textarea id="edit-note-${note.id}" class="govuk-textarea review-note-textarea" rows="3">${escapeHtml(note.text)}</textarea>
+            <textarea id="edit-note-${note.id}" class="govuk-textarea" rows="3">${escapeHtml(note.text)}</textarea>
             <div class="review-note-item__actions">
-              <button type="button" class="review-note-action-link save-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}">Save</button>
-              <button type="button" class="review-note-action-link cancel-inline-note-action" data-job-id="${escapeAttribute(jobId)}">Cancel</button>
+              <button type="button" class="govuk-link review-note-action-link save-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}">Save</button>
+              <button type="button" class="govuk-link review-note-action-link cancel-inline-note-action" data-job-id="${escapeAttribute(jobId)}">Cancel</button>
             </div>
           </div>
         `;
@@ -480,11 +480,11 @@
 
       return `
         <div class="review-note-item">
-          <div class="review-note-item__meta">${formatDateTime(note.created_at)}</div>
-          <div class="review-note-item__text">${escapeHtml(note.text)}</div>
+          <div class="govuk-body-s review-note-item__meta">${formatDateTime(note.created_at)}</div>
+          <div class="govuk-body review-note-item__text">${escapeHtml(note.text)}</div>
           <div class="review-note-item__actions">
-            <button type="button" class="review-note-action-link edit-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}">Edit</button>
-            <button type="button" class="review-note-action-link review-note-action-link--destructive delete-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}">Delete</button>
+            <button type="button" class="govuk-link review-note-action-link edit-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}">Edit</button>
+            <button type="button" class="govuk-link review-note-action-link review-note-action-link--destructive delete-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}">Delete</button>
           </div>
         </div>
       `;
@@ -669,25 +669,8 @@
       margin: 0 0 24px;
   }
 
-  .review-jobs-header h2 {
-      margin: 0 0 10px;
-      color: #0b0c0c;
-      font-size: 28px;
-      line-height: 1.2;
-      font-weight: 700;
-      letter-spacing: 0;
-  }
-
-  .review-jobs-header p {
-      margin: 0;
-      color: #505a5f;
-      font-size: 17px;
-      line-height: 1.45;
-  }
-
   .review-sort-button:focus,
   .review-detail-tab:focus,
-  .review-row-action:focus,
   .review-row-action-link:focus,
   .review-note-action-link:focus,
   .review-pagination .govuk-pagination__link:focus {
@@ -696,51 +679,17 @@
       box-shadow: 0 4px #0b0c0c;
   }
 
-  .review-search-bar {
-      width: 100%;
-      margin: 0 0 18px;
-  }
-
-  .review-search-input-wrapper {
-      position: relative;
-      max-width: 560px;
-  }
-
   .review-table-container {
       width: 100%;
       overflow-x: auto;
       background: #ffffff;
-      border-top: 1px solid #b1b4b6;
-      border-bottom: 1px solid #b1b4b6;
   }
 
   .review-jobs-table {
       width: 100%;
       min-width: 920px;
-      border-collapse: collapse;
       table-layout: fixed;
-      color: #0b0c0c;
-      background: #ffffff;
-  }
-
-  .review-jobs-table th,
-  .review-jobs-table td {
-      border-bottom: 1px solid #e5e7eb;
-      padding: 14px 18px;
-      vertical-align: middle;
-      font-size: 16px;
-      line-height: 1.35;
       overflow-wrap: anywhere;
-  }
-
-  .review-jobs-table th {
-      background: #f8f9fa;
-      border-bottom: 2px solid #b1b4b6;
-      color: #374151;
-      font-size: 14px;
-      font-weight: 700;
-      text-align: left;
-      text-transform: uppercase;
   }
 
   .review-sort-button {
@@ -755,12 +704,7 @@
       color: inherit;
       cursor: pointer;
       font: inherit;
-      font-size: inherit;
-      font-weight: inherit;
-      line-height: inherit;
-      letter-spacing: 0;
       text-align: left;
-      text-transform: inherit;
       user-select: none;
       -webkit-tap-highlight-color: transparent;
   }
@@ -852,15 +796,7 @@
 
   .review-job-id {
       display: block;
-      color: #505a5f;
-      font-size: 14px;
-      font-weight: 400;
-  }
-
-  .review-tag {
       margin: 0;
-      white-space: nowrap;
-      text-transform: lowercase;
   }
 
   .review-detail-row td {
@@ -912,15 +848,6 @@
       padding: 24px 28px;
   }
 
-  .review-detail-content h3 {
-      margin: 0 0 16px;
-      color: #374151;
-      font-size: 15px;
-      line-height: 1.3;
-      font-weight: 700;
-      text-transform: uppercase;
-  }
-
   .review-artifact-list {
       max-width: 660px;
   }
@@ -933,10 +860,6 @@
       min-height: 44px;
       padding: 10px 0;
       border-bottom: 1px solid #f3f2f1;
-  }
-
-  .review-artifact-action-link {
-      color: #1d70b8;
   }
 
   .review-artifact-row:hover .review-artifact-name span {
@@ -969,11 +892,6 @@
   .review-artifact-actions__item {
       margin: 0;
       padding: 0;
-  }
-
-  .review-empty-state,
-  .review-table-empty {
-      color: #505a5f;
   }
 
   .review-table-empty {
@@ -1034,15 +952,9 @@
 
   .review-note-item__meta {
       margin-bottom: 6px;
-      color: #505a5f;
-      font-size: 14px;
-      line-height: 1.35;
   }
 
   .review-note-item__text {
-      color: #0b0c0c;
-      font-size: 16px;
-      line-height: 1.45;
       white-space: pre-wrap;
       word-break: break-word;
   }
@@ -1060,18 +972,11 @@
       padding: 0;
       border: 0;
       background: transparent;
-      color: #1d70b8;
       cursor: pointer;
       font: inherit;
-      font-size: 15px;
-      line-height: 1.25;
-      text-decoration: underline;
-      text-decoration-thickness: max(1px, 0.0625rem);
-      text-underline-offset: 0.1em;
   }
 
   .review-note-action-link:hover {
-      color: #003078;
       text-decoration-thickness: max(3px, 0.1875rem);
   }
 
@@ -1085,32 +990,6 @@
 
   .review-inline-note-form {
       max-width: 760px;
-  }
-
-  .review-note-textarea {
-      min-height: 100px;
-      margin: 0 0 18px;
-      border: 2px solid #0b0c0c !important;
-      box-sizing: border-box;
-      color: #0b0c0c;
-      font-size: 16px;
-  }
-
-  .review-note-textarea:focus {
-      outline: 3px solid #ffdd00;
-      outline-offset: 0;
-      box-shadow: inset 0 0 0 2px #0b0c0c;
-  }
-
-  .review-add-note-button {
-      margin: 0;
-      background: #00703c;
-      box-shadow: 0 2px 0 #002d18;
-      color: #ffffff;
-  }
-
-  .review-add-note-button:hover {
-      background: #005a30;
   }
 
   .review-pagination {
