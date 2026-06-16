@@ -524,6 +524,24 @@ def _iter_local_files(path: Path) -> list[Path]:
     return []
 
 
+def _deduplicate_artifact_groups(groups: dict[str, list[dict]]) -> dict[str, list[dict]]:
+    deduplicated: dict[str, list[dict]] = {}
+    for group_name, artifacts in groups.items():
+        seen_by_name: dict[str, dict] = {}
+        deduplicated[group_name] = []
+        for artifact in artifacts:
+            name = str(artifact.get("name", ""))
+            existing = seen_by_name.get(name)
+            if existing is not None:
+                if "visualize_url" not in existing and artifact.get("visualize_url"):
+                    existing["visualize_url"] = artifact["visualize_url"]
+                continue
+
+            seen_by_name[name] = artifact
+            deduplicated[group_name].append(artifact)
+    return deduplicated
+
+
 def _add_local_input_artifacts(
     groups: dict[str, list[dict]],
     seen_folders: set[tuple[str, str, str]],
@@ -694,7 +712,7 @@ def _job_artifact_groups(job: ProcessingJob) -> dict[str, list[dict]]:
             _add_run_artifact(groups, seen_folders, job, bucket_name, run_prefix, item)
         _add_input_artifacts(groups, seen_folders, job, s3_client)
 
-    return groups
+    return _deduplicate_artifact_groups(groups)
 
 
 def _allowed_download_prefixes(job: ProcessingJob) -> set[tuple[str, str]]:
