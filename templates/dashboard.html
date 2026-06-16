@@ -29,6 +29,98 @@
             border: 4px solid #d4351c !important;
         }
 
+        /* Ensure govuk-select elements override Materialize CSS styling */
+        select.govuk-select.browser-default {
+            font-family: "GDS Transport", arial, sans-serif !important;
+            font-size: 1rem !important; /* 16px on mobile */
+            height: 40px !important;
+            border: 2px solid #0b0c0c !important;
+            border-radius: 0 !important;
+            background-color: #ffffff !important;
+            color: #0b0c0c !important;
+            padding: 5px 35px 5px 8px !important;
+            display: block !important;
+            width: 100% !important;
+            max-width: 410px !important; /* Standard GOV.UK form field width restriction */
+            box-sizing: border-box !important;
+            appearance: none !important; /* Hide native browser arrow */
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 17 10' width='17' height='10'%3E%3Cpath fill='%230b0c0c' d='M0 0h17L8.5 10z'/%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 12px center !important;
+            background-size: 12px 8px !important;
+        }
+
+        @media (min-width: 40.0625em) {
+            select.govuk-select.browser-default {
+                font-size: 1.1875rem !important; /* 19px on desktop */
+                height: 44px !important;
+                padding: 7px 35px 7px 8px !important;
+            }
+        }
+
+        select.govuk-select.browser-default:focus {
+            outline: 3px solid #ffdd00 !important; /* GOV.UK yellow focus outline */
+            outline-offset: 0 !important;
+            box-shadow: inset 0 0 0 2px #0b0c0c !important;
+            border-color: #0b0c0c !important;
+        }
+
+        /* Ensure govuk-textarea elements override Materialize CSS styling */
+        textarea.govuk-textarea.browser-default {
+            font-family: "GDS Transport", arial, sans-serif !important;
+            font-size: 1rem !important; /* 16px on mobile */
+            border: 2px solid #0b0c0c !important;
+            border-radius: 0 !important;
+            background-color: #ffffff !important;
+            color: #0b0c0c !important;
+            padding: 8px 12px !important;
+            box-sizing: border-box !important;
+            width: 100% !important;
+            min-height: 120px !important;
+            height: auto !important;
+            display: block !important;
+        }
+
+        @media (min-width: 40.0625em) {
+            textarea.govuk-textarea.browser-default {
+                font-size: 1.1875rem !important; /* 19px on desktop */
+            }
+        }
+
+        textarea.govuk-textarea.browser-default:focus {
+            outline: 3px solid #ffdd00 !important;
+            outline-offset: 0 !important;
+            box-shadow: inset 0 0 0 2px #0b0c0c !important;
+            border-color: #0b0c0c !important;
+        }
+
+        /* Ensure button group layout works correctly alongside Materialize */
+        .govuk-button-group {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            align-items: baseline !important;
+            margin-top: 25px !important;
+            margin-bottom: 15px !important;
+            gap: 15px !important;
+        }
+
+        /* Ensure govuk-label elements override Materialize CSS label styles */
+        label.govuk-label {
+            font-family: "GDS Transport", arial, sans-serif !important;
+            font-size: 1.1875rem !important; /* 19px */
+            line-height: 1.3157894737 !important;
+            font-weight: bold !important;
+            color: #0b0c0c !important;
+            display: block !important;
+            margin-bottom: 8px !important;
+            position: static !important;
+            transform: none !important;
+            height: auto !important;
+            pointer-events: auto !important;
+        }
+
         /* Refined Configuration Accordion Styling */
         #advanced-collapsible {
             border: 1px solid #b1b4b6 !important;
@@ -52,9 +144,7 @@
             background-color: #e5e5e5 !important;
         }
         #advanced-collapsible .collapsible-header i.material-icons:first-child {
-            margin-right: 8px;
-            font-size: 1.2rem;
-            color: #1d70b8;
+            display: none !important;
         }
         #advanced-collapsible .collapsible-header .chevron-icon {
             margin-left: auto;
@@ -80,15 +170,7 @@
 
         /* Tooltip & Help Icons */
         .help-icon {
-            font-size: 0.95rem !important;
-            vertical-align: middle;
-            color: #505a5f;
-            cursor: help;
-            margin-left: 4px;
-            transition: color 0.2s ease;
-        }
-        .help-icon:hover {
-            color: #1d70b8;
+            display: none !important;
         }
 
         /* Toggle configuration button adjustments */
@@ -136,13 +218,13 @@
         }
 
         /* Configuration Panel Input Styling overrides (GOV.UK style) */
-        #right-column .input-field {
+        #right-column .govuk-form-group {
             margin-top: 20px !important;
             margin-bottom: 20px !important;
             position: static !important;
         }
 
-        #right-column .input-field label:not(.label-icon) {
+        #right-column .govuk-form-group label:not(.label-icon) {
             position: static !important;
             font-size: 1rem !important;
             color: #0b0c0c !important;
@@ -205,11 +287,131 @@
         #right-column .select-wrapper select {
             display: block !important;
         }
+
+        /* Override Materialize's grey label color for all labels in the config panel */
+        .config-panel--flat label,
+        .config-panel--flat label.active,
+        #config-sidebar-card label,
+        #config-sidebar-card label.active,
+        #advanced-accordion-container label,
+        #advanced-accordion-container label.active {
+            color: #0b0c0c !important;
+            font-size: 1rem !important;
+            -webkit-transition: none !important;
+            transition: none !important;
+        }
+
+        /* Ensure govuk-checkboxes elements override Materialize CSS checkbox styling */
+        .govuk-checkboxes__item {
+            display: block !important;
+            position: relative !important;
+            min-height: 40px !important;
+            margin-bottom: 10px !important;
+            padding-left: 0 !important;
+        }
+
+        .govuk-checkboxes__input {
+            position: absolute !important;
+            z-index: 1 !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 40px !important;
+            height: 40px !important;
+            margin: 0 !important;
+            opacity: 0 !important;
+            cursor: pointer !important;
+            pointer-events: auto !important;
+        }
+
+        .govuk-checkboxes__label,
+        .govuk-checkboxes__item > label,
+        .govuk-checkboxes__item label,
+        .config-panel--flat label.govuk-checkboxes__label,
+        input[type="checkbox"] + label.govuk-checkboxes__label {
+            display: inline-block !important;
+            position: relative !important;
+            padding: 8px 15px 5px 48px !important;
+            margin-bottom: 0 !important;
+            cursor: pointer !important;
+            font-family: "GDS Transport", arial, sans-serif !important;
+            font-weight: 400 !important;
+            font-size: 1rem !important;
+            line-height: 1.25 !important;
+            color: #0b0c0c !important;
+            transform: none !important;
+            height: auto !important;
+            -webkit-transition: none !important;
+            transition: none !important;
+        }
+
+        @media (min-width: 40.0625em) {
+            .govuk-checkboxes__label {
+                font-size: 1.1875rem !important;
+                line-height: 1.3157894737 !important;
+            }
+        }
+
+        .govuk-checkboxes__label::before {
+            content: "" !important;
+            box-sizing: border-box !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 40px !important;
+            height: 40px !important;
+            border: 2px solid #0b0c0c !important;
+            background: #ffffff !important;
+        }
+
+        /* Checkmark styling */
+        .govuk-checkboxes__label::after {
+            content: "" !important;
+            box-sizing: border-box !important;
+            position: absolute !important;
+            top: 11px !important;
+            left: 9px !important;
+            width: 22px !important;
+            height: 14px !important;
+            transform: rotate(-45deg) !important;
+            border: solid #0b0c0c !important;
+            border-width: 0 0 5px 5px !important;
+            border-top-color: transparent !important;
+            border-right-color: transparent !important;
+            background: transparent !important;
+            opacity: 0 !important;
+        }
+
+        .govuk-checkboxes__input:checked + .govuk-checkboxes__label::after {
+            opacity: 1 !important;
+        }
+
+        .govuk-checkboxes__input:focus + .govuk-checkboxes__label::before {
+            border-width: 4px !important;
+            outline: 3px solid #ffdd00 !important;
+            outline-offset: 0 !important;
+        }
+
+        .config-panel--flat {
+            border: none !important;
+            background-color: transparent !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+        }
+        .config-panel--flat .panel-header-container {
+            border-bottom: 3px solid #0b0c0c !important;
+            padding-bottom: 10px !important;
+            margin-bottom: 1.5rem !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+        .config-panel--flat .card-content {
+            padding: 0 !important;
+        }
     </style>
     <div class="govuk-width-container">
         <div class="row" style="margin-top: 10px;">
         <!-- Left Column: Core Run Controller and Job History -->
-        <div class="col s12 l8" id="left-column">
+        <div class="col s12" id="left-column">
 
                     <!-- Wizard Back Link -->
                     <div style="margin-bottom: 20px; min-height: 25px;">
@@ -218,13 +420,13 @@
                     <form id="upload-form" enctype="multipart/form-data">
                         <!-- STEP 1: START -->
                         <div id="step-1" class="wizard-step">
-                            <h1 class="govuk-heading-xl" style="font-weight: 800; font-size: 2.8rem; margin: 0 0 20px 0; color: #0b0c0c;">Create an Ontology</h1>
-                            <p class="govuk-body" style="font-size: 1.2rem; line-height: 1.6; color: #0b0c0c; margin-bottom: 30px;">
+                            <h1 class="govuk-heading-xl">Create an Ontology</h1>
+                            <p class="govuk-body">
                                 For you to create an Ontology you have to select a domain containing the content from GOV.UK, and optionally adjust the configuration and add a domain prompt.
                             </p>
-                            <button type="button" id="wizard-start-btn" style="background-color: #00703c; color: white; border: none; padding: 12px 24px; font-weight: bold; font-size: 1.25rem; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; border-radius: 4px; box-shadow: 0 2px 0 #002d18;">
+                            <button type="button" id="wizard-start-btn" class="govuk-button govuk-button--start" data-module="govuk-button">
                                 Start
-                                <svg class="govuk-button__start-icon" xmlns="http://www.w3.org/2000/svg" width="17.5" height="19" viewBox="0 0 33 40" aria-hidden="true" focusable="false" style="margin-left: 10px; vertical-align: middle;">
+                                <svg class="govuk-button__start-icon" xmlns="http://www.w3.org/2000/svg" width="17.5" height="19" viewBox="0 0 33 40" aria-hidden="true" focusable="false">
                                     <path fill="currentColor" d="M0 0h13l20 20-20 20H0l20-20z"/>
                                 </svg>
                             </button>
@@ -232,38 +434,40 @@
 
                         <!-- STEP 2: SELECT DOMAIN -->
                         <div id="step-2" class="wizard-step" style="display: none;">
-                            <h1 class="govuk-heading-xl" style="font-weight: 800; font-size: 2.8rem; margin: 0 0 20px 0; color: #0b0c0c;">Create an Ontology</h1>
-                            <div class="govuk-form-group" id="domain-form-group" style="margin-bottom: 25px;">
-                                <label class="govuk-label" for="domain-selector" style="font-size: 1.2rem; font-weight: 600; color: #0b0c0c; display: block; margin-bottom: 5px;">Select the domain for your ontology</label>
-                                <p id="domain-error-message" class="govuk-error-message" style="display: none; color: #d4351c; font-weight: bold; font-size: 1.15rem; margin-top: 0; margin-bottom: 15px;">
+                            <h1 class="govuk-heading-xl">Create an Ontology</h1>
+                            <div class="govuk-form-group" id="domain-form-group">
+                                <label class="govuk-label" for="domain-selector">
+                                    Select the domain for your ontology
+                                </label>
+                                <p id="domain-error-message" class="govuk-error-message" style="display: none;">
                                     <span class="govuk-visually-hidden">Error:</span> Select a domain
                                 </p>
-                                <select id="domain-selector" name="domain" class="browser-default" style="height: 44px; border: 2px solid #0b0c0c; border-radius: 0; font-family: inherit; font-size: 1.1rem; padding: 8px; background-color: #fff; display: block; width: 100%; max-width: 590px; box-sizing: border-box;" required>
+                                <select class="govuk-select browser-default" id="domain-selector" name="domain" required>
                                     <option value="" disabled selected>Loading domains...</option>
                                 </select>
                             </div>
 
-                            <p class="govuk-body" style="font-size: 1rem; color: #505a5f; margin-top: 10px; margin-bottom: 25px;">
-                                If there is not a domain created for this ontology, go <a href="{{ url_for('ontology.domains_page') }}" style="color: #1d70b8; text-decoration: underline; font-weight: bold;">here</a> to create a domain.
+                            <p class="govuk-body">
+                                If there is not a domain created for this ontology, go <a href="{{ url_for('ontology.domains_page') }}" class="govuk-link">here</a> to create a domain.
                             </p>
 
-                            <div style="margin-top: 25px; display: flex; gap: 15px; align-items: center;">
-                                <button type="button" id="wizard-step2-next" class="btn" style="background-color: #00703c; font-weight: bold; height: 45px; padding: 0 20px; text-transform: none;">Next</button>
-                                <button type="button" class="btn-flat wizard-prev-btn-action" style="border: 1px solid #b1b4b6; color: #0b0c0c; font-weight: bold; height: 45px; padding: 0 20px; border-radius: 4px; text-transform: none;">Back</button>
+                            <div class="govuk-button-group">
+                                <button type="button" id="wizard-step2-next" class="govuk-button" data-module="govuk-button">Next</button>
+                                <button type="button" class="govuk-button govuk-button--secondary wizard-prev-btn-action">Back</button>
                             </div>
                         </div>
 
                         <!-- STEP 3: ADD PROMPT -->
                         <div id="step-3" class="wizard-step" style="display: none;">
-                            <h1 class="govuk-heading-xl" style="font-weight: 800; font-size: 2.8rem; margin: 0 0 20px 0; color: #0b0c0c;">Create an Ontology</h1>
-                            <p class="govuk-body" style="color: #0b0c0c; font-size: 1.15rem; line-height: 1.5; margin-bottom: 20px;">
+                            <h1 class="govuk-heading-xl">Create an Ontology</h1>
+                            <p class="govuk-body">
                                 Add a domain prompt. This is optional, and the generator will be able to create an ontology without one. By adding a domain specific prompt you might get a more specialised ontology.
                             </p>
 
                             <!-- Text area prompt input -->
-                            <div style="margin-bottom: 25px;">
-                                <label for="custom-prompt-text" style="display: none;">Domain prompt text box</label>
-                                <textarea id="custom-prompt-text" class="materialize-textarea" style="min-height: 120px; border: 2px solid #0b0c0c; border-radius: 0; padding: 12px; background-color: #fff; font-family: inherit; font-size: 1rem; box-sizing: border-box;" placeholder="Type or paste your domain prompt here..."></textarea>
+                            <div class="govuk-form-group">
+                                <label for="custom-prompt-text" class="govuk-visually-hidden">Domain prompt text box</label>
+                                <textarea id="custom-prompt-text" class="govuk-textarea browser-default" rows="5" placeholder="Type or paste your domain prompt here..."></textarea>
                             </div>
 
                             <!-- Hidden file inputs for compatibility with form scripts -->
@@ -290,108 +494,55 @@
                                 </li>
                             </ul>
 
-                            <div style="margin-top: 25px; display: flex; gap: 15px; align-items: center;">
-                                <button type="button" id="wizard-step3-next" class="btn" style="background-color: #00703c; font-weight: bold; height: 45px; padding: 0 20px; text-transform: none;">Next</button>
-                                <button type="button" class="btn-flat wizard-prev-btn-action" style="border: 1px solid #b1b4b6; color: #0b0c0c; font-weight: bold; height: 45px; padding: 0 20px; border-radius: 4px; text-transform: none;">Back</button>
+                            <div class="govuk-button-group">
+                                <button type="button" id="wizard-step3-next" class="govuk-button" data-module="govuk-button">Next</button>
+                                <button type="button" class="govuk-button govuk-button--secondary wizard-prev-btn-action">Back</button>
                             </div>
                         </div>
 
                         <!-- STEP 4: MAKE CONFIGURATION -->
                         <div id="step-4" class="wizard-step" style="display: none;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                <h2 class="govuk-heading-l" style="font-weight: 700; font-size: 1.8rem; margin: 0; color: #0b0c0c;">Configure pipeline settings</h2>
-                                <button type="button" id="toggle-config-btn" class="btn-flat waves-effect" style="border: 2px solid #0b0c0c; border-radius: 0; display: inline-flex; align-items: center; gap: 6px; font-weight: bold; height: 40px; padding: 0 16px; color: #0b0c0c; transition: all 0.2s ease-in-out; background-color: #f3f2f1;">
-                                    <i class="material-icons" style="font-size: 1.2rem; margin: 0;">settings</i>
-                                    <span id="toggle-config-text">Configure Settings</span>
-                                </button>
+                                <h2 class="govuk-heading-l" style="margin: 0;">Configure pipeline settings</h2>
                             </div>
-                            <p class="govuk-body" style="color: #0b0c0c; margin-bottom: 25px;">Review the configurations used to create your Ontology.</p>
+                            <p class="govuk-body">Review the configurations used to create your Ontology.</p>
 
-                            <!-- Summary info -->
-                            <div class="summary-box" style="background-color: #f3f2f1; padding: 20px; border-radius: 6px; border-left: 5px solid #1d70b8; margin-bottom: 25px;">
-                                <p style="margin: 0 0 10px 0;"><strong>Selected Domain:</strong> <span id="summary-domain" style="font-weight: bold;">None</span></p>
-                                <p style="margin: 0 0 10px 0;"><strong>LLM Model:</strong> <span id="summary-model" style="font-weight: bold;">Claude 4.6 Sonnet</span></p>
-                                <p style="margin: 0;"><strong>Temperature:</strong> <span id="summary-temp" style="font-weight: bold;">0.00</span></p>
-                            </div>
-
-                            <div id="upload-status" style="display: none; margin-bottom: 1.5rem; padding: 15px; border-radius: 4px;"></div>
-
-                            <div style="margin-top: 25px; display: flex; gap: 15px; align-items: center;">
-                                <button class="btn waves-effect waves-light" type="submit" id="submit-btn"
-                                        style="background-color: #00703c; height: 45px; padding: 0 20px; font-weight: bold; border-radius: 4px; box-shadow: 0 2px 0 #002d18; display: inline-flex; align-items: center; gap: 6px; text-transform: none;">
-                                    Create Ontology
-                                    <svg class="govuk-button__start-icon" xmlns="http://www.w3.org/2000/svg" width="17.5" height="19" viewBox="0 0 33 40" aria-hidden="true" focusable="false" style="margin-left: 10px; vertical-align: middle;">
-                                        <path fill="currentColor" d="M0 0h13l20 20-20 20H0l20-20z"/>
-                                    </svg>
-                                </button>
-                                <button type="button" class="btn-flat wizard-prev-btn-action" style="border: 1px solid #b1b4b6; color: #0b0c0c; font-weight: bold; height: 45px; padding: 0 20px; border-radius: 4px; text-transform: none;">Back</button>
-                            </div>
-
-                            <div class="progress" id="upload-progress" style="display: none;">
-                                <div class="indeterminate"></div>
-                            </div>
-                        </div>
-
-                        <!-- STEP 5: SUCCESS / KICK OFF -->
-                        <div id="step-5" class="wizard-step" style="display: none;">
-                            <div class="govuk-panel govuk-panel--confirmation" style="background-color: #00703c; color: white; padding: 35px; text-align: center; border-radius: 4px; margin-bottom: 30px;">
-                                <h1 class="govuk-panel__title" style="font-size: 2.5rem; font-weight: bold; margin-bottom: 15px; color: white;">
-                                    Ontology creation started
-                                </h1>
-                                <div class="govuk-panel__body" style="font-size: 1.5rem; color: white;">
-                                    Your job ID is<br><strong id="success-job-id" style="font-weight: 800; font-size: 2rem;"></strong>
-                                </div>
-                            </div>
-                            <h3 class="govuk-heading-m" style="margin-top: 20px; font-weight: bold; font-size: 1.4rem;">What happens next</h3>
-                            <p class="govuk-body" style="font-size: 1.1rem; line-height: 1.6; color: #0b0c0c;">
-                                Your Ontology is being created. Go to Review Ontologies to download the files, add notes, download reports and visualise the graph.
-                            </p>
-                            <div style="margin-top: 30px; display: flex; gap: 15px;">
-                                <button type="button" class="btn" id="wizard-reset-btn" style="background-color: #1d70b8; font-weight: bold; height: 40px; text-transform: none;">Create another ontology</button>
-                                <a href="/ontology/review-ontologies" class="btn-flat" style="border: 1px solid #1d70b8; color: #1d70b8; font-weight: bold; text-align: center; line-height: 38px; height: 40px; border-radius: 4px; text-transform: none;">Review Ontologies</a>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Right Column: Interactive Configuration Sidebar -->
-        <div class="col s12 l4" id="right-column">
-            <div class="card" id="config-sidebar-card" style="box-shadow: none; border: 2px solid #0b0c0c; border-radius: 0; background-color: #fff; margin: 0;">
-                <div class="card-content" style="padding: 1.5rem;">
-                    <span class="card-title" style="font-weight: bold; color: #0b0c0c; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; font-size: 1.35rem;">
-                        <span>Configuration Panel</span>
-                        <button type="button" id="close-config-btn" class="btn-flat waves-effect" style="padding: 0; min-width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #505a5f; margin: 0;" title="Minimize settings">
-                            <i class="material-icons" style="font-size: 1.25rem; margin: 0;">close</i>
-                        </button>
-                    </span>
+                            <!-- Summary info using govuk-inset-text component -->
+                            <div class="config-panel--flat" id="config-sidebar-card" style="margin: 0;">
+                                <div class="card-content" style="padding: 0;">
+                                    <div class="panel-header-container" style="border-bottom: 3px solid #0b0c0c; padding-bottom: 10px; margin-bottom: 1.5rem;">
+                                        <h2 class="govuk-heading-m" style="margin: 0; color: #0b0c0c;">Configuration Panel</h2>
+                                    </div>
 
                     <!-- LLM Model Selection -->
-                    <div class="input-field" style="margin-bottom: 1.5rem;">
-                        <label style="font-weight: bold; color: #0b0c0c; position: static; font-size: 0.95rem;">LLM Model <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Select the Large Language Model to use for generating the ontology.">info_outline</i></label>
-                        <select id="model-selector" class="browser-default">
+                    <div class="govuk-form-group" style="margin-bottom: 1.5rem;">
+                                        <label style="font-weight: bold; color: #0b0c0c; position: static; font-size: 0.95rem;">LLM Model <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Select the Large Language Model to use for generating the ontology.">info_outline</i></label>
+                                        <select id="model-selector" class="browser-default">
                             <option value="bedrock:eu.anthropic.claude-sonnet-4-6" selected>Claude 4.6 Sonnet</option>
                             <option value="custom">-- Custom Model --</option>
                         </select>
-                    </div>
+                                    </div>
 
                     <!-- Custom Model Input (Hidden unless "custom" is selected) -->
-                    <div class="input-field" id="custom-model-container" style="display: none; margin-bottom: 1.5rem;">
-                        <input type="text" id="custom-model-input" placeholder="e.g. bedrock:us.meta.llama3-2-3b" class="validate">
-                        <label for="custom-model-input">Custom Model Name <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enter the exact API identifier for a custom model from Vertex AI or AWS Bedrock.">info_outline</i></label>
-                    </div>
+                    <div class="govuk-form-group" id="custom-model-container" style="display: none; margin-bottom: 1.5rem;">
+                        
+                                        <label for="custom-model-input">Custom Model Name <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enter the exact API identifier for a custom model from Vertex AI or AWS Bedrock.">info_outline</i></label>
+                                        <input type="text" id="custom-model-input" placeholder="e.g. bedrock:us.meta.llama3-2-3b" class="validate">
+                                    </div>
 
 
 
                     <!-- Advanced Toggle Switch -->
-                    <div class="switch" style="margin-bottom: 1.5rem; background: #f3f2f1; padding: 10px 12px; border-radius: 4px;">
-                        <label style="font-size: 0.95rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                            <span>Advanced Parameters <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Customize underlying pipeline configs, embedding choices, and deduplication settings.">info_outline</i></span>
-                            <input type="checkbox" id="advanced-toggle">
-                            <span class="lever" style="margin-right: 0;"></span>
-                        </label>
-                    </div>
+                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="advanced-toggle" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="advanced-toggle">
+                                                Advanced Parameters <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Customize underlying pipeline configs, embedding choices, and deduplication settings.">info_outline</i>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
 
                     <!-- Collapsible Accordion Container (Only shown when switch is checked) -->
                     <div id="advanced-accordion-container" style="display: none; margin-top: 1rem;">
@@ -401,69 +552,91 @@
                             <li>
                                 <div class="collapsible-header"><i class="material-icons">folder_open</i>Paths & Outputs<i class="material-icons chevron-icon">expand_more</i></div>
                                 <div class="collapsible-body">
-                                    <div class="input-field" style="margin: 5px 0 15px 0;">
-                                        <input type="text" id="config-entity-prefix" class="validate">
+                                    <div class="govuk-form-group" style="margin: 5px 0 15px 0;">
+                                        
                                         <label for="config-entity-prefix" class="active">Entity ID Prefix <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Prefix for generated RDF/OWL class and property identifiers.">info_outline</i></label>
+                                        <input type="text" id="config-entity-prefix" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 5px 0 15px 0;">
-                                        <input type="text" id="config-rel-prefix" class="validate">
+                                    <div class="govuk-form-group" style="margin: 5px 0 15px 0;">
+                                        
                                         <label for="config-rel-prefix" class="active">Relationship ID Prefix <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Prefix for generated RDF/OWL relationship identifiers.">info_outline</i></label>
+                                        <input type="text" id="config-rel-prefix" class="validate">
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Compress Output <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Compress large JSON files with gzip.">info_outline</i></span>
-                                            <input type="checkbox" id="config-compress-output">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-compress-output" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-compress-output">
+                                                Compress Output <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Compress large JSON files with gzip.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Pretty Print JSON <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Pretty-print JSON output files.">info_outline</i></span>
-                                            <input type="checkbox" id="config-pretty-print">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                </div>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-pretty-print" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-pretty-print">
+                                                Pretty Print JSON <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Pretty-print JSON output files.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Include Metadata <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Include runtime metadata in output files.">info_outline</i></span>
-                                            <input type="checkbox" id="config-include-metadata">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                </div>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-include-metadata" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-include-metadata">
+                                                Include Metadata <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Include runtime metadata in output files.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="text" id="config-deduplication-log-filename" class="validate">
+                                </div>
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-deduplication-log-filename" class="active">Deduplication Log Filename <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Custom filename for the deduplication logs.">info_outline</i></label>
+                                        <input type="text" id="config-deduplication-log-filename" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="text" id="config-faiss-index-filename" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-faiss-index-filename" class="active">FAISS Index Filename <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Custom filename for the FAISS index.">info_outline</i></label>
+                                        <input type="text" id="config-faiss-index-filename" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="text" id="config-graph-filename" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-graph-filename" class="active">Graph Filename <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Custom filename for the generated output graph.">info_outline</i></label>
+                                        <input type="text" id="config-graph-filename" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="text" id="config-schema-filename" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-schema-filename" class="active">Schema Filename <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Custom filename for the schema output.">info_outline</i></label>
+                                        <input type="text" id="config-schema-filename" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="text" id="config-timestamp-format" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-timestamp-format" class="active">Timestamp Format <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Format pattern used for datetime strings.">info_outline</i></label>
+                                        <input type="text" id="config-timestamp-format" class="validate">
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Emit Deduplication Logs <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Write deduplication details to logs.">info_outline</i></span>
-                                            <input type="checkbox" id="config-emit-deduplication-logs">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-emit-deduplication-logs" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-emit-deduplication-logs">
+                                                Emit Deduplication Logs <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Write deduplication details to logs.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 5px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Emit Stage Lists <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Output entity and relationship lists at intermediate stages.">info_outline</i></span>
-                                            <input type="checkbox" id="config-emit-pipeline-stage-lists">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                </div>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-emit-pipeline-stage-lists" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-emit-pipeline-stage-lists">
+                                                Emit Stage Lists <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Output entity and relationship lists at intermediate stages.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
+                                </div>
                                 </div>
                             </li>
 
@@ -471,17 +644,20 @@
                             <li>
                                 <div class="collapsible-header"><i class="material-icons">content_cut</i>Chunking & Models<i class="material-icons chevron-icon">expand_more</i></div>
                                 <div class="collapsible-body">
-                                    <div class="input-field" style="margin: 5px 0 15px 0;">
-                                        <input type="number" id="config-chunk-size" min="100" step="100" class="validate">
+                                    <div class="govuk-form-group" style="margin: 5px 0 15px 0;">
+                                        
                                         <label for="config-chunk-size" class="active">Chunk Size (chars) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Size of text chunks (in characters) sent to the LLM.">info_outline</i></label>
+                                        <input type="number" id="config-chunk-size" min="100" step="100" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 5px 0 15px 0;">
-                                        <input type="number" id="config-chunk-overlap" min="0" step="50" class="validate">
+                                    <div class="govuk-form-group" style="margin: 5px 0 15px 0;">
+                                        
                                         <label for="config-chunk-overlap" class="active">Chunk Overlap (chars) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Overlap (in characters) between consecutive text chunks.">info_outline</i></label>
+                                        <input type="number" id="config-chunk-overlap" min="0" step="50" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 5px 0 15px 0;">
-                                        <input type="number" id="config-max-tokens" min="1000" step="1000" class="validate">
+                                    <div class="govuk-form-group" style="margin: 5px 0 15px 0;">
+                                        
                                         <label for="config-max-tokens" class="active">LLM Max Output Tokens <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum number of tokens the LLM can generate in a single response.">info_outline</i></label>
+                                        <input type="number" id="config-max-tokens" min="1000" step="1000" class="validate">
                                     </div>
                                     <div class="range-field" style="margin: 5px 0 15px 0;">
                                         <label for="temp-slider" style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold;">
@@ -490,44 +666,55 @@
                                         </label>
                                         <input type="range" id="temp-slider" min="0.0" max="1.0" step="0.05" value="0.00" style="margin-top: 8px; border: none;">
                                     </div>
-                                    <div class="input-field" style="margin: 5px 0 15px 0;">
-                                        <input type="text" id="config-embedding-model" class="validate">
+                                    <div class="govuk-form-group" style="margin: 5px 0 15px 0;">
+                                        
                                         <label for="config-embedding-model" class="active">Embedding Model <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="The text embedding model used for similarity calculation and vector storage.">info_outline</i></label>
+                                        <input type="text" id="config-embedding-model" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 5px 0 15px 0;">
-                                        <input type="number" id="config-embedding-dimension" min="1" step="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 5px 0 15px 0;">
+                                        
                                         <label for="config-embedding-dimension" class="active">Embedding Dimension <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Dimensionality of the vector representations produced by the embedding model.">info_outline</i></label>
+                                        <input type="number" id="config-embedding-dimension" min="1" step="1" class="validate">
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Embedding Cache Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable embedding caching to avoid re-computing.">info_outline</i></span>
-                                            <input type="checkbox" id="config-embedding-cache-enabled">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-embedding-cache-enabled" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-embedding-cache-enabled">
+                                                Embedding Cache Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable embedding caching to avoid re-computing.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="text" id="config-embedding-cache-dir" class="validate">
+                                </div>
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-embedding-cache-dir" class="active">Embedding Cache Dir <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Directory to store cache files.">info_outline</i></label>
+                                        <input type="text" id="config-embedding-cache-dir" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-embedding-concurrency" min="1" step="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-embedding-concurrency" class="active">Embedding Concurrency <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum concurrent API calls for embeddings generation (async mode only).">info_outline</i></label>
+                                        <input type="number" id="config-embedding-concurrency" min="1" step="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-chunking-chars-per-token" min="1" step="0.1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-chunking-chars-per-token" class="active">Chars Per Token Estimate <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Multiplier to estimate token length from characters (~4 for English).">info_outline</i></label>
+                                        <input type="number" id="config-chunking-chars-per-token" min="1" step="0.1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-chunking-max-chunks" min="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-chunking-max-chunks" class="active">Max Chunks <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum number of chunks to create (leave blank for unlimited).">info_outline</i></label>
+                                        <input type="number" id="config-chunking-max-chunks" min="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-chunking-min-chunk-size" min="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-chunking-min-chunk-size" class="active">Min Chunk Size (tokens) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Minimum token size allowed per chunk. Fragments below this will be skipped.">info_outline</i></label>
+                                        <input type="number" id="config-chunking-min-chunk-size" min="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 5px 0;">
-                                        <input type="text" id="config-chunking-separators" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 5px 0;">
+                                        
                                         <label for="config-chunking-separators" class="active">Text Separators <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Comma-separated separators used to split text (e.g. \\n\\n, \\n, . , ).">info_outline</i></label>
+                                        <input type="text" id="config-chunking-separators" class="validate">
                                     </div>
                                 </div>
                             </li>
@@ -564,46 +751,57 @@
                                         </label>
                                         <input type="range" id="config-min-label-similarity" min="0.5" max="1.0" step="0.05" value="0.75" style="margin-top: 8px; border: none;">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        <label style="position: static; font-size: 0.9rem;">Conflict Strategy <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Method to resolve conflicts when merging properties.">info_outline</i></label>
                                         <select id="config-conflict-strat" class="browser-default">
                                             <option value="confidence">Higher Confidence</option>
                                             <option value="latest">Latest Value</option>
                                         </select>
-                                        <label style="position: static; font-size: 0.9rem;">Conflict Strategy <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Method to resolve conflicts when merging properties.">info_outline</i></label>
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Label Similarity Check <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Perform an additional check on entity labels before merging.">info_outline</i></span>
-                                            <input type="checkbox" id="config-label-similarity">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-label-similarity" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-label-similarity">
+                                                Label Similarity Check <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Perform an additional check on entity labels before merging.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Conflict Resolution Feature <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable conflict resolution stage.">info_outline</i></span>
-                                            <input type="checkbox" id="config-feat-conflict-resolution">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                </div>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-feat-conflict-resolution" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-feat-conflict-resolution">
+                                                Conflict Resolution Feature <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable conflict resolution stage.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-faiss-threshold" min="1" step="1" class="validate">
+                                </div>
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-faiss-threshold" class="active">FAISS Threshold <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Use FAISS index when entity count exceeds this threshold.">info_outline</i></label>
+                                        <input type="number" id="config-faiss-threshold" min="1" step="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-faiss-rebuild-threshold" min="1" step="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-faiss-rebuild-threshold" class="active">FAISS Rebuild Threshold <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Rebuild FAISS index after N new entities.">info_outline</i></label>
+                                        <input type="number" id="config-faiss-rebuild-threshold" min="1" step="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-faiss-batch-size" min="1" step="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-faiss-batch-size" class="active">FAISS Search Batch Size <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Batch size for FAISS search queries.">info_outline</i></label>
+                                        <input type="number" id="config-faiss-batch-size" min="1" step="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-faiss-top-k" min="1" step="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-faiss-top-k" class="active">FAISS Top K Neighbors <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Number of nearest neighbors to search in FAISS.">info_outline</i></label>
+                                        <input type="number" id="config-faiss-top-k" min="1" step="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 5px 0;">
-                                        <input type="text" id="config-faiss-index-type" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 5px 0;">
+                                        
                                         <label for="config-faiss-index-type" class="active">FAISS Index Type <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="FAISS index structure configuration (e.g. IDMap, Flat, auto).">info_outline</i></label>
+                                        <input type="text" id="config-faiss-index-type" class="validate">
                                     </div>
                                 </div>
                             </li>
@@ -612,116 +810,124 @@
                             <li>
                                 <div class="collapsible-header"><i class="material-icons">import_export</i>OWL/RDF Export<i class="material-icons chevron-icon">expand_more</i></div>
                                 <div class="collapsible-body">
-                                    <div class="switch" style="margin: 5px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span style="display: inline-flex; align-items: center; gap: 4px;">
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-export-enabled" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-export-enabled">
                                                 Enable OWL Export
                                                 <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Convert the generated ontology output to OWL format." style="margin-top: -2px;">info_outline</i>
-                                            </span>
-                                            <input type="checkbox" id="config-export-enabled">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="text" id="config-export-uri" class="validate">
+                                </div>
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-export-uri" class="active">Base Ontology URI <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="The base URI for the generated OWL ontology metadata.">info_outline</i></label>
+                                        <input type="text" id="config-export-uri" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        <label style="position: static; font-size: 0.9rem;">Export Format <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="File format for the exported ontology (Turtle or RDF/XML).">info_outline</i></label>
                                         <select id="config-export-format" class="browser-default">
                                             <option value="turtle">Turtle (.ttl)</option>
                                             <option value="rdfxml">RDF/XML (.rdf)</option>
                                         </select>
-                                        <label style="position: static; font-size: 0.9rem;">Export Format <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="File format for the exported ontology (Turtle or RDF/XML).">info_outline</i></label>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        <label style="position: static; font-size: 0.9rem;">Spelling Variant <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Standard spelling convention for generated terms (US or UK).">info_outline</i></label>
                                         <select id="config-spelling-variant" class="browser-default">
                                             <option value="US">US Spelling</option>
                                             <option value="UK">UK Spelling</option>
                                             <option value="preserve">Preserve Original</option>
                                         </select>
-                                        <label style="position: static; font-size: 0.9rem;">Spelling Variant <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Standard spelling convention for generated terms (US or UK).">info_outline</i></label>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        <label style="position: static; font-size: 0.9rem;">Entity Casing Style <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Casing format applied to generated ontology entity labels.">info_outline</i></label>
                                         <select id="config-label-casing" class="browser-default">
                                             <option value="UpperCamelCase">UpperCamelCase</option>
                                             <option value="lowerCamelCase">lowerCamelCase</option>
                                             <option value="snake_case">snake_case</option>
                                             <option value="preserve">Preserve Original</option>
                                         </select>
-                                        <label style="position: static; font-size: 0.9rem;">Entity Casing Style <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Casing format applied to generated ontology entity labels.">info_outline</i></label>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        <label style="position: static; font-size: 0.9rem;">Entity Type Casing <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Casing style for entity types (e.g. MedicalConcept).">info_outline</i></label>
                                         <select id="config-entity-type-casing" class="browser-default">
                                             <option value="UpperCamelCase">UpperCamelCase</option>
                                             <option value="lowerCamelCase">lowerCamelCase</option>
                                             <option value="snake_case">snake_case</option>
                                             <option value="preserve">Preserve Original</option>
                                         </select>
-                                        <label style="position: static; font-size: 0.9rem;">Entity Type Casing <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Casing style for entity types (e.g. MedicalConcept).">info_outline</i></label>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        <label style="position: static; font-size: 0.9rem;">Property Casing <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Casing style for property keys (e.g. startDate).">info_outline</i></label>
                                         <select id="config-property-casing" class="browser-default">
                                             <option value="lowerCamelCase">lowerCamelCase</option>
                                             <option value="UpperCamelCase">UpperCamelCase</option>
                                             <option value="snake_case">snake_case</option>
                                             <option value="preserve">Preserve Original</option>
                                         </select>
-                                        <label style="position: static; font-size: 0.9rem;">Property Casing <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Casing style for property keys (e.g. startDate).">info_outline</i></label>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        <label style="position: static; font-size: 0.9rem;">Relationship Type Casing <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Casing style for relationship types (e.g. isPartOf).">info_outline</i></label>
                                         <select id="config-relationship-type-casing" class="browser-default">
                                             <option value="lowerCamelCase">lowerCamelCase</option>
                                             <option value="UpperCamelCase">UpperCamelCase</option>
                                             <option value="snake_case">snake_case</option>
                                             <option value="preserve">Preserve Original</option>
                                         </select>
-                                        <label style="position: static; font-size: 0.9rem;">Relationship Type Casing <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Casing style for relationship types (e.g. isPartOf).">info_outline</i></label>
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span style="display: inline-flex; align-items: center; gap: 4px;">
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-type-aware-keys" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-type-aware-keys">
                                                 Type-Aware Canonical Keys
                                                 <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Prefix canonical keys with type to prevent cross-type identity collisions." style="margin-top: -2px;">info_outline</i>
-                                            </span>
-                                            <input type="checkbox" id="config-type-aware-keys">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="text" id="config-export-entity-suffix" class="validate">
+                                </div>
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-export-entity-suffix" class="active">Entity URI Suffix <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="URI suffix for entities (e.g. /entity#).">info_outline</i></label>
+                                        <input type="text" id="config-export-entity-suffix" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="text" id="config-export-relationship-suffix" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-export-relationship-suffix" class="active">Relationship URI Suffix <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="URI suffix for relationships (e.g. /relationship#).">info_outline</i></label>
+                                        <input type="text" id="config-export-relationship-suffix" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="text" id="config-export-filename" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-export-filename" class="active">Export OWL Filename <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Filename for exported OWL/RDF file (without extension).">info_outline</i></label>
+                                        <input type="text" id="config-export-filename" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-export-min-property-frequency" min="0" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-export-min-property-frequency" class="active">Min Property Frequency <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Only export DatatypeProperty for keys seen at least N times.">info_outline</i></label>
+                                        <input type="number" id="config-export-min-property-frequency" min="0" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        <label style="position: static; font-size: 0.9rem;">Entity Label Spelling Variant <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Spelling variant style for human-readable labels.">info_outline</i></label>
                                         <select id="config-naming-entity-label-spelling" class="browser-default">
                                             <option value="UK">UK Spelling</option>
                                             <option value="US">US Spelling</option>
                                             <option value="preserve">Preserve Original</option>
                                         </select>
-                                        <label style="position: static; font-size: 0.9rem;">Entity Label Spelling Variant <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Spelling variant style for human-readable labels.">info_outline</i></label>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        <label style="position: static; font-size: 0.9rem;">Entity IRI Spelling Variant <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Spelling variant style for OWL IRIs.">info_outline</i></label>
                                         <select id="config-naming-entity-iri-spelling" class="browser-default">
                                             <option value="US">US Spelling</option>
                                             <option value="UK">UK Spelling</option>
                                             <option value="preserve">Preserve Original</option>
                                         </select>
-                                        <label style="position: static; font-size: 0.9rem;">Entity IRI Spelling Variant <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Spelling variant style for OWL IRIs.">info_outline</i></label>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 5px 0;">
-                                        <input type="text" id="config-naming-language-tag" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 5px 0;">
+                                        
                                         <label for="config-naming-language-tag" class="active">Entity Label Language Tag <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="RDF language tag for term labels (e.g. en-GB).">info_outline</i></label>
+                                        <input type="text" id="config-naming-language-tag" class="validate">
                                     </div>
                                 </div>
                             </li>
@@ -730,78 +936,106 @@
                             <li>
                                 <div class="collapsible-header"><i class="material-icons">settings_applications</i>Pipeline & Performance<i class="material-icons chevron-icon">expand_more</i></div>
                                 <div class="collapsible-body">
-                                    <div class="input-field" style="margin: 5px 0 15px 0;">
-                                        <input type="number" id="config-parallel-files" min="1" step="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 5px 0 15px 0;">
+                                        
                                         <label for="config-parallel-files" class="active">Parallel Files <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Number of files processed in parallel during ingestion/generation.">info_outline</i></label>
+                                        <input type="number" id="config-parallel-files" min="1" step="1" class="validate">
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Batch API Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Use LLM batch API endpoints to reduce rate limit issues.">info_outline</i></span>
-                                            <input type="checkbox" id="config-batch-api">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-batch-api" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-batch-api">
+                                                Batch API Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Use LLM batch API endpoints to reduce rate limit issues.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Term Extraction Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Perform initial terminology extraction before relationship generation.">info_outline</i></span>
-                                            <input type="checkbox" id="config-term-extraction">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                </div>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-term-extraction" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-term-extraction">
+                                                Term Extraction Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Perform initial terminology extraction before relationship generation.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Auto-Resume Checkpoint <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Automatically resume from checkpoint if available, instead of starting fresh.">info_outline</i></span>
-                                            <input type="checkbox" id="config-auto-resume">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                </div>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-auto-resume" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-auto-resume">
+                                                Auto-Resume Checkpoint <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Automatically resume from checkpoint if available, instead of starting fresh.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>LLM Cache Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable LLM response caching.">info_outline</i></span>
-                                            <input type="checkbox" id="config-perf-llm-cache">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                </div>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-perf-llm-cache" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-perf-llm-cache">
+                                                LLM Cache Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable LLM response caching.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Schema Evolution Feature <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable schema evolution tracking.">info_outline</i></span>
-                                            <input type="checkbox" id="config-feat-schema-evolution">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                </div>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-feat-schema-evolution" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-feat-schema-evolution">
+                                                Schema Evolution Feature <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable schema evolution tracking.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Checkpointing Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable pipeline file checkpointing.">info_outline</i></span>
-                                            <input type="checkbox" id="config-checkpointing-enabled">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                </div>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-checkpointing-enabled" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-checkpointing-enabled">
+                                                Checkpointing Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable pipeline file checkpointing.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-checkpointing-flush-interval" min="0" class="validate">
+                                </div>
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-checkpointing-flush-interval" class="active">Flush Interval (batches) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Flush checkpoints to disk every N batches.">info_outline</i></label>
+                                        <input type="number" id="config-checkpointing-flush-interval" min="0" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-checkpointing-max-checkpoints" min="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-checkpointing-max-checkpoints" class="active">Max State Checkpoints <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Max number of checkpoints to keep.">info_outline</i></label>
+                                        <input type="number" id="config-checkpointing-max-checkpoints" min="1" class="validate">
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Persist State <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Persist complete pipeline ExtractionState.">info_outline</i></span>
-                                            <input type="checkbox" id="config-checkpointing-persist-state">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-checkpointing-persist-state" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-checkpointing-persist-state">
+                                                Persist State <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Persist complete pipeline ExtractionState.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-perf-max-cache-size" min="1" class="validate">
+                                </div>
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-perf-max-cache-size" class="active">Max Cache Size (MB) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum cache size allowed in megabytes.">info_outline</i></label>
+                                        <input type="number" id="config-perf-max-cache-size" min="1" class="validate">
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 5px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Normalization Cache Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable normalization caching.">info_outline</i></span>
-                                            <input type="checkbox" id="config-perf-normalization-cache">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-perf-normalization-cache" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-perf-normalization-cache">
+                                                Normalization Cache Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable normalization caching.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
+                                </div>
                                 </div>
                             </li>
 
@@ -809,13 +1043,16 @@
                             <li>
                                 <div class="collapsible-header"><i class="material-icons">share</i>Relationships<i class="material-icons chevron-icon">expand_more</i></div>
                                 <div class="collapsible-body">
-                                    <div class="switch" style="margin: 5px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Auto-Create Entities <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Automatically create missing entities referenced in relationships.">info_outline</i></span>
-                                            <input type="checkbox" id="config-auto-create-entities">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-auto-create-entities" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-auto-create-entities">
+                                                Auto-Create Entities <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Automatically create missing entities referenced in relationships.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
+                                </div>
                                     <div class="range-field" style="margin: 15px 0 15px 0;">
                                         <label for="config-relationship-auto-confidence" style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold;">
                                             Auto-Created Entity Confidence: <span id="relationship-auto-confidence-val" style="color: #1d70b8; font-weight: 800;">0.50</span>
@@ -823,9 +1060,10 @@
                                         </label>
                                         <input type="range" id="config-relationship-auto-confidence" min="0.0" max="1.0" step="0.05" value="0.50" style="margin-top: 8px; border: none;">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 5px 0;">
-                                        <input type="text" id="config-relationship-auto-default-type" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 5px 0;">
+                                        
                                         <label for="config-relationship-auto-default-type" class="active">Auto-Created Default Type <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Entity type assigned to auto-created missing entities (e.g. entity).">info_outline</i></label>
+                                        <input type="text" id="config-relationship-auto-default-type" class="validate">
                                     </div>
                                 </div>
                             </li>
@@ -834,111 +1072,143 @@
                             <li>
                                 <div class="collapsible-header"><i class="material-icons">cloud_queue</i>AWS Bedrock & Advanced<i class="material-icons chevron-icon">expand_more</i></div>
                                 <div class="collapsible-body">
-                                    <div class="switch" style="margin: 5px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>AWS Bedrock Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable AWS Bedrock client interface.">info_outline</i></span>
-                                            <input type="checkbox" id="config-aws-bedrock-enabled">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-aws-bedrock-enabled" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-aws-bedrock-enabled">
+                                                AWS Bedrock Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable AWS Bedrock client interface.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-bedrock-read-timeout" min="1" class="validate">
+                                </div>
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-bedrock-read-timeout" class="active">Bedrock Read Timeout (sec) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Read timeout for Bedrock operations.">info_outline</i></label>
+                                        <input type="number" id="config-bedrock-read-timeout" min="1" class="validate">
                                     </div>
-                                    <div class="switch" style="margin: 5px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Quota Governor Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable Bedrock API quota governor.">info_outline</i></span>
-                                            <input type="checkbox" id="config-bedrock-quota-gov">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-bedrock-quota-gov" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-bedrock-quota-gov">
+                                                Quota Governor Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable Bedrock API quota governor.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-llm-retries" min="0" class="validate">
+                                </div>
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-llm-retries" class="active">LLM API Retries <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Number of retries for LLM calls.">info_outline</i></label>
+                                        <input type="number" id="config-llm-retries" min="0" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-max-file-size" step="0.1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-max-file-size" class="active">Max File Size (MB) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum file size allowed for ingestion.">info_outline</i></label>
+                                        <input type="number" id="config-max-file-size" step="0.1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-min-shard-length" min="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-min-shard-length" class="active">Min Shard Length <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Minimum character length per text shard.">info_outline</i></label>
+                                        <input type="number" id="config-min-shard-length" min="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-retry-backoff-multiplier" min="1.0" step="0.1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-retry-backoff-multiplier" class="active">Retry Backoff Multiplier <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Multiplier for exponential backoff delays.">info_outline</i></label>
+                                        <input type="number" id="config-retry-backoff-multiplier" min="1.0" step="0.1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-retry-initial-delay" min="0.1" step="0.1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-retry-initial-delay" class="active">Retry Initial Delay (sec) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Initial delay in seconds before the first retry attempt.">info_outline</i></label>
+                                        <input type="number" id="config-retry-initial-delay" min="0.1" step="0.1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-retry-max-delay" min="1.0" step="0.1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-retry-max-delay" class="active">Retry Max Delay (sec) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum delay in seconds between retry attempts.">info_outline</i></label>
+                                        <input type="number" id="config-retry-max-delay" min="1.0" step="0.1" class="validate">
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Retry on Rate Limit <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Retry automatically when rate limits (429) are encountered.">info_outline</i></span>
-                                            <input type="checkbox" id="config-retry-rate-limit">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-retry-rate-limit" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-retry-rate-limit">
+                                                Retry on Rate Limit <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Retry automatically when rate limits (429) are encountered.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Retry on Timeout <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Automatically retry on timeouts.">info_outline</i></span>
-                                            <input type="checkbox" id="config-retry-on-timeout">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                </div>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-retry-on-timeout" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-retry-on-timeout">
+                                                Retry on Timeout <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Automatically retry on timeouts.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Retry Jitter <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Add random jitter delay to retry attempts.">info_outline</i></span>
-                                            <input type="checkbox" id="config-retry-jitter">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                </div>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-retry-jitter" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-retry-jitter">
+                                                Retry Jitter <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Add random jitter delay to retry attempts.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                </div>
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        <label style="position: static; font-size: 0.9rem;">Retry Strategy Type <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Retry backoff progression strategy.">info_outline</i></label>
                                         <select id="config-retry-strategy-type" class="browser-default">
                                             <option value="exponential">Exponential</option>
                                             <option value="linear">Linear</option>
                                             <option value="constant">Constant</option>
                                         </select>
-                                        <label style="position: static; font-size: 0.9rem;">Retry Strategy Type <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Retry backoff progression strategy.">info_outline</i></label>
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Bedrock 1M Beta Context <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable context 1M beta endpoints for Bedrock.">info_outline</i></span>
-                                            <input type="checkbox" id="config-bedrock-enable-beta">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-bedrock-enable-beta" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-bedrock-enable-beta">
+                                                Bedrock 1M Beta Context <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable context 1M beta endpoints for Bedrock.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="text" id="config-bedrock-beta-flag" class="validate">
+                                </div>
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-bedrock-beta-flag" class="active">Bedrock Beta Flag <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Beta API request flag header.">info_outline</i></label>
+                                        <input type="text" id="config-bedrock-beta-flag" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-governor-rpm" min="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-governor-rpm" class="active">Governor Requests Per Minute <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Max Bedrock requests permitted per minute.">info_outline</i></label>
+                                        <input type="number" id="config-governor-rpm" min="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-governor-tpm" min="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-governor-tpm" class="active">Governor Tokens Per Minute <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Max Bedrock tokens permitted per minute.">info_outline</i></label>
+                                        <input type="number" id="config-governor-tpm" min="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-governor-max-concurrency" min="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-governor-max-concurrency" class="active">Governor Max Concurrency <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Max concurrent Bedrock requests.">info_outline</i></label>
+                                        <input type="number" id="config-governor-max-concurrency" min="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-governor-window" min="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-governor-window" class="active">Governor Window (sec) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Window seconds for quota calculations.">info_outline</i></label>
+                                        <input type="number" id="config-governor-window" min="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-governor-jitter-min" min="0" step="0.1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-governor-jitter-min" class="active">Governor Jitter Min (sec) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Minimum delay jitter added to governor retries.">info_outline</i></label>
+                                        <input type="number" id="config-governor-jitter-min" min="0" step="0.1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 5px 0;">
-                                        <input type="number" id="config-governor-jitter-max" min="0" step="0.1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 5px 0;">
+                                        
                                         <label for="config-governor-jitter-max" class="active">Governor Jitter Max (sec) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum delay jitter added to governor retries.">info_outline</i></label>
+                                        <input type="number" id="config-governor-jitter-max" min="0" step="0.1" class="validate">
                                     </div>
                                 </div>
                             </li>
@@ -947,44 +1217,55 @@
                             <li>
                                 <div class="collapsible-header"><i class="material-icons">view_module</i>Batching<i class="material-icons chevron-icon">expand_more</i></div>
                                 <div class="collapsible-body">
-                                    <div class="input-field" style="margin: 5px 0 15px 0;">
-                                        <input type="number" id="config-batching-chunks-per-batch" min="1" step="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 5px 0 15px 0;">
+                                        
                                         <label for="config-batching-chunks-per-batch" class="active">Chunks Per Batch <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Number of text chunks bundled in a single LLM request.">info_outline</i></label>
+                                        <input type="number" id="config-batching-chunks-per-batch" min="1" step="1" class="validate">
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>File Scaffold Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Build a compact per-file scaffold to improve chunk-level consistency.">info_outline</i></span>
-                                            <input type="checkbox" id="config-batching-scaffold-enabled">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-batching-scaffold-enabled" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-batching-scaffold-enabled">
+                                                File Scaffold Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Build a compact per-file scaffold to improve chunk-level consistency.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-batching-input-token-ratio" min="0.1" max="1.0" step="0.05" class="validate">
+                                </div>
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-batching-input-token-ratio" class="active">Input Token Ratio <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Budget ratio of LLM max tokens reserved for prompt input.">info_outline</i></label>
+                                        <input type="number" id="config-batching-input-token-ratio" min="0.1" max="1.0" step="0.05" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-batching-max-batch-anthropic" min="1" step="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-batching-max-batch-anthropic" class="active">Max Batch Size (Anthropic) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Upper limit for Anthropic batch sizes to avoid API timeouts.">info_outline</i></label>
+                                        <input type="number" id="config-batching-max-batch-anthropic" min="1" step="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-batching-max-input-tokens" min="1000" step="1000" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-batching-max-input-tokens" class="active">Max Input Tokens <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum total input tokens allowed per batch.">info_outline</i></label>
+                                        <input type="number" id="config-batching-max-input-tokens" min="1000" step="1000" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-batching-min-batch-tokens" min="10" step="10" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-batching-min-batch-tokens" class="active">Min Batch Tokens <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Minimum tokens budget reserved for processing the batch.">info_outline</i></label>
+                                        <input type="number" id="config-batching-min-batch-tokens" min="10" step="10" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="text" id="config-batching-chunk-separator" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-batching-chunk-separator" class="active">Chunk Separator <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Separator boundary string between chunks in a batch.">info_outline</i></label>
+                                        <input type="text" id="config-batching-chunk-separator" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-batching-max-batch-text-length" min="100" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-batching-max-batch-text-length" class="active">Max Batch Text Length (chars) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum permitted batch size in characters (safety cap).">info_outline</i></label>
+                                        <input type="number" id="config-batching-max-batch-text-length" min="100" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 5px 0;">
-                                        <input type="number" id="config-batching-min-batch-size" min="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 5px 0;">
+                                        
                                         <label for="config-batching-min-batch-size" class="active">Min Batch Size <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Minimum batch size allowed (progress safety floor).">info_outline</i></label>
+                                        <input type="number" id="config-batching-min-batch-size" min="1" class="validate">
                                     </div>
                                 </div>
                             </li>
@@ -993,25 +1274,30 @@
                             <li>
                                 <div class="collapsible-header"><i class="material-icons">public</i>Web Research<i class="material-icons chevron-icon">expand_more</i></div>
                                 <div class="collapsible-body">
-                                    <div class="input-field" style="margin: 5px 0 15px 0;">
-                                        <input type="text" id="config-research-allowed-domains" class="validate" placeholder="e.g. .gov, .edu">
+                                    <div class="govuk-form-group" style="margin: 5px 0 15px 0;">
+                                        
                                         <label for="config-research-allowed-domains" class="active">Allowed Domains <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Comma-separated list of domains to restrict search results to.">info_outline</i></label>
+                                        <input type="text" id="config-research-allowed-domains" class="validate" placeholder="e.g. .gov, .edu">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="text" id="config-research-blocked-domains" class="validate" placeholder="e.g. facebook.com, twitter.com">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-research-blocked-domains" class="active">Blocked Domains <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Comma-separated list of domains to ignore.">info_outline</i></label>
+                                        <input type="text" id="config-research-blocked-domains" class="validate" placeholder="e.g. facebook.com, twitter.com">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-research-max-fetches" min="1" step="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-research-max-fetches" class="active">Max Page Fetches <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum total web pages to fetch.">info_outline</i></label>
+                                        <input type="number" id="config-research-max-fetches" min="1" step="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-research-num-queries" min="1" step="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-research-num-queries" class="active">Number of Queries <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Number of search queries to generate.">info_outline</i></label>
+                                        <input type="number" id="config-research-num-queries" min="1" step="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 5px 0;">
-                                        <input type="number" id="config-research-results-per-query" min="1" step="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 5px 0;">
+                                        
                                         <label for="config-research-results-per-query" class="active">Results Per Query <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Web results to fetch per search query.">info_outline</i></label>
+                                        <input type="number" id="config-research-results-per-query" min="1" step="1" class="validate">
                                     </div>
                                 </div>
                             </li>
@@ -1020,39 +1306,51 @@
                             <li>
                                 <div class="collapsible-header"><i class="material-icons">assignment</i>Source Grounding<i class="material-icons chevron-icon">expand_more</i></div>
                                 <div class="collapsible-body">
-                                    <div class="switch" style="margin: 5px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Source Grounding Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable source grounding to track entity/relationship origins.">info_outline</i></span>
-                                            <input type="checkbox" id="config-source-grounding-enabled">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-source-grounding-enabled" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-source-grounding-enabled">
+                                                Source Grounding Enabled <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Enable source grounding to track entity/relationship origins.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Merge Sources on Deduplication <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Combine original source lists when merging duplicate entities.">info_outline</i></span>
-                                            <input type="checkbox" id="config-source-grounding-merge">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                </div>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-source-grounding-merge" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-source-grounding-merge">
+                                                Merge Sources on Deduplication <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Combine original source lists when merging duplicate entities.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="text" id="config-source-grounding-fallback" class="validate">
+                                </div>
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-source-grounding-fallback" class="active">Fallback Source Prefix <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Prefix for synthetic source IDs when processing raw text input (no file).">info_outline</i></label>
+                                        <input type="text" id="config-source-grounding-fallback" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-source-grounding-max-length" min="10" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-source-grounding-max-length" class="active">Max Source Length <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum length permitted for a single source identifier string.">info_outline</i></label>
+                                        <input type="number" id="config-source-grounding-max-length" min="10" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="text" id="config-source-grounding-property-name" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-source-grounding-property-name" class="active">Source Property Name <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Property key name used to store source identifiers in the output.">info_outline</i></label>
+                                        <input type="text" id="config-source-grounding-property-name" class="validate">
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 5px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Validate Source Format <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Validate that source identifiers are non-empty strings.">info_outline</i></span>
-                                            <input type="checkbox" id="config-source-grounding-validate">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-source-grounding-validate" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-source-grounding-validate">
+                                                Validate Source Format <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Validate that source identifiers are non-empty strings.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
+                                </div>
                                 </div>
                             </li>
 
@@ -1060,33 +1358,35 @@
                             <li>
                                 <div class="collapsible-header"><i class="material-icons">text_fields</i>Text Normalization<i class="material-icons chevron-icon">expand_more</i></div>
                                 <div class="collapsible-body">
-                                    <div class="input-field" style="margin: 5px 0 15px 0;">
+                                    <div class="govuk-form-group" style="margin: 5px 0 15px 0;">
+                                        <label style="position: static; font-size: 0.9rem;">Text Casing <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Standard casing normalization strategy.">info_outline</i></label>
                                         <select id="config-norm-casing" class="browser-default">
                                             <option value="lowercase">lowercase</option>
                                             <option value="uppercase">uppercase</option>
                                             <option value="preserve">preserve</option>
                                         </select>
-                                        <label style="position: static; font-size: 0.9rem;">Text Casing <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Standard casing normalization strategy.">info_outline</i></label>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        <label style="position: static; font-size: 0.9rem;">Punctuation Handling <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Method to resolve special characters and punctuation.">info_outline</i></label>
                                         <select id="config-norm-punctuation" class="browser-default">
                                             <option value="remove">remove</option>
                                             <option value="preserve">preserve</option>
                                             <option value="normalize">normalize</option>
                                         </select>
-                                        <label style="position: static; font-size: 0.9rem;">Punctuation Handling <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Method to resolve special characters and punctuation.">info_outline</i></label>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <textarea id="config-norm-abbreviation-mappings" class="materialize-textarea" style="min-height: 80px; padding: 8px; border: 1px solid #b1b4b6; border-radius: 4px; box-sizing: border-box; background-color: #ffffff;"></textarea>
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
                                         <label for="config-norm-abbreviation-mappings" class="active">Abbreviation Mappings (JSON) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="JSON mapping object for abbreviation expansion (e.g. {&quot;USA&quot;: &quot;United States&quot;}).">info_outline</i></label>
+                                        <textarea id="config-norm-abbreviation-mappings" class="materialize-textarea" style="min-height: 80px; padding: 8px; border: 1px solid #b1b4b6; border-radius: 4px; box-sizing: border-box; background-color: #ffffff;"></textarea>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="text" id="config-norm-preserve-patterns" class="validate" placeholder="e.g. ^[A-Z]+_\d+$">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-norm-preserve-patterns" class="active">Preserve Identifier Patterns <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Comma-separated regular expressions matching identifiers that skip casing normalization.">info_outline</i></label>
+                                        <input type="text" id="config-norm-preserve-patterns" class="validate" placeholder="e.g. ^[A-Z]+_\d+$">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 5px 0;">
-                                        <input type="text" id="config-norm-remove-words" class="validate" placeholder="e.g. the, and">
+                                    <div class="govuk-form-group" style="margin: 15px 0 5px 0;">
+                                        
                                         <label for="config-norm-remove-words" class="active">Remove Common Words <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Comma-separated list of common stopwords to remove from text.">info_outline</i></label>
+                                        <input type="text" id="config-norm-remove-words" class="validate" placeholder="e.g. the, and">
                                     </div>
                                 </div>
                             </li>
@@ -1095,21 +1395,23 @@
                             <li>
                                 <div class="collapsible-header"><i class="material-icons">device_hub</i>Schema Evolution<i class="material-icons chevron-icon">expand_more</i></div>
                                 <div class="collapsible-body">
-                                    <div class="input-field" style="margin: 5px 0 15px 0;">
-                                        <input type="text" id="config-schema-initial-version" class="validate">
+                                    <div class="govuk-form-group" style="margin: 5px 0 15px 0;">
+                                        
                                         <label for="config-schema-initial-version" class="active">Initial Schema Version <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Starting schema version identifier string.">info_outline</i></label>
+                                        <input type="text" id="config-schema-initial-version" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-schema-similarity-threshold" min="0.0" max="1.0" step="0.05" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-schema-similarity-threshold" class="active">Type Similarity Threshold <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Threshold above which similar schemas are merged together.">info_outline</i></label>
+                                        <input type="number" id="config-schema-similarity-threshold" min="0.0" max="1.0" step="0.05" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 5px 0;">
+                                    <div class="govuk-form-group" style="margin: 15px 0 5px 0;">
+                                        <label style="position: static; font-size: 0.9rem;">Version Increment Strategy <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Semantic version increment strategy.">info_outline</i></label>
                                         <select id="config-schema-version-increment" class="browser-default">
                                             <option value="patch">patch</option>
                                             <option value="minor">minor</option>
                                             <option value="major">major</option>
                                         </select>
-                                        <label style="position: static; font-size: 0.9rem;">Version Increment Strategy <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Semantic version increment strategy.">info_outline</i></label>
                                     </div>
                                 </div>
                             </li>
@@ -1118,63 +1420,80 @@
                             <li>
                                 <div class="collapsible-header"><i class="material-icons">report_problem</i>System Resource Limits<i class="material-icons chevron-icon">expand_more</i></div>
                                 <div class="collapsible-body">
-                                    <div class="input-field" style="margin: 5px 0 15px 0;">
-                                        <input type="number" id="config-limits-max-entities" min="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 5px 0 15px 0;">
+                                        
                                         <label for="config-limits-max-entities" class="active">Max Entities <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum number of entities allowed.">info_outline</i></label>
+                                        <input type="number" id="config-limits-max-entities" min="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-limits-max-entity-types" min="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-limits-max-entity-types" class="active">Max Entity Types <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum number of entity types allowed.">info_outline</i></label>
+                                        <input type="number" id="config-limits-max-entity-types" min="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-limits-max-relationship-types" min="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-limits-max-relationship-types" class="active">Max Relationship Types <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum number of relationship types allowed.">info_outline</i></label>
+                                        <input type="number" id="config-limits-max-relationship-types" min="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-limits-max-relationships" min="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-limits-max-relationships" class="active">Max Relationships <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum number of relationships allowed.">info_outline</i></label>
+                                        <input type="number" id="config-limits-max-relationships" min="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-limits-max-shard-length" min="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-limits-max-shard-length" class="active">Max Shard Length <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum character length allowed per text shard.">info_outline</i></label>
+                                        <input type="number" id="config-limits-max-shard-length" min="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-limits-max-shards" min="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-limits-max-shards" class="active">Max Shards <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum number of input shards to generate.">info_outline</i></label>
+                                        <input type="number" id="config-limits-max-shards" min="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-limits-max-text-length" min="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-limits-max-text-length" class="active">Max Text Length <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum allowed length of total input text.">info_outline</i></label>
+                                        <input type="number" id="config-limits-max-text-length" min="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-limits-max-errors" min="0" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-limits-max-errors" class="active">Max Errors <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Maximum number of errors to collect before failing.">info_outline</i></label>
+                                        <input type="number" id="config-limits-max-errors" min="0" class="validate">
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Continue on Error <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Continue processing on non-critical step execution errors.">info_outline</i></span>
-                                            <input type="checkbox" id="config-error-continue">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-error-continue" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-error-continue">
+                                                Continue on Error <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Continue processing on non-critical step execution errors.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="switch" style="margin: 15px 0 15px 0;">
-                                        <label style="font-size: 0.85rem; color: #0b0c0c; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                                            <span>Check Available Memory <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Validate available host memory before parsing large files.">info_outline</i></span>
-                                            <input type="checkbox" id="config-memory-check">
-                                            <span class="lever" style="margin-right: 0;"></span>
-                                        </label>
+                                </div>
+                                    <div class="govuk-form-group" style="margin-bottom: 15px;">
+                                    <div class="govuk-checkboxes">
+                                        <div class="govuk-checkboxes__item">
+                                            <input class="govuk-checkboxes__input" id="config-memory-check" type="checkbox">
+                                            <label class="govuk-checkboxes__label" for="config-memory-check">
+                                                Check Available Memory <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Validate available host memory before parsing large files.">info_outline</i>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-memory-max-usage" min="1" class="validate">
+                                </div>
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-memory-max-usage" class="active">Max Memory Usage (MB) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Memory ceiling cap for processing (defaults to 80% RAM).">info_outline</i></label>
+                                        <input type="number" id="config-memory-max-usage" min="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 15px 0;">
-                                        <input type="number" id="config-memory-safety-margin" min="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 15px 0;">
+                                        
                                         <label for="config-memory-safety-margin" class="active">Memory Safety Margin (MB) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Safety margin memory reserved (default 256MB).">info_outline</i></label>
+                                        <input type="number" id="config-memory-safety-margin" min="1" class="validate">
                                     </div>
-                                    <div class="input-field" style="margin: 15px 0 5px 0;">
-                                        <input type="number" id="config-memory-warn-threshold" min="1" class="validate">
+                                    <div class="govuk-form-group" style="margin: 15px 0 5px 0;">
+                                        
                                         <label for="config-memory-warn-threshold" class="active">Memory Warning Threshold (MB) <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Threshold above which warning alerts are triggered.">info_outline</i></label>
+                                        <input type="number" id="config-memory-warn-threshold" min="1" class="validate">
                                     </div>
                                 </div>
                             </li>
@@ -1182,7 +1501,47 @@
                     </div>
                 </div>
             </div>
+
+                            <div id="upload-status" style="display: none; margin-bottom: 1.5rem; padding: 15px; border-radius: 4px;"></div>
+
+                            <div class="govuk-button-group" style="margin-top: 25px;">
+                                <button class="govuk-button" type="submit" id="submit-btn" data-module="govuk-button">
+                                    Create Ontology
+                                </button>
+                                <button type="button" class="govuk-button govuk-button--secondary wizard-prev-btn-action">Back</button>
+                            </div>
+
+                            <div class="progress" id="upload-progress" style="display: none;">
+                                <div class="indeterminate"></div>
+                            </div>
+                        </div>
+
+                        <!-- STEP 5: SUCCESS / KICK OFF -->
+                        <div id="step-5" class="wizard-step" style="display: none;">
+                            <div class="govuk-panel govuk-panel--confirmation">
+                                <h1 class="govuk-panel__title">
+                                    Ontology creation started
+                                </h1>
+                                <div class="govuk-panel__body">
+                                    Your job ID is<br><strong id="success-job-id"></strong>
+                                </div>
+                            </div>
+                            <h3 class="govuk-heading-m">What happens next</h3>
+                            <p class="govuk-body">
+                                Your Ontology is being created. Go to Review Ontologies to download the files, add notes, download reports and visualise the graph.
+                            </p>
+                            <div class="govuk-button-group" style="margin-top: 30px;">
+                                <button type="button" class="govuk-button" id="wizard-reset-btn" data-module="govuk-button">Create another ontology</button>
+                                <a href="/ontology/review-ontologies" class="govuk-button govuk-button--secondary" role="button" data-module="govuk-button">Review Ontologies</a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
+
+        <!-- Right Column: Interactive Configuration Sidebar -->
+        
 
         <!-- Notes Modal Structure -->
         <div id="notes-modal" class="modal" style="border-radius: 6px; max-width: 600px; border-top: 4px solid #1d70b8; overflow-y: visible;">
@@ -1196,7 +1555,7 @@
                 <div id="notes-modal-list" style="max-height: 250px; overflow-y: auto; margin-bottom: 20px; padding-right: 5px;"></div>
                 <div style="border-top: 1px solid #b1b4b6; padding-top: 15px;">
                     <label for="notes-modal-input" style="color: #0b0c0c; font-weight: bold; font-size: 0.95rem; display: block; margin-bottom: 8px;">Add a note</label>
-                    <div class="input-field" style="margin-top: 0; margin-bottom: 12px;">
+                    <div class="govuk-form-group" style="margin-top: 0; margin-bottom: 12px;">
                         <textarea id="notes-modal-input" class="materialize-textarea" placeholder="Type a note here..." style="min-height: 60px; margin: 0; padding: 8px; border: 1px solid #b1b4b6; border-radius: 4px; box-sizing: border-box; background-color: #ffffff;"></textarea>
                     </div>
                     <button type="button" id="notes-modal-add-btn" class="btn" style="background-color: #1d70b8; font-weight: bold; height: 36px; line-height: 36px; padding: 0 16px; border-radius: 4px; box-shadow: none;">
@@ -1710,29 +2069,30 @@
             const rightColumn = document.getElementById('right-column');
 
             function setConfigVisibility(visible) {
-                 const recentJobsColumn = document.getElementById('recent-jobs-column');
-                 const jobsTableBody = document.getElementById('jobs-tbody');
-                 if (visible) {
-                     leftColumn.classList.remove('l12');
-                     leftColumn.classList.add('l8');
-                     rightColumn.style.display = 'block';
-                     toggleConfigBtn.style.display = 'none';
-                     localStorage.setItem('showConfig', 'true');
-                     if (recentJobsColumn) {
-                         recentJobsColumn.style.display = 'none';
-                     }
-                 } else {
-                     leftColumn.classList.remove('l8');
-                     leftColumn.classList.add('l12');
-                     rightColumn.style.display = 'none';
-                     toggleConfigBtn.style.display = 'inline-flex';
-                     localStorage.setItem('showConfig', 'false');
-                     if (recentJobsColumn && jobsTableBody) {
-                         if (jobsTableBody.querySelectorAll('tr').length > 0 && jobsTableBody.textContent.indexOf('No jobs found') === -1) {
-                             recentJobsColumn.style.display = 'block';
-                         }
-                     }
-                 }
+                  const recentJobsColumn = document.getElementById('recent-jobs-column');
+                  const jobsTableBody = document.getElementById('jobs-tbody');
+                  if (!leftColumn || !rightColumn) return;
+                  if (visible) {
+                      leftColumn.classList.remove('l12');
+                      leftColumn.classList.add('l8');
+                      rightColumn.style.display = 'block';
+                      if (toggleConfigBtn) toggleConfigBtn.style.display = 'none';
+                      localStorage.setItem('showConfig', 'true');
+                      if (recentJobsColumn) {
+                          recentJobsColumn.style.display = 'none';
+                      }
+                  } else {
+                      leftColumn.classList.remove('l8');
+                      leftColumn.classList.add('l12');
+                      rightColumn.style.display = 'none';
+                      if (toggleConfigBtn) toggleConfigBtn.style.display = 'inline-flex';
+                      localStorage.setItem('showConfig', 'false');
+                      if (recentJobsColumn && jobsTableBody) {
+                          if (jobsTableBody.querySelectorAll('tr').length > 0 && jobsTableBody.textContent.indexOf('No jobs found') === -1) {
+                              recentJobsColumn.style.display = 'block';
+                          }
+                      }
+                  }
             }
 
             // Load saved state or default to false (collapsed)
@@ -1740,18 +2100,13 @@
             let showConfig = savedState === null ? 'false' : savedState;
             setConfigVisibility(showConfig === 'true');
 
-            toggleConfigBtn.addEventListener('click', () => {
-                const isVisible = rightColumn.style.display !== 'none';
-                setConfigVisibility(!isVisible);
-            });
-
-            // Close button inside the panel (minimize)
-            const closeConfigBtn = document.getElementById('close-config-btn');
-            if (closeConfigBtn) {
-                closeConfigBtn.addEventListener('click', () => {
-                    setConfigVisibility(false);
+            if (toggleConfigBtn) {
+                toggleConfigBtn.addEventListener('click', () => {
+                    const isVisible = rightColumn ? rightColumn.style.display !== 'none' : false;
+                    setConfigVisibility(!isVisible);
                 });
             }
+
 
             // Initial Sync
             syncUIFromConfig(activeConfig);
@@ -1846,7 +2201,7 @@
                 if (stepNum !== 4) {
                     setConfigVisibility(false);
                     // Hide the toggle button
-                    toggleConfigBtn.style.setProperty('display', 'none', 'important');
+                    if (toggleConfigBtn) toggleConfigBtn.style.setProperty('display', 'none', 'important');
                 } else {
                     const savedPref = localStorage.getItem('showConfig') === 'true';
                     setConfigVisibility(savedPref);
@@ -1894,16 +2249,26 @@
                 const modelSel = document.getElementById('model-selector');
                 const tempSlider = document.getElementById('temp-slider');
                 
-                document.getElementById('summary-domain').textContent = domainSel.options[domainSel.selectedIndex]?.text || 'None';
-                
-                let selectedModel = modelSel.value;
-                if (selectedModel === 'custom') {
-                    selectedModel = document.getElementById('custom-model-input').value || 'Custom';
-                } else {
-                    selectedModel = modelSel.options[modelSel.selectedIndex]?.text || selectedModel;
+                const summaryDomain = document.getElementById('summary-domain');
+                if (summaryDomain && domainSel) {
+                    summaryDomain.textContent = domainSel.options[domainSel.selectedIndex]?.text || 'None';
                 }
-                document.getElementById('summary-model').textContent = selectedModel;
-                document.getElementById('summary-temp').textContent = parseFloat(tempSlider.value).toFixed(2);
+                
+                const summaryModel = document.getElementById('summary-model');
+                if (summaryModel && modelSel) {
+                    let selectedModel = modelSel.value;
+                    if (selectedModel === 'custom') {
+                        selectedModel = document.getElementById('custom-model-input').value || 'Custom';
+                    } else {
+                        selectedModel = modelSel.options[modelSel.selectedIndex]?.text || selectedModel;
+                    }
+                    summaryModel.textContent = selectedModel;
+                }
+                
+                const summaryTemp = document.getElementById('summary-temp');
+                if (summaryTemp && tempSlider) {
+                    summaryTemp.textContent = parseFloat(tempSlider.value).toFixed(2);
+                }
                 
                 showStep(4);
             });
