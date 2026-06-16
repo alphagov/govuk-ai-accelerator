@@ -1280,6 +1280,7 @@ def create_blueprints():
             review_job_type='ontology',
             review_page_title='Review Ontologies',
             review_page_description='View your available ontologies below. Click any row to see more information about it.',
+            include_materialize=False,
         )
 
     @ontology_bp.route('/review-tests', methods=['GET'])
@@ -1290,6 +1291,7 @@ def create_blueprints():
             review_job_type='test',
             review_page_title='Review Tests',
             review_page_description='View ontology harness test runs, regression reports, and review notes.',
+            include_materialize=False,
         )
 
     @ontology_bp.route('/all_jobs', methods=['GET'])
