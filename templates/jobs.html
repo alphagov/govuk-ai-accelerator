@@ -176,9 +176,20 @@
 
     async function fetchJson(url, options = {}) {
       const response = await fetch(url, options);
-      const payload = response.status === 204 ? null : await response.json();
+      if (response.status === 204) return null;
+
+      const contentType = response.headers.get('content-type') || '';
+      const responseText = await response.text();
+      let payload = null;
+      if (responseText && contentType.includes('application/json')) {
+        try {
+          payload = JSON.parse(responseText);
+        } catch (err) {
+          throw new Error('Unable to load job details.');
+        }
+      }
       if (!response.ok) {
-        throw new Error((payload && payload.error) || 'Request failed');
+        throw new Error((payload && payload.error) || 'Unable to load job details.');
       }
       return payload;
     }
