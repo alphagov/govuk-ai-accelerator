@@ -54,4 +54,5 @@ def test_header_links_to_review_tests_after_create_domains():
     assert "/ontology/review-tests" in body
     assert "Review Tests" in body
     assert body.index("Create Domains") < body.index("Review Tests")
-    assert body.index("Review Tests") < body.index("File Explorer")
+    assert "File Explorer" not in body
+    assert "/viewer/bucket/govuk-ai-accelerator-data-integration" not in body

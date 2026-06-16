@@ -2247,7 +2247,7 @@
                 if (actionsHeader) {
                     actionsHeader.style.display = showActions ? '' : 'none';
                 }
-                const colspanVal = showActions ? 11 : 10;
+                const colspanVal = showActions ? 10 : 9;
 
                 if (!jobs || jobs.length === 0) {
                     jobsTbody.innerHTML = `<tr><td colspan="${colspanVal}" class="center-align grey-text">No jobs found.</td></tr>`;
@@ -2282,7 +2282,6 @@
                             : '<span class="new badge indigo lighten-1" data-badge-caption="ontology"></span>';
 
                     let ttlLink = 'N/A';
-                    let outputLink = 'N/A';
                     let visualiserLink = 'N/A';
                     let reportLink = 'N/A';
 
@@ -2290,7 +2289,6 @@
                         const targetBucket = 'govuk-ai-accelerator-data-integration';
                         const hasOutputArtifacts = Boolean(job.job_runs);
                         if (hasOutputArtifacts) {
-                            outputLink = `<a href="/viewer/bucket/${targetBucket}/${domainStr}/${job.job_runs}/" class="btn-view">Browse Files</a>`;
                             ttlLink = `<a href="/viewer/bucket/download/buckets/${targetBucket}/${domainStr}/${job.job_runs}/output/ontology.ttl" class="blue-text" target="_blank">Download</a>`;
                             visualiserLink = `<a href="/visualizer/?run=${domainStr}/${job.job_runs}" class="btn-view">Visualise Graph</a>`;
                             if (isHarness) {
@@ -2328,7 +2326,6 @@
                       <td>${statusHtml}</td>
                       <td>${pipelineBadge}</td>
                       <td>${ttlLink}</td>
-                      <td>${outputLink}</td>
                       <td>${visualiserLink}</td>
                       <td>${reportLink}</td>
                       ${showActions ? `<td style="vertical-align: middle;">${actionsHtml}</td>` : ''}
