@@ -29,7 +29,6 @@ from scripts.pipeline.constants import APP_HOST, APP_PORT, BLUEPRINTS
 from scripts.ingestion.commands.utils import DEFAULT_S3_BUCKET
 from scripts.ingestion.ingestion_pipeline import run_ingestion_background_task
 from src.aws_helper import create_bucket_folder
-from src.web_browser import routing
 from flask import current_app
 
 from starlette.routing import Mount, Route
@@ -1302,20 +1301,6 @@ def create_blueprints():
     def list_domains():
         return get_domain_list('govuk-ai-accelerator-data-integration')
 
-    @viewer_bp.route("/bucket")
-    def viewer_load():
-        return routing.index()
-
-    @viewer_bp.route("/bucket/<bucket_name>", defaults={"path": ""})
-    @viewer_bp.route("/bucket/<bucket_name>/<path:path>")
-    def view_bucket(bucket_name: str, path: str) -> str:
-        return routing.view_bucket(bucket_name, path, 1)
-
-    @viewer_bp.route("/api/bucket/<bucket_name>/tree")
-    def api_bucket_tree(bucket_name: str):
-        prefix = request.args.get('prefix', '')
-        return jsonify(routing.get_bucket_tree_nodes(bucket_name, prefix))
-
     @viewer_bp.route("/bucket/download/buckets/<bucket_name>/<path:path>")
     def download_file(bucket_name: str, path: str) -> Response:
         s3_client = boto3.client("s3")
@@ -1326,31 +1311,6 @@ def create_blueprints():
         )
 
         return redirect(url)
-
-    @viewer_bp.route("/api/bucket/<bucket_name>/<path:path>", methods=['DELETE'])
-    def delete_bucket_object(bucket_name: str, path: str):
-        try:
-            s3 = boto3.resource("s3")
-            bucket = s3.Bucket(bucket_name)
-
-            if path.endswith('/'):
-                responses = bucket.objects.filter(Prefix=path).delete()
-
-                errors = []
-                for response in responses:
-                    if 'Errors' in response:
-                        errors.extend(response['Errors'])
-
-                if errors:
-                    error_messages = ", ".join([f"{e.get('Key')}: {e.get('Message')}" for e in errors])
-                    return jsonify({"error": f"Failed to delete some objects: {error_messages}"}), 500
-            else:
-                s3.Object(bucket_name, path).delete()
-                print(path, bucket, bucket.objects.filter(Prefix=path))
-
-            return jsonify({"message": f"Successfully deleted {path} from {bucket_name}"}), 200
-        except Exception as e:
-            return jsonify({"error": f"Failed to delete object: {str(e)}"}), 500
 
     return healthcheck_bp, ontology_bp, viewer_bp, home_bp
 

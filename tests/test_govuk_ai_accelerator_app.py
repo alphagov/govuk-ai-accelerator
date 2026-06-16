@@ -1078,12 +1078,56 @@ def test_header_navigation_links_map_labels_to_paths():
     assert '<a class="govuk-service-navigation__link" href="/ontology/review-tests"' in html
     assert "Review Tests" in html
     assert html.index("Create Domains") < html.index("Review Tests")
-    assert html.index("Review Tests") < html.index("File Explorer")
-    assert (
-        '<a class="govuk-service-navigation__link" '
-        'href="/viewer/bucket/govuk-ai-accelerator-data-integration"' in html
+    assert "File Explorer" not in html
+    assert "/viewer/bucket/govuk-ai-accelerator-data-integration" not in html
+
+
+def test_file_explorer_browse_routes_are_not_registered(monkeypatch):
+    routing_module = importlib.import_module("src.web_browser.routing")
+    monkeypatch.setattr(routing_module, "index", lambda: "browse index")
+    monkeypatch.setattr(
+        routing_module,
+        "view_bucket",
+        lambda bucket, path, page: "bucket browse",
     )
-    assert "File Explorer" in html
+    monkeypatch.setattr(
+        routing_module,
+        "get_bucket_tree_nodes",
+        lambda bucket, prefix: [{"name": "folder"}],
+    )
+    mock_s3_resource = MagicMock()
+    monkeypatch.setattr("boto3.resource", lambda service_name: mock_s3_resource)
+
+    client = _client()
+
+    assert client.get("/viewer/bucket").status_code == 404
+    assert client.get("/viewer/bucket/govuk-ai-accelerator-data-integration").status_code == 404
+    assert client.get("/viewer/api/bucket/govuk-ai-accelerator-data-integration/tree").status_code == 404
+    assert (
+        client.delete(
+            "/viewer/api/bucket/govuk-ai-accelerator-data-integration/path/file.txt"
+        ).status_code
+        == 404
+    )
+
+
+def test_file_explorer_download_route_still_redirects(monkeypatch):
+    mock_s3_client = MagicMock()
+    mock_s3_client.generate_presigned_url.return_value = "https://example.test/download"
+    monkeypatch.setattr("boto3.client", lambda service_name: mock_s3_client)
+
+    response = _client().get(
+        "/viewer/bucket/download/buckets/test-bucket/path/to/file.txt",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == "https://example.test/download"
+    mock_s3_client.generate_presigned_url.assert_called_once_with(
+        "get_object",
+        Params={"Bucket": "test-bucket", "Key": "path/to/file.txt"},
+        ExpiresIn=3600,
+    )
 
 
 def test_header_marks_home_active_on_dashboard():
@@ -1353,8 +1397,10 @@ def test_jobs_page_styles_note_actions_as_gds_text_actions():
 
     assert response.status_code == 200
     assert "govuk-link govuk-!-font-size-16 review-note-action-link edit-inline-note-action" in html
+    assert "govuk-link govuk-!-font-size-16 review-note-action-link review-note-action-link--secondary cancel-inline-note-action" in html
     assert "govuk-link govuk-!-font-size-16 review-note-action-link review-note-action-link--destructive delete-inline-note-action" in html
     assert ">Edit</button>" in html
+    assert ">Cancel</button>" in html
     assert ">Delete</button>" in html
     assert "review-note-icon-button" not in html
 
@@ -1368,6 +1414,18 @@ def test_jobs_page_notes_use_flow_layout_and_govuk_link_colours():
     assert "position: absolute;" not in notes_css
     assert "margin-top:" in notes_css
     assert "color: #1d70b8;" in notes_css
+    assert ".review-note-action-link--secondary {" in notes_css
+    assert ".review-note-action-link--destructive {" in notes_css
+
+
+def test_jobs_page_note_edit_mode_keeps_delete_action():
+    template = Path(__file__).parents[1] / "templates" / "jobs.html"
+    html = template.read_text(encoding="utf-8")
+    edit_markup = html.split("if (isEditing) {", 1)[1].split("return `", 2)[1]
+
+    assert "save-inline-note-action" in edit_markup
+    assert "review-note-action-link--secondary cancel-inline-note-action" in edit_markup
+    assert "review-note-action-link--destructive delete-inline-note-action" in edit_markup
 
 
 def test_review_tests_page_uses_same_note_action_styles():
@@ -1378,6 +1436,23 @@ def test_review_tests_page_uses_same_note_action_styles():
     assert "govuk-link govuk-!-font-size-16 review-note-action-link edit-inline-note-action" in html
     assert ".review-note-item__actions {" in html
     assert "position: absolute;" not in html.split(".review-note-item {", 1)[1].split(".review-inline-note-form {", 1)[0]
+
+
+def test_dashboard_omits_file_explorer_browse_action_but_keeps_downloads():
+    template = Path(__file__).parents[1] / "templates" / "dashboard.html"
+    html = template.read_text(encoding="utf-8")
+
+    assert "Browse Files" not in html
+    assert "/viewer/bucket/${targetBucket}/${domainStr}/${job.job_runs}/" not in html
+    assert (
+        "/viewer/bucket/download/buckets/${targetBucket}/${domainStr}/${job.job_runs}/output/ontology.ttl"
+        in html
+    )
+    assert "/visualizer/?run=${domainStr}/${job.job_runs}" in html
+    assert (
+        "/viewer/bucket/download/buckets/${targetBucket}/${domainStr}/${job.job_runs}/output/regression_report.json"
+        in html
+    )
 
 
 def test_left_sidebar_is_removed():

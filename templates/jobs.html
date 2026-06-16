@@ -472,7 +472,8 @@
             <textarea id="edit-note-${note.id}" class="govuk-textarea" rows="3">${escapeHtml(note.text)}</textarea>
             <div class="review-note-item__actions">
               <button type="button" class="govuk-link govuk-!-font-size-16 review-note-action-link save-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}">Save</button>
-              <button type="button" class="govuk-link govuk-!-font-size-16 review-note-action-link cancel-inline-note-action" data-job-id="${escapeAttribute(jobId)}">Cancel</button>
+              <button type="button" class="govuk-link govuk-!-font-size-16 review-note-action-link review-note-action-link--secondary cancel-inline-note-action" data-job-id="${escapeAttribute(jobId)}">Cancel</button>
+              <button type="button" class="govuk-link govuk-!-font-size-16 review-note-action-link review-note-action-link--destructive delete-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}">Delete</button>
             </div>
           </div>
         `;
@@ -977,6 +978,14 @@
   .review-note-action-link:hover {
       color: #003078;
       text-decoration-thickness: max(3px, 0.1875rem);
+  }
+
+  .review-note-action-link--secondary {
+      color: #505a5f;
+  }
+
+  .review-note-action-link--secondary:hover {
+      color: #0b0c0c;
   }
 
   .review-note-action-link--destructive {
