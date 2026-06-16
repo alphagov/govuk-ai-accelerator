@@ -361,6 +361,202 @@ def test_review_jobs_endpoint_filters_harness_jobs_for_review_tests(tmp_path):
     )
 
 
+def test_review_domains_endpoint_returns_latest_ingestion_job_per_domain(tmp_path):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+    created_at = datetime(2026, 5, 11, 13, 0, tzinfo=timezone.utc)
+
+    with flask_app.app_context():
+        app_module.db.session.add_all(
+            [
+                app_module.ProcessingJob(
+                    id="visa-old",
+                    status="completed",
+                    pipeline="ingestion",
+                    domain="visa",
+                    created_at=created_at,
+                ),
+                app_module.ProcessingJob(
+                    id="visa-new",
+                    status="running",
+                    pipeline="ingestion",
+                    domain="visa",
+                    created_at=created_at + timedelta(hours=1),
+                ),
+                app_module.ProcessingJob(
+                    id="asylum-job",
+                    status="completed",
+                    pipeline="ingestion",
+                    domain="asylum",
+                    created_at=created_at + timedelta(minutes=30),
+                ),
+                app_module.ProcessingJob(
+                    id="ontology-job",
+                    status="completed",
+                    pipeline="ontology",
+                    domain="visa",
+                    created_at=created_at + timedelta(hours=2),
+                ),
+            ]
+        )
+        app_module.db.session.add(
+            app_module.ProcessingJobNote(
+                job_id="visa-new",
+                text="Needs policy review",
+                created_at=created_at + timedelta(hours=3),
+            )
+        )
+        app_module.db.session.commit()
+
+    response = flask_app.test_client().get(
+        "/ontology/domains/review?page=1&per_page=10&sort=domain&direction=asc"
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["pagination"] == {
+        "page": 1,
+        "per_page": 10,
+        "total_items": 2,
+        "total_pages": 1,
+        "has_next": False,
+        "has_previous": False,
+    }
+    assert [domain["domain"] for domain in payload["domains"]] == ["asylum", "visa"]
+    visa = payload["domains"][1]
+    assert visa["job_id"] == "visa-new"
+    assert visa["status"] == "running"
+    assert visa["notes_count"] == 1
+    assert visa["latest_note"]["text"] == "Needs policy review"
+
+
+def test_review_domains_endpoint_searches_latest_note_text(tmp_path):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+    created_at = datetime(2026, 5, 11, 13, 0, tzinfo=timezone.utc)
+
+    with flask_app.app_context():
+        app_module.db.session.add_all(
+            [
+                app_module.ProcessingJob(
+                    id="visa-job",
+                    status="completed",
+                    pipeline="ingestion",
+                    domain="visa",
+                    created_at=created_at,
+                ),
+                app_module.ProcessingJob(
+                    id="asylum-job",
+                    status="completed",
+                    pipeline="ingestion",
+                    domain="asylum",
+                    created_at=created_at + timedelta(minutes=1),
+                ),
+            ]
+        )
+        app_module.db.session.add(
+            app_module.ProcessingJobNote(
+                job_id="visa-job",
+                text="Source list needs review",
+                created_at=created_at + timedelta(minutes=2),
+            )
+        )
+        app_module.db.session.commit()
+
+    response = flask_app.test_client().get("/ontology/domains/review?search=source%20list")
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert [domain["domain"] for domain in payload["domains"]] == ["visa"]
+    assert payload["pagination"]["total_items"] == 1
+
+
+def test_review_domain_urls_prefers_successful_sources_sidecar(tmp_path, monkeypatch):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+    sources = {
+        "s3://govuk-ai-accelerator-data-integration/visa/input/a.md": "https://www.gov.uk/a",
+        "s3://govuk-ai-accelerator-data-integration/visa/input/b.md": "https://www.gov.uk/b",
+    }
+    mock_body = MagicMock()
+    mock_body.read.return_value = json.dumps(sources).encode("utf-8")
+    mock_s3_client = MagicMock()
+    mock_s3_client.get_object.return_value = {"Body": mock_body}
+    monkeypatch.setattr("boto3.client", lambda service_name: mock_s3_client)
+
+    with flask_app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="visa-job",
+                status="completed",
+                pipeline="ingestion",
+                domain="visa",
+                config_data=json.dumps(
+                    {"links": ["https://www.gov.uk/submitted-only"]}
+                ),
+                created_at=datetime(2026, 5, 11, 13, 0, tzinfo=timezone.utc),
+            )
+        )
+        app_module.db.session.commit()
+
+    response = flask_app.test_client().get("/ontology/domains/review/visa-job/urls")
+
+    assert response.status_code == 200
+    assert response.get_json()["urls"] == ["https://www.gov.uk/a", "https://www.gov.uk/b"]
+    mock_s3_client.get_object.assert_called_once_with(
+        Bucket="govuk-ai-accelerator-data-integration",
+        Key="visa/input/sources.json",
+    )
+
+
+def test_review_domain_urls_falls_back_to_submitted_links(tmp_path, monkeypatch):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+    mock_s3_client = MagicMock()
+    mock_s3_client.get_object.side_effect = Exception("missing sidecar")
+    monkeypatch.setattr("boto3.client", lambda service_name: mock_s3_client)
+
+    with flask_app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="pending-job",
+                status="pending",
+                pipeline="ingestion",
+                domain="asylum",
+                config_data=json.dumps(
+                    {"links": ["https://www.gov.uk/a", "https://www.gov.uk/b"]}
+                ),
+                created_at=datetime(2026, 5, 11, 13, 0, tzinfo=timezone.utc),
+            )
+        )
+        app_module.db.session.commit()
+
+    response = flask_app.test_client().get("/ontology/domains/review/pending-job/urls")
+
+    assert response.status_code == 200
+    assert response.get_json()["urls"] == ["https://www.gov.uk/a", "https://www.gov.uk/b"]
+
+
+def test_review_domain_urls_returns_empty_list_without_sources_or_links(tmp_path, monkeypatch):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+    mock_s3_client = MagicMock()
+    mock_s3_client.get_object.side_effect = Exception("missing sidecar")
+    monkeypatch.setattr("boto3.client", lambda service_name: mock_s3_client)
+
+    with flask_app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="empty-job",
+                status="completed",
+                pipeline="ingestion",
+                domain="empty",
+                created_at=datetime(2026, 5, 11, 13, 0, tzinfo=timezone.utc),
+            )
+        )
+        app_module.db.session.commit()
+
+    response = flask_app.test_client().get("/ontology/domains/review/empty-job/urls")
+
+    assert response.status_code == 200
+    assert response.get_json()["urls"] == []
+
+
 def test_review_jobs_endpoint_adds_visualizer_url_for_local_graph_jobs(tmp_path):
     app_module, flask_app = _jobs_test_app(tmp_path)
     output_dir = tmp_path / "review-demo" / "local-graph-job" / "output"
@@ -876,6 +1072,34 @@ def test_job_artifacts_endpoint_groups_downloadable_flat_s3_files(tmp_path, monk
     assert "filename=visa-run-20260605-1-output-ontology.ttl" in ontology_artifact["download_url"]
 
 
+def test_job_artifacts_endpoint_returns_json_error_when_s3_listing_fails(tmp_path, monkeypatch):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+
+    with flask_app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="artifact-error-job",
+                status="completed",
+                pipeline="ontology",
+                domain="visa",
+                job_runs="run-20260605-1",
+                created_at=datetime.now(timezone.utc),
+            )
+        )
+        app_module.db.session.commit()
+
+    mock_s3_client = MagicMock()
+    mock_s3_client.get_paginator.side_effect = RuntimeError("s3 unavailable")
+    monkeypatch.setattr("boto3.client", lambda service_name: mock_s3_client)
+
+    response = flask_app.test_client().get("/ontology/jobs/artifact-error-job/artifacts")
+
+    assert response.status_code == 502
+    assert response.is_json
+    payload = response.get_json()
+    assert payload["error"] == "Unable to load job details."
+
+
 def test_job_artifacts_endpoint_includes_flat_local_input_and_output_downloads(tmp_path):
     app_module, flask_app = _jobs_test_app(tmp_path)
     input_dir = tmp_path / "run" / "input"
@@ -1075,9 +1299,12 @@ def test_header_navigation_links_map_labels_to_paths():
     assert '<a class="govuk-service-navigation__link" href="/ontology/review-ontologies"' in html
     assert "Review Ontologies" in html
     assert "Create Domains" in html
+    assert '<a class="govuk-service-navigation__link" href="/ontology/review-domains"' in html
+    assert "Review Domains" in html
     assert '<a class="govuk-service-navigation__link" href="/ontology/review-tests"' in html
     assert "Review Tests" in html
-    assert html.index("Create Domains") < html.index("Review Tests")
+    assert html.index("Create Domains") < html.index("Review Domains")
+    assert html.index("Review Domains") < html.index("Review Tests")
     assert "File Explorer" not in html
     assert "/viewer/bucket/govuk-ai-accelerator-data-integration" not in html
 
@@ -1148,6 +1375,21 @@ def test_header_marks_create_domains_active_on_domains():
     )
     assert (
         '<strong class="govuk-service-navigation__active-fallback">Create Domains</strong>'
+        in html
+    )
+
+
+def test_header_marks_review_domains_active_on_review_domains():
+    response = _client().get("/ontology/review-domains")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert (
+        '<a class="govuk-service-navigation__link" href="/ontology/review-domains" '
+        'aria-current="page">' in html
+    )
+    assert (
+        '<strong class="govuk-service-navigation__active-fallback">Review Domains</strong>'
         in html
     )
 
@@ -1346,6 +1588,18 @@ def test_jobs_page_uses_inline_notes_without_per_row_sync_or_native_note_prompts
     assert "Edit note text:" not in html
     assert "Are you sure you want to delete this note?" not in html
     assert "localStorage.setItem('job-notes-'" not in html
+
+
+def test_review_pages_harden_fetch_json_against_html_error_responses():
+    for template_name in ("jobs.html", "review_domains.html"):
+        html = (Path(__file__).parents[1] / "templates" / template_name).read_text(
+            encoding="utf-8"
+        )
+
+        assert "response.headers.get('content-type')" in html
+        assert "await response.text()" in html
+        assert "Unable to load job details." in html
+        assert "Unexpected token '<'" not in html
 
 
 def test_jobs_page_orders_detail_menu_by_artifact_context():
