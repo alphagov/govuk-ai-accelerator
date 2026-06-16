@@ -1335,13 +1335,25 @@ def test_jobs_page_uses_gds_tags_and_notes_modal_controls():
     assert "chat_bubble_outline" not in html
 
 
+def test_review_custom_classes_do_not_define_typography():
+    template = Path(__file__).parents[1] / "templates" / "jobs.html"
+    html = template.read_text(encoding="utf-8")
+
+    assert 'class="govuk-!-font-weight-bold"' in html
+    assert "govuk-body-s review-job-id" in html
+    assert "govuk-!-font-size-19 govuk-!-font-weight-bold review-detail-tab" in html
+    assert "font-size:" not in html
+    assert "font-weight:" not in html
+    assert "font-family:" not in html
+
+
 def test_jobs_page_styles_note_actions_as_gds_text_actions():
     response = _client().get("/ontology/review-ontologies")
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert "govuk-link review-note-action-link edit-inline-note-action" in html
-    assert "govuk-link review-note-action-link review-note-action-link--destructive delete-inline-note-action" in html
+    assert "govuk-link govuk-!-font-size-16 review-note-action-link edit-inline-note-action" in html
+    assert "govuk-link govuk-!-font-size-16 review-note-action-link review-note-action-link--destructive delete-inline-note-action" in html
     assert ">Edit</button>" in html
     assert ">Delete</button>" in html
     assert "review-note-icon-button" not in html
