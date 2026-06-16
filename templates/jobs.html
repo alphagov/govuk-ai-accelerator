@@ -249,7 +249,7 @@
         tr.innerHTML = `
           <td class="govuk-table__cell">
             <span class="review-job-label" title="${escapeAttribute(job.job_runs || job.job_id)}">
-              <strong>${escapeHtml(formatOntologyLabel(job))}</strong>
+              <strong class="govuk-!-font-weight-bold">${escapeHtml(formatOntologyLabel(job))}</strong>
               <span class="govuk-body-s review-job-id" title="${escapeAttribute(job.job_id)}">${escapeHtml(formatJobIdLabel(job.job_id))}</span>
             </span>
           </td>
@@ -277,7 +277,7 @@
       const actions = [];
       actions.push(`
         <li class="review-row-actions__item">
-          <button type="button" class="govuk-link review-row-action-link open-notes-action" data-job-id="${escapeAttribute(job.job_id)}" aria-label="${escapeAttribute(notesLabel)} for this job">
+          <button type="button" class="govuk-link govuk-!-font-size-16 review-row-action-link open-notes-action" data-job-id="${escapeAttribute(job.job_id)}" aria-label="${escapeAttribute(notesLabel)} for this job">
             ${escapeHtml(notesLabel)}
           </button>
         </li>
@@ -285,7 +285,7 @@
       if (job.ontology_download_url) {
         actions.push(`
           <li class="review-row-actions__item">
-            <a class="govuk-link review-row-action-link download-ontology-action" href="${escapeAttribute(job.ontology_download_url)}" download aria-label="Download TTL ${escapeAttribute(job.job_id)}">
+            <a class="govuk-link govuk-!-font-size-16 review-row-action-link download-ontology-action" href="${escapeAttribute(job.ontology_download_url)}" download aria-label="Download TTL ${escapeAttribute(job.job_id)}">
               Download TTL<span class="govuk-visually-hidden"> ${escapeHtml(job.job_id)}</span>
             </a>
           </li>
@@ -294,7 +294,7 @@
       if (job.visualize_url) {
         actions.push(`
           <li class="review-row-actions__item">
-            <a class="govuk-link review-row-action-link visualise-job-action" href="${escapeAttribute(job.visualize_url)}" target="_blank" rel="noopener noreferrer">
+            <a class="govuk-link govuk-!-font-size-16 review-row-action-link visualise-job-action" href="${escapeAttribute(job.visualize_url)}" target="_blank" rel="noopener noreferrer">
               Visualise<span class="govuk-visually-hidden"> ${escapeHtml(job.job_id)}</span>
             </a>
           </li>
@@ -387,7 +387,7 @@
     function renderDetailTab(section, label) {
       const active = selectedDetailSection === section;
       return `
-        <button type="button" class="review-detail-tab${active ? ' is-active' : ''}" data-detail-section="${section}">
+        <button type="button" class="govuk-!-font-size-19 govuk-!-font-weight-bold review-detail-tab${active ? ' is-active' : ''}" data-detail-section="${section}">
           ${label}
         </button>
       `;
@@ -471,8 +471,8 @@
             <label class="govuk-visually-hidden" for="edit-note-${note.id}">Edit note</label>
             <textarea id="edit-note-${note.id}" class="govuk-textarea" rows="3">${escapeHtml(note.text)}</textarea>
             <div class="review-note-item__actions">
-              <button type="button" class="govuk-link review-note-action-link save-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}">Save</button>
-              <button type="button" class="govuk-link review-note-action-link cancel-inline-note-action" data-job-id="${escapeAttribute(jobId)}">Cancel</button>
+              <button type="button" class="govuk-link govuk-!-font-size-16 review-note-action-link save-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}">Save</button>
+              <button type="button" class="govuk-link govuk-!-font-size-16 review-note-action-link cancel-inline-note-action" data-job-id="${escapeAttribute(jobId)}">Cancel</button>
             </div>
           </div>
         `;
@@ -483,8 +483,8 @@
           <div class="govuk-body-s review-note-item__meta">${formatDateTime(note.created_at)}</div>
           <div class="govuk-body review-note-item__text">${escapeHtml(note.text)}</div>
           <div class="review-note-item__actions">
-            <button type="button" class="govuk-link review-note-action-link edit-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}">Edit</button>
-            <button type="button" class="govuk-link review-note-action-link review-note-action-link--destructive delete-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}">Delete</button>
+            <button type="button" class="govuk-link govuk-!-font-size-16 review-note-action-link edit-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}">Edit</button>
+            <button type="button" class="govuk-link govuk-!-font-size-16 review-note-action-link review-note-action-link--destructive delete-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}">Delete</button>
           </div>
         </div>
       `;
@@ -828,8 +828,6 @@
       color: #0b0c0c;
       cursor: pointer;
       font: inherit;
-      font-size: 16px;
-      font-weight: 600;
       text-align: left;
       padding: 16px 18px;
   }
@@ -841,7 +839,6 @@
   .review-detail-tab.is-active {
       border-left-color: #1d70b8;
       background: #ffffff;
-      font-weight: 700;
   }
 
   .review-detail-panel {
@@ -923,10 +920,6 @@
       background: transparent;
       color: #1d70b8;
       cursor: pointer;
-      font-family: inherit;
-      font-size: 15px;
-      font-weight: 400;
-      line-height: 1.25;
       text-align: left;
       text-decoration: underline;
       text-decoration-thickness: max(1px, 0.0625rem);
@@ -1001,10 +994,6 @@
       height: auto;
       line-height: normal;
       min-height: 0;
-  }
-
-  .review-pagination .govuk-pagination__link {
-      font-weight: 700;
   }
 
   @media (max-width: 760px) {
