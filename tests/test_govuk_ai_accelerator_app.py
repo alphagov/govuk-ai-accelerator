@@ -400,9 +400,22 @@ def test_jobs_template_exposes_selected_job_artifact_downloads():
     assert "/artifacts" in html
     assert "renderArtifactRows" in html
     assert "download_url" in html
+    assert "material-icons" not in html
     assert "insert_drive_file" not in html
     assert "folder_zip" not in html
     assert "browse files" not in html
+
+
+def test_review_pages_do_not_load_material_design_assets():
+    for path in ("/ontology/review-ontologies", "/ontology/review-tests"):
+        response = _client().get(path)
+        html = response.get_data(as_text=True)
+
+        assert response.status_code == 200
+        assert "materialize.min.css" not in html
+        assert "materialize.min.js" not in html
+        assert "Material+Icons" not in html
+        assert "material-icons" not in html
 
 
 def test_source_config_template_uses_ui_selected_domain():
