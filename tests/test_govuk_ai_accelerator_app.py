@@ -400,9 +400,22 @@ def test_jobs_template_exposes_selected_job_artifact_downloads():
     assert "/artifacts" in html
     assert "renderArtifactRows" in html
     assert "download_url" in html
-    assert "insert_drive_file" in html
+    assert "material-icons" not in html
+    assert "insert_drive_file" not in html
     assert "folder_zip" not in html
     assert "browse files" not in html
+
+
+def test_review_pages_do_not_load_material_design_assets():
+    for path in ("/ontology/review-ontologies", "/ontology/review-tests"):
+        response = _client().get(path)
+        html = response.get_data(as_text=True)
+
+        assert response.status_code == 200
+        assert "materialize.min.css" not in html
+        assert "materialize.min.js" not in html
+        assert "Material+Icons" not in html
+        assert "material-icons" not in html
 
 
 def test_source_config_template_uses_ui_selected_domain():
@@ -790,6 +803,7 @@ def test_job_artifacts_endpoint_groups_downloadable_flat_s3_files(tmp_path, monk
                     {
                         "Contents": [
                             {"Key": "visa/run-20260605-1/config.yaml", "Size": 9},
+                            {"Key": "visa/run-20260605-1/input/source.md", "Size": 17},
                             {"Key": "visa/run-20260605-1/output/graph.json", "Size": 10},
                             {"Key": "visa/run-20260605-1/output/ontology.ttl", "Size": 11},
                             {"Key": "visa/run-20260605-1/output/schema.json", "Size": 12},
@@ -832,6 +846,9 @@ def test_job_artifacts_endpoint_groups_downloadable_flat_s3_files(tmp_path, monk
     assert "input" not in intermediary_names
     assert "output" not in intermediary_names
     assert "checkpoints" not in intermediary_names
+    assert [
+        artifact["name"] for artifact in groups["intermediary_files"]
+    ].count("input/source.md") == 1
     assert report_names == {
         "output/bedrock_costs.csv",
         "output/regression_report.json",
@@ -1061,12 +1078,56 @@ def test_header_navigation_links_map_labels_to_paths():
     assert '<a class="govuk-service-navigation__link" href="/ontology/review-tests"' in html
     assert "Review Tests" in html
     assert html.index("Create Domains") < html.index("Review Tests")
-    assert html.index("Review Tests") < html.index("File Explorer")
-    assert (
-        '<a class="govuk-service-navigation__link" '
-        'href="/viewer/bucket/govuk-ai-accelerator-data-integration"' in html
+    assert "File Explorer" not in html
+    assert "/viewer/bucket/govuk-ai-accelerator-data-integration" not in html
+
+
+def test_file_explorer_browse_routes_are_not_registered(monkeypatch):
+    routing_module = importlib.import_module("src.web_browser.routing")
+    monkeypatch.setattr(routing_module, "index", lambda: "browse index")
+    monkeypatch.setattr(
+        routing_module,
+        "view_bucket",
+        lambda bucket, path, page: "bucket browse",
     )
-    assert "File Explorer" in html
+    monkeypatch.setattr(
+        routing_module,
+        "get_bucket_tree_nodes",
+        lambda bucket, prefix: [{"name": "folder"}],
+    )
+    mock_s3_resource = MagicMock()
+    monkeypatch.setattr("boto3.resource", lambda service_name: mock_s3_resource)
+
+    client = _client()
+
+    assert client.get("/viewer/bucket").status_code == 404
+    assert client.get("/viewer/bucket/govuk-ai-accelerator-data-integration").status_code == 404
+    assert client.get("/viewer/api/bucket/govuk-ai-accelerator-data-integration/tree").status_code == 404
+    assert (
+        client.delete(
+            "/viewer/api/bucket/govuk-ai-accelerator-data-integration/path/file.txt"
+        ).status_code
+        == 404
+    )
+
+
+def test_file_explorer_download_route_still_redirects(monkeypatch):
+    mock_s3_client = MagicMock()
+    mock_s3_client.generate_presigned_url.return_value = "https://example.test/download"
+    monkeypatch.setattr("boto3.client", lambda service_name: mock_s3_client)
+
+    response = _client().get(
+        "/viewer/bucket/download/buckets/test-bucket/path/to/file.txt",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == "https://example.test/download"
+    mock_s3_client.generate_presigned_url.assert_called_once_with(
+        "get_object",
+        Params={"Bucket": "test-bucket", "Key": "path/to/file.txt"},
+        ExpiresIn=3600,
+    )
 
 
 def test_header_marks_home_active_on_dashboard():
@@ -1122,9 +1183,13 @@ def test_jobs_page_renders_review_table_headings():
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert "<h2>Review Ontologies</h2>" in html
-    assert '<table class="review-jobs-table" id="jobs-table">' in html
-    for heading in ("Ontology", "Domain", "Created At", "Status", "Actions"):
+    assert '<h1 class="govuk-heading-l">Review Ontologies</h1>' in html
+    assert (
+        '<p class="govuk-body">View your available ontologies below. Click any row to see more '
+        "information about it.</p>"
+    ) in html
+    assert '<table class="govuk-table review-jobs-table" id="jobs-table">' in html
+    for heading in ("Ontology", "Domain", "Created at", "Status", "Actions"):
         assert f"<span>{heading}</span>" in html
     assert "<span>Type</span>" not in html
     assert "pipelineTypeLabel" not in html
@@ -1136,7 +1201,7 @@ def test_jobs_page_renders_review_table_headings():
     assert "status, or type" not in html
     assert 'colspan="5"' in html
     assert 'colspan="6"' not in html
-    assert '<th scope="col" aria-sort="descending">' in html
+    assert '<th scope="col" class="govuk-table__header" aria-sort="descending">' in html
     assert "data-sort-icon" not in html
     assert "sort-icon-active" not in html
     assert "sort-icon-inactive" not in html
@@ -1150,9 +1215,11 @@ def test_review_tests_page_renders_test_title_and_type():
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert "<h2>Review Tests</h2>" in html
+    assert '<h1 class="govuk-heading-l">Review Tests</h1>' in html
     assert 'const REVIEW_JOB_TYPE = "test";' in html
     assert 'const REVIEW_PAGE_TITLE = "Review Tests";' in html
+    assert "renderPagination" in html
+    assert "perPage = 10" in html
 
 
 def test_review_ontologies_page_uses_requested_subtitle():
@@ -1302,14 +1369,26 @@ def test_jobs_page_uses_gds_tags_and_notes_modal_controls():
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert "govuk-tag review-tag" in html
+    assert "govuk-tag govuk-tag--${statusTagModifier(status)}" in html
     assert "if (status === 'pending') return 'yellow';" in html
     assert "return 'yellow';" in html
-    assert "review-add-note-button add-inline-note-action" in html
-    assert 'class="govuk-textarea review-note-textarea"' in html
+    assert "govuk-button add-inline-note-action" in html
+    assert 'class="govuk-textarea"' in html
     assert 'class="govuk-label govuk-label--s"' in html
     assert "review-note-button" not in html
     assert "chat_bubble_outline" not in html
+
+
+def test_review_custom_classes_do_not_define_typography():
+    template = Path(__file__).parents[1] / "templates" / "jobs.html"
+    html = template.read_text(encoding="utf-8")
+
+    assert 'class="govuk-!-font-weight-bold"' in html
+    assert "govuk-body-s review-job-id" in html
+    assert "govuk-!-font-size-19 govuk-!-font-weight-bold review-detail-tab" in html
+    assert "font-size:" not in html
+    assert "font-weight:" not in html
+    assert "font-family:" not in html
 
 
 def test_jobs_page_styles_note_actions_as_gds_text_actions():
@@ -1317,11 +1396,63 @@ def test_jobs_page_styles_note_actions_as_gds_text_actions():
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert "review-note-action-link edit-inline-note-action" in html
-    assert "review-note-action-link review-note-action-link--destructive delete-inline-note-action" in html
+    assert "govuk-link govuk-!-font-size-16 review-note-action-link edit-inline-note-action" in html
+    assert "govuk-link govuk-!-font-size-16 review-note-action-link review-note-action-link--secondary cancel-inline-note-action" in html
+    assert "govuk-link govuk-!-font-size-16 review-note-action-link review-note-action-link--destructive delete-inline-note-action" in html
     assert ">Edit</button>" in html
+    assert ">Cancel</button>" in html
     assert ">Delete</button>" in html
     assert "review-note-icon-button" not in html
+
+
+def test_jobs_page_notes_use_flow_layout_and_govuk_link_colours():
+    template = Path(__file__).parents[1] / "templates" / "jobs.html"
+    html = template.read_text(encoding="utf-8")
+    notes_css = html.split(".review-note-item {", 1)[1].split(".review-inline-note-form {", 1)[0]
+
+    assert "padding: 14px 92px 14px 0;" not in notes_css
+    assert "position: absolute;" not in notes_css
+    assert "margin-top:" in notes_css
+    assert "color: #1d70b8;" in notes_css
+    assert ".review-note-action-link--secondary {" in notes_css
+    assert ".review-note-action-link--destructive {" in notes_css
+
+
+def test_jobs_page_note_edit_mode_keeps_delete_action():
+    template = Path(__file__).parents[1] / "templates" / "jobs.html"
+    html = template.read_text(encoding="utf-8")
+    edit_markup = html.split("if (isEditing) {", 1)[1].split("return `", 2)[1]
+
+    assert "save-inline-note-action" in edit_markup
+    assert "review-note-action-link--secondary cancel-inline-note-action" in edit_markup
+    assert "review-note-action-link--destructive delete-inline-note-action" in edit_markup
+
+
+def test_review_tests_page_uses_same_note_action_styles():
+    response = _client().get("/ontology/review-tests")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "govuk-link govuk-!-font-size-16 review-note-action-link edit-inline-note-action" in html
+    assert ".review-note-item__actions {" in html
+    assert "position: absolute;" not in html.split(".review-note-item {", 1)[1].split(".review-inline-note-form {", 1)[0]
+
+
+def test_dashboard_omits_file_explorer_browse_action_but_keeps_downloads():
+    template = Path(__file__).parents[1] / "templates" / "dashboard.html"
+    html = template.read_text(encoding="utf-8")
+
+    assert "Browse Files" not in html
+    assert "/viewer/bucket/${targetBucket}/${domainStr}/${job.job_runs}/" not in html
+    assert (
+        "/viewer/bucket/download/buckets/${targetBucket}/${domainStr}/${job.job_runs}/output/ontology.ttl"
+        in html
+    )
+    assert "/visualizer/?run=${domainStr}/${job.job_runs}" in html
+    assert (
+        "/viewer/bucket/download/buckets/${targetBucket}/${domainStr}/${job.job_runs}/output/regression_report.json"
+        in html
+    )
 
 
 def test_left_sidebar_is_removed():

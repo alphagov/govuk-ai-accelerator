@@ -29,7 +29,6 @@ from scripts.pipeline.constants import APP_HOST, APP_PORT, BLUEPRINTS
 from scripts.ingestion.commands.utils import DEFAULT_S3_BUCKET
 from scripts.ingestion.ingestion_pipeline import run_ingestion_background_task
 from src.aws_helper import create_bucket_folder
-from src.web_browser import routing
 from flask import current_app
 
 from starlette.routing import Mount, Route
@@ -524,6 +523,24 @@ def _iter_local_files(path: Path) -> list[Path]:
     return []
 
 
+def _deduplicate_artifact_groups(groups: dict[str, list[dict]]) -> dict[str, list[dict]]:
+    deduplicated: dict[str, list[dict]] = {}
+    for group_name, artifacts in groups.items():
+        seen_by_name: dict[str, dict] = {}
+        deduplicated[group_name] = []
+        for artifact in artifacts:
+            name = str(artifact.get("name", ""))
+            existing = seen_by_name.get(name)
+            if existing is not None:
+                if "visualize_url" not in existing and artifact.get("visualize_url"):
+                    existing["visualize_url"] = artifact["visualize_url"]
+                continue
+
+            seen_by_name[name] = artifact
+            deduplicated[group_name].append(artifact)
+    return deduplicated
+
+
 def _add_local_input_artifacts(
     groups: dict[str, list[dict]],
     seen_folders: set[tuple[str, str, str]],
@@ -694,7 +711,7 @@ def _job_artifact_groups(job: ProcessingJob) -> dict[str, list[dict]]:
             _add_run_artifact(groups, seen_folders, job, bucket_name, run_prefix, item)
         _add_input_artifacts(groups, seen_folders, job, s3_client)
 
-    return groups
+    return _deduplicate_artifact_groups(groups)
 
 
 def _allowed_download_prefixes(job: ProcessingJob) -> set[tuple[str, str]]:
@@ -1262,6 +1279,7 @@ def create_blueprints():
             review_job_type='ontology',
             review_page_title='Review Ontologies',
             review_page_description='View your available ontologies below. Click any row to see more information about it.',
+            include_materialize=False,
         )
 
     @ontology_bp.route('/review-tests', methods=['GET'])
@@ -1272,6 +1290,7 @@ def create_blueprints():
             review_job_type='test',
             review_page_title='Review Tests',
             review_page_description='View ontology harness test runs, regression reports, and review notes.',
+            include_materialize=False,
         )
 
     @ontology_bp.route('/all_jobs', methods=['GET'])
@@ -1281,20 +1300,6 @@ def create_blueprints():
     @ontology_bp.route("/list_domains")
     def list_domains():
         return get_domain_list('govuk-ai-accelerator-data-integration')
-
-    @viewer_bp.route("/bucket")
-    def viewer_load():
-        return routing.index()
-
-    @viewer_bp.route("/bucket/<bucket_name>", defaults={"path": ""})
-    @viewer_bp.route("/bucket/<bucket_name>/<path:path>")
-    def view_bucket(bucket_name: str, path: str) -> str:
-        return routing.view_bucket(bucket_name, path, 1)
-
-    @viewer_bp.route("/api/bucket/<bucket_name>/tree")
-    def api_bucket_tree(bucket_name: str):
-        prefix = request.args.get('prefix', '')
-        return jsonify(routing.get_bucket_tree_nodes(bucket_name, prefix))
 
     @viewer_bp.route("/bucket/download/buckets/<bucket_name>/<path:path>")
     def download_file(bucket_name: str, path: str) -> Response:
@@ -1306,31 +1311,6 @@ def create_blueprints():
         )
 
         return redirect(url)
-
-    @viewer_bp.route("/api/bucket/<bucket_name>/<path:path>", methods=['DELETE'])
-    def delete_bucket_object(bucket_name: str, path: str):
-        try:
-            s3 = boto3.resource("s3")
-            bucket = s3.Bucket(bucket_name)
-
-            if path.endswith('/'):
-                responses = bucket.objects.filter(Prefix=path).delete()
-
-                errors = []
-                for response in responses:
-                    if 'Errors' in response:
-                        errors.extend(response['Errors'])
-
-                if errors:
-                    error_messages = ", ".join([f"{e.get('Key')}: {e.get('Message')}" for e in errors])
-                    return jsonify({"error": f"Failed to delete some objects: {error_messages}"}), 500
-            else:
-                s3.Object(bucket_name, path).delete()
-                print(path, bucket, bucket.objects.filter(Prefix=path))
-
-            return jsonify({"message": f"Successfully deleted {path} from {bucket_name}"}), 200
-        except Exception as e:
-            return jsonify({"error": f"Failed to delete object: {str(e)}"}), 500
 
     return healthcheck_bp, ontology_bp, viewer_bp, home_bp
 
