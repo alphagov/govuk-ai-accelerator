@@ -938,8 +938,7 @@
   }
 
   .review-note-item {
-      position: relative;
-      padding: 14px 92px 14px 0;
+      padding: 14px 0;
       border-bottom: 1px solid #f3f2f1;
   }
 
@@ -953,11 +952,11 @@
   }
 
   .review-note-item__actions {
-      position: absolute;
-      top: 12px;
-      right: 0;
       display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
       gap: 12px;
+      margin-top: 10px;
   }
 
   .review-note-action-link {
@@ -965,11 +964,18 @@
       padding: 0;
       border: 0;
       background: transparent;
+      color: #1d70b8;
       cursor: pointer;
       font: inherit;
+      text-align: left;
+      text-decoration: underline;
+      text-decoration-thickness: max(1px, 0.0625rem);
+      text-underline-offset: 0.1em;
+      white-space: nowrap;
   }
 
   .review-note-action-link:hover {
+      color: #003078;
       text-decoration-thickness: max(3px, 0.1875rem);
   }
 

@@ -1359,6 +1359,27 @@ def test_jobs_page_styles_note_actions_as_gds_text_actions():
     assert "review-note-icon-button" not in html
 
 
+def test_jobs_page_notes_use_flow_layout_and_govuk_link_colours():
+    template = Path(__file__).parents[1] / "templates" / "jobs.html"
+    html = template.read_text(encoding="utf-8")
+    notes_css = html.split(".review-note-item {", 1)[1].split(".review-inline-note-form {", 1)[0]
+
+    assert "padding: 14px 92px 14px 0;" not in notes_css
+    assert "position: absolute;" not in notes_css
+    assert "margin-top:" in notes_css
+    assert "color: #1d70b8;" in notes_css
+
+
+def test_review_tests_page_uses_same_note_action_styles():
+    response = _client().get("/ontology/review-tests")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "govuk-link govuk-!-font-size-16 review-note-action-link edit-inline-note-action" in html
+    assert ".review-note-item__actions {" in html
+    assert "position: absolute;" not in html.split(".review-note-item {", 1)[1].split(".review-inline-note-form {", 1)[0]
+
+
 def test_left_sidebar_is_removed():
     response = _client().get("/ontology/")
     html = response.get_data(as_text=True)
