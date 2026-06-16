@@ -37,7 +37,7 @@
     <label class="govuk-label govuk-visually-hidden" for="jobs-search">Search historical jobs</label>
     <div class="review-search-input-wrapper">
       <i class="material-icons" aria-hidden="true">search</i>
-      <input class="govuk-input review-search-input" id="jobs-search" type="search" placeholder="Search ontology, domain, status, or type...">
+      <input class="govuk-input review-search-input" id="jobs-search" type="search" placeholder="Search ontology, domain, or status...">
     </div>
   </div>
 
@@ -66,16 +66,11 @@
               <span>Status</span>
             </button>
           </th>
-          <th scope="col" aria-sort="none">
-            <button type="button" class="review-sort-button" data-sort-key="type">
-              <span>Type</span>
-            </button>
-          </th>
           <th scope="col"><span>Actions</span></th>
         </tr>
       </thead>
       <tbody id="jobs-tbody">
-        <tr><td colspan="6" class="review-table-empty">Loading jobs...</td></tr>
+        <tr><td colspan="5" class="review-table-empty">Loading jobs...</td></tr>
       </tbody>
     </table>
   </div>
@@ -138,12 +133,6 @@
       return status.charAt(0).toUpperCase() + status.slice(1);
     }
 
-    function pipelineTypeLabel(pipeline) {
-      if (pipeline === 'ingestion') return 'ingestion';
-      if (pipeline === 'ontology-harness') return 'test';
-      return 'ontology';
-    }
-
     function statusTagModifier(status) {
       if (status === 'completed') return 'green';
       if (status === 'failed') return 'red';
@@ -151,12 +140,6 @@
       if (status === 'pending') return 'yellow';
       if (status === 'stopped') return 'grey';
       return 'grey';
-    }
-
-    function pipelineTagModifier(pipeline) {
-      if (pipeline === 'ingestion') return 'turquoise';
-      if (pipeline === 'ontology-harness') return 'purple';
-      return 'yellow';
     }
 
     function shortenText(value, maxLength = 42) {
@@ -221,7 +204,7 @@
         renderCurrentJobs();
         renderPagination(currentPagination);
       } catch (err) {
-        jobsTbody.innerHTML = `<tr><td colspan="6" class="review-table-empty red-text">Error fetching jobs: ${escapeHtml(err.message)}</td></tr>`;
+        jobsTbody.innerHTML = `<tr><td colspan="5" class="review-table-empty red-text">Error fetching jobs: ${escapeHtml(err.message)}</td></tr>`;
         paginationContainer.innerHTML = '';
       }
     }
@@ -247,7 +230,7 @@
       updateSortIndicators();
 
       if (!jobs.length) {
-        jobsTbody.innerHTML = '<tr><td colspan="6" class="review-table-empty">No jobs found.</td></tr>';
+        jobsTbody.innerHTML = '<tr><td colspan="5" class="review-table-empty">No jobs found.</td></tr>';
         return;
       }
 
@@ -255,9 +238,7 @@
       jobs.forEach(job => {
         const status = String(job.status || 'pending').toLowerCase();
         const domainStr = job.domain ? String(job.domain) : '-';
-        const pipeline = job.pipeline || 'ontology';
         const isSelected = selectedJobId === job.job_id;
-        const typeLabel = pipelineTypeLabel(pipeline);
         const notesCount = Number(job.notes_count || 0);
         const notesLabel = notesCount > 0 ? `Notes (${notesCount})` : 'Add note';
 
@@ -279,9 +260,6 @@
             <span class="govuk-tag review-tag govuk-tag--${statusTagModifier(status)}">${escapeHtml(jobStatusLabel(job))}</span>
           </td>
           <td>
-            <span class="govuk-tag review-tag govuk-tag--${pipelineTagModifier(pipeline)}">${escapeHtml(typeLabel)}</span>
-          </td>
-          <td>
             ${renderJobActions(job, notesLabel)}
           </td>
         `;
@@ -290,7 +268,7 @@
         if (isSelected) {
           const detailTr = document.createElement('tr');
           detailTr.className = 'review-detail-row';
-          detailTr.innerHTML = `<td colspan="6">${renderJobDetail(job)}</td>`;
+          detailTr.innerHTML = `<td colspan="5">${renderJobDetail(job)}</td>`;
           jobsTbody.appendChild(detailTr);
         }
       });
@@ -434,7 +412,7 @@
           ${artifacts.map(artifact => `
             <div class="review-artifact-row">
               <span class="review-artifact-name">
-                <i class="material-icons" aria-hidden="true">${artifact.kind === 'folder' ? 'folder_zip' : 'insert_drive_file'}</i>
+                <i class="material-icons" aria-hidden="true">insert_drive_file</i>
                 <span>${escapeHtml(artifact.name)}</span>
               </span>
               ${renderArtifactActions(artifact)}
@@ -836,7 +814,7 @@
   }
 
   .review-jobs-table th:nth-child(1) {
-      width: 23%;
+      width: 28%;
   }
 
   .review-jobs-table th:nth-child(2) {
@@ -848,19 +826,15 @@
   }
 
   .review-jobs-table th:nth-child(4) {
-      width: 10%;
+      width: 12%;
   }
 
   .review-jobs-table th:nth-child(5) {
-      width: 13%;
+      width: 20%;
   }
 
-  .review-jobs-table th:nth-child(6) {
-      width: 18%;
-  }
-
-  .review-jobs-table th:nth-child(6),
-  .review-jobs-table td:nth-child(6) {
+  .review-jobs-table th:nth-child(5),
+  .review-jobs-table td:nth-child(5) {
       min-width: 180px;
   }
 
