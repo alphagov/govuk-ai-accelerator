@@ -1139,9 +1139,13 @@ def test_jobs_page_renders_review_table_headings():
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert "<h2>Review Ontologies</h2>" in html
-    assert '<table class="review-jobs-table" id="jobs-table">' in html
-    for heading in ("Ontology", "Domain", "Created At", "Status", "Actions"):
+    assert '<h1 class="govuk-heading-l">Review Ontologies</h1>' in html
+    assert (
+        '<p class="govuk-body">View your available ontologies below. Click any row to see more '
+        "information about it.</p>"
+    ) in html
+    assert '<table class="govuk-table review-jobs-table" id="jobs-table">' in html
+    for heading in ("Ontology", "Domain", "Created at", "Status", "Actions"):
         assert f"<span>{heading}</span>" in html
     assert "<span>Type</span>" not in html
     assert "pipelineTypeLabel" not in html
@@ -1153,7 +1157,7 @@ def test_jobs_page_renders_review_table_headings():
     assert "status, or type" not in html
     assert 'colspan="5"' in html
     assert 'colspan="6"' not in html
-    assert '<th scope="col" aria-sort="descending">' in html
+    assert '<th scope="col" class="govuk-table__header" aria-sort="descending">' in html
     assert "data-sort-icon" not in html
     assert "sort-icon-active" not in html
     assert "sort-icon-inactive" not in html
@@ -1167,9 +1171,11 @@ def test_review_tests_page_renders_test_title_and_type():
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert "<h2>Review Tests</h2>" in html
+    assert '<h1 class="govuk-heading-l">Review Tests</h1>' in html
     assert 'const REVIEW_JOB_TYPE = "test";' in html
     assert 'const REVIEW_PAGE_TITLE = "Review Tests";' in html
+    assert "renderPagination" in html
+    assert "perPage = 10" in html
 
 
 def test_review_ontologies_page_uses_requested_subtitle():
@@ -1319,11 +1325,11 @@ def test_jobs_page_uses_gds_tags_and_notes_modal_controls():
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert "govuk-tag review-tag" in html
+    assert "govuk-tag govuk-tag--${statusTagModifier(status)}" in html
     assert "if (status === 'pending') return 'yellow';" in html
     assert "return 'yellow';" in html
-    assert "review-add-note-button add-inline-note-action" in html
-    assert 'class="govuk-textarea review-note-textarea"' in html
+    assert "govuk-button add-inline-note-action" in html
+    assert 'class="govuk-textarea"' in html
     assert 'class="govuk-label govuk-label--s"' in html
     assert "review-note-button" not in html
     assert "chat_bubble_outline" not in html
@@ -1334,8 +1340,8 @@ def test_jobs_page_styles_note_actions_as_gds_text_actions():
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert "review-note-action-link edit-inline-note-action" in html
-    assert "review-note-action-link review-note-action-link--destructive delete-inline-note-action" in html
+    assert "govuk-link review-note-action-link edit-inline-note-action" in html
+    assert "govuk-link review-note-action-link review-note-action-link--destructive delete-inline-note-action" in html
     assert ">Edit</button>" in html
     assert ">Delete</button>" in html
     assert "review-note-icon-button" not in html
