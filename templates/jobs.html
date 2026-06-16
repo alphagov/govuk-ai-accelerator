@@ -412,7 +412,6 @@
           ${artifacts.map(artifact => `
             <div class="review-artifact-row">
               <span class="review-artifact-name">
-                <i class="material-icons" aria-hidden="true">insert_drive_file</i>
                 <span>${escapeHtml(artifact.name)}</span>
               </span>
               ${renderArtifactActions(artifact)}
@@ -973,9 +972,7 @@
   }
 
   .review-artifact-name {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
+      display: block;
       min-width: 0;
   }
 
