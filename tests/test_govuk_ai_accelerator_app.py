@@ -790,6 +790,7 @@ def test_job_artifacts_endpoint_groups_downloadable_flat_s3_files(tmp_path, monk
                     {
                         "Contents": [
                             {"Key": "visa/run-20260605-1/config.yaml", "Size": 9},
+                            {"Key": "visa/run-20260605-1/input/source.md", "Size": 17},
                             {"Key": "visa/run-20260605-1/output/graph.json", "Size": 10},
                             {"Key": "visa/run-20260605-1/output/ontology.ttl", "Size": 11},
                             {"Key": "visa/run-20260605-1/output/schema.json", "Size": 12},
@@ -832,6 +833,9 @@ def test_job_artifacts_endpoint_groups_downloadable_flat_s3_files(tmp_path, monk
     assert "input" not in intermediary_names
     assert "output" not in intermediary_names
     assert "checkpoints" not in intermediary_names
+    assert [
+        artifact["name"] for artifact in groups["intermediary_files"]
+    ].count("input/source.md") == 1
     assert report_names == {
         "output/bedrock_costs.csv",
         "output/regression_report.json",
