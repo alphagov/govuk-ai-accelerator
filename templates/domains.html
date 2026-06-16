@@ -1,50 +1,151 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <div class="row">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <div class="card full-width">
-                <div class="card-content">
-                    <span class="card-title" style="font-weight: bold; color: #1d70b8;">Ingest Webpages for a Domain</span>
-                    <p class="grey-text text-darken-1" style="margin-bottom: 20px;">Upload a plain-text file containing one URL per line. Output is written to the domain's folder in S3.</p>
+    <style>
+        .domain-wizard-step {
+            min-height: 200px;
+        }
+        /* Override Materialize textarea styling */
+        textarea.govuk-textarea {
+            display: block !important;
+            width: 100% !important;
+            min-height: 200px !important;
+            padding: 5px !important;
+            border: 2px solid #0b0c0c !important;
+            border-radius: 0 !important;
+            font-family: "GDS Transport", arial, sans-serif !important;
+            font-size: 1rem !important;
+            line-height: 1.25 !important;
+            color: #0b0c0c !important;
+            background-color: #fff !important;
+            resize: vertical !important;
+            box-sizing: border-box !important;
+        }
+        textarea.govuk-textarea:focus {
+            outline: 3px solid #fd0 !important;
+            outline-offset: 0 !important;
+            border-color: #0b0c0c !important;
+            box-shadow: inset 0 0 0 2px #0b0c0c !important;
+        }
+        /* Override Materialize label colour */
+        .domain-wizard-step label {
+            color: #0b0c0c !important;
+            font-size: 1rem !important;
+            transition: none !important;
+        }
+        /* Override Materialize input styling */
+        input.govuk-input {
+            display: block !important;
+            width: 100% !important;
+            height: 40px !important;
+            padding: 5px !important;
+            border: 2px solid #0b0c0c !important;
+            border-radius: 0 !important;
+            font-family: "GDS Transport", arial, sans-serif !important;
+            font-size: 1rem !important;
+            color: #0b0c0c !important;
+            background-color: #fff !important;
+            box-sizing: border-box !important;
+            margin: 0 !important;
+        }
+        input.govuk-input:focus {
+            outline: 3px solid #fd0 !important;
+            outline-offset: 0 !important;
+            border-color: #0b0c0c !important;
+            box-shadow: inset 0 0 0 2px #0b0c0c !important;
+        }
+    </style>
+    <div class="govuk-width-container">
+        <div class="row" style="margin-top: 10px;">
+        <div class="col s12">
+
+                    <!-- Wizard Back Link -->
+                    <div style="margin-bottom: 20px; min-height: 25px;">
+                    </div>
 
                     <form id="upload-form" enctype="multipart/form-data">
-                        <!-- Domain Text Input -->
-                        <div class="input-field" style="margin-bottom: 1.5rem;">
-                            <input id="domain" name="domain" type="text" maxlength="255" required>
-                            <label for="domain">Domain *</label>
-                            <span class="helper-text" data-error="Domain is required" data-success="">Enter the domain name (max 255 characters)</span>
+                        <!-- STEP 1: START -->
+                        <div id="domain-step-1" class="domain-wizard-step">
+                            <h1 class="govuk-heading-xl">Create an Ontology Domain</h1>
+                            <p class="govuk-body">
+                                An ontology domain is a collection of GOV.UK pages under the same general topic that will be used as the basis to generate an ontology.
+                            </p>
+                            <button type="button" id="domain-wizard-start-btn" class="govuk-button govuk-button--start" data-module="govuk-button">
+                                Start
+                                <svg class="govuk-button__start-icon" xmlns="http://www.w3.org/2000/svg" width="17.5" height="19" viewBox="0 0 33 40" aria-hidden="true" focusable="false">
+                                    <path fill="currentColor" d="M0 0h13l20 20-20 20H0l20-20z"/>
+                                </svg>
+                            </button>
                         </div>
 
-                        <div id="drop-zone" class="drop-zone" style="border: 2px dashed var(--gov-border); border-radius: 8px; padding: 2rem; text-align: center; margin-bottom: 1.5rem; transition: background-color 0.2s; cursor: pointer;">
-                            <i class="material-icons" style="font-size: 3rem; color: #1d70b8;">cloud_upload</i>
-                            <h6 style="margin: 10px 0; font-weight: bold;">Drag &amp; Drop URL list here</h6>
-                            <p class="grey-text text-darken-2" style="margin-bottom: 5px;">Required: <strong>.txt</strong> file with one URL per line</p>
-                            <p class="grey-text" style="font-size: 0.9em; margin-top: 15px;">or click to browse</p>
+                        <!-- STEP 2: ENTER DOMAIN NAME -->
+                        <div id="domain-step-2" class="domain-wizard-step" style="display: none;">
+                            <h1 class="govuk-heading-xl">Create an Ontology Domain</h1>
+                            <div class="govuk-form-group" id="domain-name-form-group">
+                                <label class="govuk-label" for="domain">
+                                    Provide the name of your domain
+                                </label>
+                                <p id="domain-error-message" class="govuk-error-message" style="display: none;">
+                                    <span class="govuk-visually-hidden">Error:</span> Enter a domain name
+                                </p>
+                                <input class="govuk-input browser-default" id="domain" name="domain" type="text" maxlength="255">
+                            </div>
 
-                            <input type="file" id="file" name="file" accept=".txt,text/plain" style="display: none;" required>
+                            <div class="govuk-button-group">
+                                <button type="button" id="domain-wizard-step2-next" class="govuk-button" data-module="govuk-button">Next</button>
+                                <button type="button" class="govuk-button govuk-button--secondary domain-wizard-prev-btn">Back</button>
+                            </div>
                         </div>
 
-                        <ul class="collection" id="file-list" style="border: none; margin-bottom: 1.5rem; display: none;">
-                            <li class="collection-item avatar" id="txt-file-item" style="display: none; min-height: auto; padding-left: 50px;">
-                                <i class="material-icons circle orange" style="width: 30px; height: 30px; line-height: 30px; left: 10px;">description</i>
-                                <span class="title" id="txt-file-name" style="font-weight: 500;"></span>
-                                <p class="grey-text" style="font-size: 0.8rem;">URL list (one per line)</p>
-                            </li>
-                        </ul>
+                        <!-- STEP 3: ENTER URLs -->
+                        <div id="domain-step-3" class="domain-wizard-step" style="display: none;">
+                            <h1 class="govuk-heading-xl">Create an Ontology Domain</h1>
+                            <p class="govuk-body">
+                                Provide the URLs used to generate the domain. Make sure that each URL is on a separated line.
+                            </p>
 
-                        <div id="upload-status" style="display: none; margin-bottom: 1rem; padding: 10px; border-radius: 4px;"></div>
+                            <div class="govuk-form-group" id="domain-urls-form-group">
+                                <label class="govuk-label govuk-visually-hidden" for="urls-text">URL list</label>
+                                <p id="urls-error-message" class="govuk-error-message" style="display: none;">
+                                    <span class="govuk-visually-hidden">Error:</span> Enter at least one URL
+                                </p>
+                                <textarea id="urls-text" class="govuk-textarea browser-default" rows="8" placeholder="https://www.gov.uk/example-page-1&#10;https://www.gov.uk/example-page-2&#10;https://www.gov.uk/example-page-3"></textarea>
+                            </div>
 
-                        <button class="btn waves-effect waves-light" type="submit" id="submit-btn" style="width: 100%; background-color: #1d70b8;">
-                            Upload &amp; Start <i class="material-icons right">send</i>
-                        </button>
+                            <div id="upload-status" style="display: none; margin-bottom: 1rem; padding: 10px; border-radius: 4px;"></div>
 
-                        <div class="progress" id="upload-progress" style="display: none;">
-                            <div class="indeterminate"></div>
+                            <div class="govuk-button-group">
+                                <button class="govuk-button" type="submit" id="submit-btn" data-module="govuk-button">
+                                    Create domain
+                                </button>
+                                <button type="button" class="govuk-button govuk-button--secondary domain-wizard-prev-btn">Back</button>
+                            </div>
+
+                            <div class="progress" id="upload-progress" style="display: none;">
+                                <div class="indeterminate"></div>
+                            </div>
+                        </div>
+
+                        <!-- STEP 4: CONFIRMATION -->
+                        <div id="domain-step-4" class="domain-wizard-step" style="display: none;">
+                            <div class="govuk-panel govuk-panel--confirmation">
+                                <h1 class="govuk-panel__title">Domain created</h1>
+                                <div class="govuk-panel__body">
+                                    Your ingestion pipeline has been started.<br>
+                                    Job ID: <strong id="domain-job-id"></strong>
+                                </div>
+                            </div>
+                            <p class="govuk-body" style="margin-top: 30px;">
+                                The URLs are now being ingested into your domain. You can track the job status from the dashboard.
+                            </p>
+                            <div class="govuk-button-group" style="margin-top: 30px;">
+                                <button type="button" class="govuk-button" id="domain-wizard-reset-btn" data-module="govuk-button">Create another domain</button>
+                                <a href="{{ url_for('ontology.index') }}" class="govuk-button govuk-button--secondary" role="button" data-module="govuk-button">Go to Create Ontology</a>
+                            </div>
                         </div>
                     </form>
-                </div>
-            </div>
+
+        </div>
         </div>
     </div>
 {% endblock %}
@@ -52,66 +153,75 @@
 {% block extra_js %}
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const dropZone = document.getElementById('drop-zone');
-            const fileInput = document.getElementById('file');
-            const fileList = document.getElementById('file-list');
-            const domainInput = document.getElementById('domain');
+            // ---- Domain Wizard Step Navigation ----
+            let domainCurrentStep = 1;
 
-            dropZone.addEventListener('click', () => {
-                const tempInput = document.createElement('input');
-                tempInput.type = 'file';
-                tempInput.accept = '.txt,text/plain';
-                tempInput.onchange = e => handleFiles(e.target.files);
-                tempInput.click();
-            });
-
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, preventDefaults, false);
-            });
-
-            function preventDefaults(e) {
-                e.preventDefault();
-                e.stopPropagation();
+            function showDomainStep(stepNum) {
+                document.querySelectorAll('.domain-wizard-step').forEach(el => {
+                    el.style.display = 'none';
+                });
+                const stepEl = document.getElementById(`domain-step-${stepNum}`);
+                if (stepEl) stepEl.style.display = 'block';
+                domainCurrentStep = stepNum;
             }
 
-            ['dragenter', 'dragover'].forEach(eventName => {
-                dropZone.addEventListener(eventName, () => {
-                    dropZone.style.backgroundColor = 'rgba(29, 112, 184, 0.05)';
-                    dropZone.style.borderColor = '#1d70b8';
-                }, false);
+            // Step 1 -> 2
+            document.getElementById('domain-wizard-start-btn').addEventListener('click', () => {
+                showDomainStep(2);
             });
 
-            ['dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, () => {
-                    dropZone.style.backgroundColor = '';
-                    dropZone.style.borderColor = 'var(--gov-border)';
-                }, false);
+            // Step 2 -> 3 (with validation)
+            document.getElementById('domain-wizard-step2-next').addEventListener('click', () => {
+                const domainInput = document.getElementById('domain');
+                const formGroup = document.getElementById('domain-name-form-group');
+                const errMsg = document.getElementById('domain-error-message');
+
+                if (!domainInput.value.trim()) {
+                    formGroup.classList.add('govuk-form-group--error');
+                    domainInput.classList.add('govuk-input--error');
+                    errMsg.style.display = 'block';
+                    domainInput.focus();
+                    return;
+                }
+
+                formGroup.classList.remove('govuk-form-group--error');
+                domainInput.classList.remove('govuk-input--error');
+                errMsg.style.display = 'none';
+                showDomainStep(3);
             });
 
-            dropZone.addEventListener('drop', (e) => {
-                handleFiles(e.dataTransfer.files);
+            // Clear validation on input
+            document.getElementById('domain').addEventListener('input', () => {
+                const domainInput = document.getElementById('domain');
+                const formGroup = document.getElementById('domain-name-form-group');
+                const errMsg = document.getElementById('domain-error-message');
+                if (domainInput.value.trim()) {
+                    formGroup.classList.remove('govuk-form-group--error');
+                    domainInput.classList.remove('govuk-input--error');
+                    errMsg.style.display = 'none';
+                }
             });
 
-            function handleFiles(files) {
-                const dt = new DataTransfer();
-                let hasTxt = false;
-
-                Array.from(files).forEach(file => {
-                    const ext = file.name.split('.').pop().toLowerCase();
-                    if (ext === 'txt') {
-                        dt.items.add(file);
-                        document.getElementById('txt-file-name').textContent = file.name;
-                        document.getElementById('txt-file-item').style.display = 'block';
-                        hasTxt = true;
+            // Back buttons
+            document.querySelectorAll('.domain-wizard-prev-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (domainCurrentStep > 1) {
+                        showDomainStep(domainCurrentStep - 1);
                     }
                 });
+            });
 
-                if (hasTxt) {
-                    fileInput.files = dt.files;
-                    fileList.style.display = 'block';
-                }
-            }
+            // Reset button
+            document.getElementById('domain-wizard-reset-btn').addEventListener('click', () => {
+                document.getElementById('domain').value = '';
+                document.getElementById('urls-text').value = '';
+                const uploadStatus = document.getElementById('upload-status');
+                if (uploadStatus) uploadStatus.style.display = 'none';
+                showDomainStep(1);
+            });
 
+            // ---- Form Submission ----
             const uploadForm = document.getElementById('upload-form');
             const submitBtn = document.getElementById('submit-btn');
             const progressBar = document.getElementById('upload-progress');
@@ -121,16 +231,28 @@
                 e.preventDefault();
                 if (submitBtn.disabled) return;
 
-                if (!domainInput.value.trim()) {
-                    showStatus('Please enter a domain name.', 'red');
-                    domainInput.focus();
+                const domainInput = document.getElementById('domain');
+                const urlsText = document.getElementById('urls-text');
+                const urlsFormGroup = document.getElementById('domain-urls-form-group');
+                const urlsErrMsg = document.getElementById('urls-error-message');
+
+                // Parse URLs from textarea
+                const links = urlsText.value
+                    .split(/\r?\n/)
+                    .map(line => line.trim())
+                    .filter(Boolean);
+
+                if (!links.length) {
+                    urlsFormGroup.classList.add('govuk-form-group--error');
+                    urlsText.classList.add('govuk-textarea--error');
+                    urlsErrMsg.style.display = 'block';
+                    urlsText.focus();
                     return;
                 }
 
-                if (!fileInput.files.length) {
-                    showStatus('Please select a .txt file containing one URL per line.', 'red');
-                    return;
-                }
+                urlsFormGroup.classList.remove('govuk-form-group--error');
+                urlsText.classList.remove('govuk-textarea--error');
+                urlsErrMsg.style.display = 'none';
 
                 submitBtn.disabled = true;
                 submitBtn.style.display = 'none';
@@ -138,18 +260,6 @@
                 uploadStatus.style.display = 'none';
 
                 try {
-                    const file = fileInput.files[0];
-                    const fileContent = await file.text();
-                    const links = fileContent
-                        .split(/\r?\n/)
-                        .map(line => line.trim())
-                        .filter(Boolean);
-
-                    if (!links.length) {
-                        showStatus('The uploaded file contains no URLs.', 'red');
-                        return;
-                    }
-
                     const response = await fetch("{{ url_for('ontology.ingest_content') }}", {
                         method: 'POST',
                         headers: {
@@ -164,11 +274,8 @@
                     const data = await response.json();
 
                     if (response.ok) {
-                        showStatus(`Pipeline started! Job ID: ${data.job_id.substring(0,8)}...`, 'green');
-                        uploadForm.reset();
-                        fileInput.value = '';
-                        fileList.style.display = 'none';
-                        document.getElementById('txt-file-item').style.display = 'none';
+                        document.getElementById('domain-job-id').textContent = data.job_id.substring(0, 8) + '...';
+                        showDomainStep(4);
                     } else {
                         showStatus(`Error: ${data.error}`, 'red');
                     }
@@ -176,7 +283,7 @@
                     showStatus(`Connection error: ${err.message}`, 'red');
                 } finally {
                     submitBtn.disabled = false;
-                    submitBtn.style.display = 'block';
+                    submitBtn.style.display = 'inline-block';
                     progressBar.style.display = 'none';
                 }
             });
