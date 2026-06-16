@@ -400,7 +400,7 @@ def test_jobs_template_exposes_selected_job_artifact_downloads():
     assert "/artifacts" in html
     assert "renderArtifactRows" in html
     assert "download_url" in html
-    assert "insert_drive_file" in html
+    assert "insert_drive_file" not in html
     assert "folder_zip" not in html
     assert "browse files" not in html
 
