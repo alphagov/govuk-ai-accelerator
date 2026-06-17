@@ -56,6 +56,7 @@ DEFAULT_CONFIG_TEMPLATE_PATH = (
 )
 
 ACTIVE_DOMAIN_DELETE_STATUSES = {"pending", "running", "stopping"}
+PROTECTED_REVIEW_DOMAIN_NAMES = {"ontology-harness-baseline"}
 
 
 class ProcessingJob(db.Model):
@@ -530,6 +531,10 @@ def _domain_source_url_payload(job: ProcessingJob) -> dict:
 def _archived_domain_names() -> set[str]:
     rows = db.session.query(ReviewDomainArchive.domain).all()
     return {str(row[0]).strip() for row in rows if str(row[0]).strip()}
+
+
+def _is_protected_review_domain(domain: str | None) -> bool:
+    return (domain or "").strip().lower() in PROTECTED_REVIEW_DOMAIN_NAMES
 
 
 def _latest_ingestion_job_for_domain(domain: str) -> ProcessingJob | None:
@@ -1025,7 +1030,12 @@ def create_blueprints():
         latest_by_domain: dict[str, ProcessingJob] = {}
         for job in ingestion_jobs:
             domain = (job.domain or "").strip()
-            if domain and domain not in archived_domains and domain not in latest_by_domain:
+            if (
+                domain
+                and domain not in archived_domains
+                and not _is_protected_review_domain(domain)
+                and domain not in latest_by_domain
+            ):
                 latest_by_domain[domain] = job
 
         domain_jobs = list(latest_by_domain.values())
