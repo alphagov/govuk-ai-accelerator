@@ -168,6 +168,19 @@ def _serialize_job(job: ProcessingJob, note_metadata: dict[str, dict] | None = N
     }
 
 
+def _serialize_domain_job(job: ProcessingJob, note_metadata: dict[str, dict] | None = None) -> dict:
+    metadata = (note_metadata or {}).get(job.id, {"notes_count": 0, "latest_note": None})
+    return {
+        "job_id": job.id,
+        "domain": job.domain,
+        "status": job.status,
+        "error": job.error_message,
+        "created_at": _serialize_job_datetime(job.created_at),
+        "notes_count": metadata["notes_count"],
+        "latest_note": metadata["latest_note"],
+    }
+
+
 def _legacy_notes_key(job: ProcessingJob) -> str | None:
     if job.job_runs and job.domain:
         return f"{job.domain}/{job.job_runs}/notes.json"
@@ -418,6 +431,53 @@ def _job_config(job: ProcessingJob) -> dict:
     except json.JSONDecodeError:
         return {}
     return config_data if isinstance(config_data, dict) else {}
+
+
+def _normalise_url_list(value) -> list[str]:
+    if not isinstance(value, list):
+        return []
+
+    urls = []
+    seen = set()
+    for item in value:
+        url = str(item).strip()
+        if not url or url in seen:
+            continue
+        seen.add(url)
+        urls.append(url)
+    return urls
+
+
+def _submitted_domain_links(job: ProcessingJob) -> list[str]:
+    return _normalise_url_list(_job_config(job).get("links"))
+
+
+def _domain_source_urls_from_sidecar(job: ProcessingJob) -> list[str] | None:
+    if not job.domain:
+        return None
+
+    s3_client = boto3.client("s3")
+    try:
+        response = s3_client.get_object(
+            Bucket=_default_bucket_name(),
+            Key=f"{job.domain}/input/sources.json",
+        )
+        raw_sources = response["Body"].read().decode("utf-8")
+        sources = json.loads(raw_sources)
+    except Exception as exc:
+        current_app.logger.info("No sources sidecar found for domain %s: %s", job.domain, exc)
+        return None
+
+    if not isinstance(sources, dict):
+        return None
+    return _normalise_url_list(list(sources.values()))
+
+
+def _domain_source_urls(job: ProcessingJob) -> list[str]:
+    sidecar_urls = _domain_source_urls_from_sidecar(job)
+    if sidecar_urls is not None:
+        return sidecar_urls
+    return _submitted_domain_links(job)
 
 
 def _list_s3_objects(s3_client, bucket_name: str, prefix: str) -> list[dict]:
@@ -870,6 +930,100 @@ def create_blueprints():
         """Render the Domains menu page so IAs can launch an ingestion run."""
         return render_template('domains.html', active_page='domains')
 
+    @ontology_bp.route('/review-domains', methods=['GET'])
+    def review_domains():
+        return render_template(
+            'review_domains.html',
+            active_page='review-domains',
+            include_materialize=False,
+        )
+
+    @ontology_bp.route('/domains/review', methods=['GET'])
+    def review_domain_jobs():
+        page = max(request.args.get("page", default=1, type=int) or 1, 1)
+        per_page = request.args.get("per_page", default=10, type=int) or 10
+        per_page = min(max(per_page, 1), 50)
+        search = (request.args.get("search") or "").strip().lower()
+        sort_key = request.args.get("sort", "created_at")
+        sort_direction = request.args.get("direction", "desc")
+
+        ingestion_jobs = (
+            db.session.query(ProcessingJob)
+            .filter(
+                ProcessingJob.pipeline == "ingestion",
+                ProcessingJob.domain.isnot(None),
+            )
+            .order_by(ProcessingJob.domain.asc(), ProcessingJob.created_at.desc(), ProcessingJob.id.asc())
+            .all()
+        )
+
+        latest_by_domain: dict[str, ProcessingJob] = {}
+        for job in ingestion_jobs:
+            domain = (job.domain or "").strip()
+            if domain and domain not in latest_by_domain:
+                latest_by_domain[domain] = job
+
+        domain_jobs = list(latest_by_domain.values())
+        note_metadata = _note_metadata_for_jobs([job.id for job in domain_jobs])
+
+        if search:
+            def matches_search(job: ProcessingJob) -> bool:
+                latest_note = note_metadata.get(job.id, {}).get("latest_note") or {}
+                values = [
+                    job.id,
+                    job.domain,
+                    job.status,
+                    job.error_message,
+                    latest_note.get("text"),
+                ]
+                return any(search in str(value or "").lower() for value in values)
+
+            domain_jobs = [job for job in domain_jobs if matches_search(job)]
+
+        def sort_value(job: ProcessingJob):
+            if sort_key == "domain":
+                return ((job.domain or "").lower(), job.id)
+            if sort_key == "status":
+                return ((job.status or "").lower(), job.id)
+            if sort_key == "notes":
+                return (note_metadata.get(job.id, {}).get("notes_count", 0), job.id)
+            return (job.created_at or datetime.min.replace(tzinfo=timezone.utc), job.id)
+
+        domain_jobs = sorted(
+            domain_jobs,
+            key=sort_value,
+            reverse=sort_direction != "asc",
+        )
+
+        total_items = len(domain_jobs)
+        total_pages = (total_items + per_page - 1) // per_page if total_items else 0
+        start = (page - 1) * per_page
+        selected_jobs = domain_jobs[start:start + per_page]
+
+        return jsonify(
+            {
+                "domains": [
+                    _serialize_domain_job(job, note_metadata)
+                    for job in selected_jobs
+                ],
+                "pagination": {
+                    "page": page,
+                    "per_page": per_page,
+                    "total_items": total_items,
+                    "total_pages": total_pages,
+                    "has_next": page < total_pages,
+                    "has_previous": page > 1 and total_pages > 0,
+                },
+            }
+        )
+
+    @ontology_bp.route('/domains/review/<job_id>/urls', methods=['GET'])
+    def review_domain_urls(job_id):
+        job = db.session.get(ProcessingJob, job_id)
+        if job is None or job.pipeline != "ingestion":
+            return error_response("Domain not found", 404)
+        return jsonify({"job_id": job.id, "domain": job.domain, "urls": _domain_source_urls(job)})
+
     @ontology_bp.route('/ingest', methods=['POST'])
     def ingest_content():
         """Trigger the ingestion pipeline for the given domain and URL list."""
@@ -877,12 +1031,14 @@ def create_blueprints():
         domain = None
         config_content = None
         links_list = None
+        source_job_id = None
 
         if request.is_json:
             data = request.get_json() or {}
             domain = (data.get('domain') or '').strip() or None
             config_content = data.get('config_content')
-            links_list = data.get('links')
+            links_list = _normalise_url_list(data.get('links'))
+            source_job_id = (data.get('source_job_id') or '').strip() or None
 
         if not domain:
             return error_response("Domain is required.")
@@ -897,8 +1053,40 @@ def create_blueprints():
 
         tracking = True
         try:
-            job = ProcessingJob(id=job_id, status="pending", pipeline="ingestion", domain=domain)
+            notes_to_copy = []
+            source_job = db.session.get(ProcessingJob, source_job_id) if source_job_id else None
+            if (
+                source_job is not None
+                and source_job.pipeline == "ingestion"
+                and source_job.domain == domain
+            ):
+                notes_to_copy = [
+                    (note.text, note.created_at, note.updated_at)
+                    for note in _notes_for_job(source_job)
+                ]
+
+            job = ProcessingJob(
+                id=job_id,
+                status="pending",
+                pipeline="ingestion",
+                domain=domain,
+                config_data=json.dumps(
+                    {
+                        "links": links_list,
+                        "config_content": config_content,
+                    }
+                ),
+            )
             db.session.add(job)
+            for note_text, created_at, updated_at in notes_to_copy:
+                db.session.add(
+                    ProcessingJobNote(
+                        job_id=job.id,
+                        text=note_text,
+                        created_at=created_at,
+                        updated_at=updated_at,
+                    )
+                )
             db.session.commit()
         except Exception as e:
             db.session.rollback()
@@ -1136,7 +1324,14 @@ def create_blueprints():
         job = db.session.get(ProcessingJob, job_id)
         if job is None:
             return error_response("Job not found", 404)
-        return jsonify({"job_id": job.id, "groups": _job_artifact_groups(job)})
+        try:
+            groups = _job_artifact_groups(job)
+        except Exception as exc:
+            current_app.logger.warning(
+                "Unable to load artifacts for job %s: %s", job.id, exc
+            )
+            return error_response("Unable to load job details.", 502)
+        return jsonify({"job_id": job.id, "groups": groups})
 
     @ontology_bp.route('/jobs/<job_id>/downloads/local-file', methods=['GET'])
     def download_job_local_file(job_id):

@@ -51,8 +51,109 @@ def test_header_links_to_review_tests_after_create_domains():
 
     assert response.status_code == 200
     body = response.get_data(as_text=True)
+    assert "/ontology/review-domains" in body
+    assert "Review Domains" in body
     assert "/ontology/review-tests" in body
     assert "Review Tests" in body
+    assert body.index("Create Domains") < body.index("Review Domains")
+    assert body.index("Review Domains") < body.index("Review Tests")
+    assert "File Explorer" not in body
+    assert "/viewer/bucket/govuk-ai-accelerator-data-integration" not in body
+
+
+def test_review_domains_page_renders_govuk_review_table():
+    response = _client().get("/ontology/review-domains")
+
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert "<title>Review domains - GOV.UK Ontology Generator</title>" in body
+    assert '<h1 class="govuk-heading-l">Review domains</h1>' in body
+    assert (
+        "View your available domains below. Click any row to audit its source URLs."
+        in body
+    )
+    assert 'id="domains-search"' in body
+    assert '<table class="govuk-table review-domains-table" id="domains-table">' in body
+    for heading in ("Domain Name", "Created At", "Status", "Notes"):
+        assert f"<span>{heading}</span>" in body
+    assert "/ontology/domains/review" in body
+    assert "perPage = 10" in body
+    assert "renderUrlPagination" in body
+    assert "review-source-url-list" in body
+    assert "editingSourceUrls: false" in body
+    assert "edit-source-urls-action" in body
+    assert "cancel-source-url-edit-action" in body
+    assert "Save and rebuild domain" in body
+    assert "renderDetailTab('source-urls', 'Source URLs')" in body
+    assert "renderDetailTab('notes', 'Notes')" in body
+    assert "review-note-action-link--secondary cancel-inline-note-action" in body
+    assert "review-note-action-link--destructive delete-inline-note-action" in body
+    assert "renderDomainActions(domain, notesLabel)" in body
+    assert "review-row-actions" in body
+    assert "delete-domain" not in body.lower()
+    assert "materialize.min.css" not in body
+    assert "materialize.min.js" not in body
+    assert "Material+Icons" not in body
+    assert "material-icons" not in body
     assert body.index("Create Domains") < body.index("Review Tests")
     assert "File Explorer" not in body
     assert "/viewer/bucket/govuk-ai-accelerator-data-integration" not in body
+
+
+def test_review_domains_detail_uses_vertical_tabs():
+    response = _client().get("/ontology/review-domains")
+
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert ".review-domain-detail {" in body
+    assert "grid-template-columns: 280px minmax(0, 1fr);" in body
+    assert "background: #ffffff;" in body
+    assert ".review-detail-menu {" in body
+    assert "background: #fafafa;" in body
+    assert "border-right: 1px solid #e5e7eb;" in body
+    assert "border-left: 4px solid transparent;" in body
+    assert "border-bottom: 1px solid #e5e7eb;" in body
+    assert "padding: 16px 18px;" in body
+    assert ".review-detail-tab.is-active {" in body
+    assert "border-left-color: #1d70b8;" in body
+    assert "@media (max-width: 760px)" in body
+
+
+def test_review_domains_detail_tabs_inherit_govuk_table_typography():
+    response = _client().get("/ontology/review-domains")
+
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    tab_css = body.split(".review-detail-tab {", 1)[1].split(
+        ".review-detail-tab.is-active {", 1
+    )[0]
+    assert "font: inherit;" in tab_css
+
+
+def test_review_domains_table_headers_match_review_table_typography():
+    response = _client().get("/ontology/review-domains")
+
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    sort_button_css = body.split(".review-sort-button {", 1)[1].split(
+        ".review-sort-button:hover span:first-child {", 1
+    )[0]
+    assert "display: inline-flex;" in sort_button_css
+    assert "align-items: center;" in sort_button_css
+    assert "gap: 4px;" in sort_button_css
+    assert "border-radius: 0;" in sort_button_css
+    assert "font: inherit;" in sort_button_css
+
+
+def test_review_domains_table_does_not_show_internal_job_ids():
+    response = _client().get("/ontology/review-domains")
+
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    first_cell_markup = body.split(
+        '<strong class="govuk-!-font-weight-bold">${escapeHtml(domain.domain || \'-\')}</strong>',
+        1,
+    )[1].split("</td>", 1)[0]
+    assert "domain.job_id" not in first_cell_markup
+    assert "review-job-id" not in first_cell_markup
+    assert "tr.dataset.jobId = domain.job_id;" in body
