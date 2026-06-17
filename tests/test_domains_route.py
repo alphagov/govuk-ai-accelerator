@@ -34,7 +34,7 @@ def test_domains_page_renders_form():
     assert response.status_code == 200
     body = response.get_data(as_text=True)
     assert 'name="domain"' in body
-    assert 'type="file"' in body
+    assert 'id="urls-text"' in body
 
 
 def test_header_links_to_create_domains_page():
