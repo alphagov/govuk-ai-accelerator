@@ -218,3 +218,28 @@ def test_reingest_does_not_copy_notes_from_different_domain(_stub_background_dep
         )
 
     assert notes_count == 0
+
+
+def test_ingest_unarchives_domain_when_recreated(_stub_background_deps):
+    client = _client()
+    app_module = _app_module()
+    app = app_module.create_flask_app()
+
+    with app.app_context():
+        app_module.db.session.add(
+            app_module.ReviewDomainArchive(
+                domain="visa",
+                source_job_id=None,
+                deleted_at=datetime(2026, 5, 11, 13, 0, tzinfo=timezone.utc),
+            )
+        )
+        app_module.db.session.commit()
+
+    response = client.post(
+        "/ontology/ingest",
+        json={"domain": "visa", "links": ["https://www.gov.uk/visa"]},
+    )
+
+    assert response.status_code == 202
+    with app.app_context():
+        assert app_module.db.session.get(app_module.ReviewDomainArchive, "visa") is None
