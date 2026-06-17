@@ -55,6 +55,7 @@ DEFAULT_CONFIG_TEMPLATE_PATH = (
     / "config-template.yaml"
 )
 
+ACTIVE_DOMAIN_DELETE_STATUSES = {"pending", "running", "stopping"}
 PROTECTED_REVIEW_DOMAIN_NAMES = {"ontology-harness-baseline"}
 
 
@@ -97,6 +98,21 @@ class ProcessingJobNote(db.Model):
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
+class ReviewDomainArchive(db.Model):
+    domain: Mapped[str] = mapped_column(String, primary_key=True)
+    source_job_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("processing_job.id"),
+        nullable=True,
+        index=True,
+    )
+    deleted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
     )
 
 
@@ -459,16 +475,12 @@ def _domain_source_urls_from_sidecar(job: ProcessingJob) -> list[str] | None:
         return None
 
     s3_client = boto3.client("s3")
-    try:
-        response = s3_client.get_object(
-            Bucket=_default_bucket_name(),
-            Key=f"{job.domain}/input/sources.json",
-        )
-        raw_sources = response["Body"].read().decode("utf-8")
-        sources = json.loads(raw_sources)
-    except Exception as exc:
-        current_app.logger.info("No sources sidecar found for domain %s: %s", job.domain, exc)
-        return None
+    response = s3_client.get_object(
+        Bucket=_default_bucket_name(),
+        Key=f"{job.domain}/input/sources.json",
+    )
+    raw_sources = response["Body"].read().decode("utf-8")
+    sources = json.loads(raw_sources)
 
     if not isinstance(sources, dict):
         return None
@@ -476,14 +488,65 @@ def _domain_source_urls_from_sidecar(job: ProcessingJob) -> list[str] | None:
 
 
 def _domain_source_urls(job: ProcessingJob) -> list[str]:
-    sidecar_urls = _domain_source_urls_from_sidecar(job)
+    try:
+        sidecar_urls = _domain_source_urls_from_sidecar(job)
+    except Exception as exc:
+        current_app.logger.info("No sources sidecar found for domain %s: %s", job.domain, exc)
+        return _submitted_domain_links(job)
     if sidecar_urls is not None:
         return sidecar_urls
     return _submitted_domain_links(job)
 
 
+def _domain_source_url_payload(job: ProcessingJob) -> dict:
+    try:
+        sidecar_urls = _domain_source_urls_from_sidecar(job)
+    except Exception as exc:
+        current_app.logger.warning(
+            "Unable to load source URL sidecar for domain %s: %s",
+            job.domain,
+            exc,
+        )
+        submitted_links = _submitted_domain_links(job)
+        return {
+            "urls": submitted_links,
+            "source": "submitted_links",
+            "warning": (
+                "Using submitted source URLs because generated source metadata could not be loaded."
+                if submitted_links
+                else "Source URLs could not be loaded."
+            ),
+        }
+
+    if sidecar_urls is not None:
+        return {"urls": sidecar_urls, "source": "sources_json", "warning": None}
+
+    return {
+        "urls": _submitted_domain_links(job),
+        "source": "submitted_links",
+        "warning": None,
+    }
+
+
+def _archived_domain_names() -> set[str]:
+    rows = db.session.query(ReviewDomainArchive.domain).all()
+    return {str(row[0]).strip() for row in rows if str(row[0]).strip()}
+
+
 def _is_protected_review_domain(domain: str | None) -> bool:
     return (domain or "").strip().lower() in PROTECTED_REVIEW_DOMAIN_NAMES
+
+
+def _latest_ingestion_job_for_domain(domain: str) -> ProcessingJob | None:
+    return (
+        db.session.query(ProcessingJob)
+        .filter(
+            ProcessingJob.pipeline == "ingestion",
+            ProcessingJob.domain == domain,
+        )
+        .order_by(ProcessingJob.created_at.desc(), ProcessingJob.id.asc())
+        .first()
+    )
 
 
 def _list_s3_objects(s3_client, bucket_name: str, prefix: str) -> list[dict]:
@@ -963,11 +1026,13 @@ def create_blueprints():
             .all()
         )
 
+        archived_domains = _archived_domain_names()
         latest_by_domain: dict[str, ProcessingJob] = {}
         for job in ingestion_jobs:
             domain = (job.domain or "").strip()
             if (
                 domain
+                and domain not in archived_domains
                 and not _is_protected_review_domain(domain)
                 and domain not in latest_by_domain
             ):
@@ -1032,7 +1097,32 @@ def create_blueprints():
         job = db.session.get(ProcessingJob, job_id)
         if job is None or job.pipeline != "ingestion":
             return error_response("Domain not found", 404)
-        return jsonify({"job_id": job.id, "domain": job.domain, "urls": _domain_source_urls(job)})
+        payload = _domain_source_url_payload(job)
+        return jsonify({"job_id": job.id, "domain": job.domain, **payload})
+
+    @ontology_bp.route('/domains/review/<job_id>', methods=['DELETE'])
+    def delete_review_domain(job_id):
+        job = db.session.get(ProcessingJob, job_id)
+        if job is None or job.pipeline != "ingestion" or not (job.domain or "").strip():
+            return error_response("Domain not found", 404)
+
+        domain = (job.domain or "").strip()
+        latest_job = _latest_ingestion_job_for_domain(domain)
+        if latest_job is None or latest_job.id != job.id:
+            return error_response("Domain has changed. Refresh before deleting.", 409)
+
+        if (job.status or "").lower() in ACTIVE_DOMAIN_DELETE_STATUSES:
+            return error_response("Domain is currently being processed.", 409)
+
+        archive = db.session.get(ReviewDomainArchive, domain)
+        if archive is None:
+            archive = ReviewDomainArchive(domain=domain)
+            db.session.add(archive)
+        archive.source_job_id = job.id
+        archive.deleted_at = datetime.now(timezone.utc)
+        db.session.commit()
+
+        return jsonify({"domain": domain, "job_id": job.id, "deleted": True})
 
     @ontology_bp.route('/ingest', methods=['POST'])
     def ingest_content():
@@ -1074,6 +1164,10 @@ def create_blueprints():
                     (note.text, note.created_at, note.updated_at)
                     for note in _notes_for_job(source_job)
                 ]
+
+            archive = db.session.get(ReviewDomainArchive, domain)
+            if archive is not None:
+                db.session.delete(archive)
 
             job = ProcessingJob(
                 id=job_id,

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Review domains - GOV.UK Ontology Generator{% endblock %}
+{% block title %}Review Domains - GOV.UK Ontology Generator{% endblock %}
 
 {% block content %}
 <style>
@@ -29,7 +29,7 @@
 
 <div class="review-domains-page govuk-width-container">
   <div class="review-domains-header">
-    <h1 class="govuk-heading-l">Review domains</h1>
+    <h1 class="govuk-heading-l">Review Domains</h1>
     <p class="govuk-body">View your available domains below. Click any row to audit its source URLs.</p>
   </div>
 
@@ -94,6 +94,8 @@
     let selectedDetailSection = 'source-urls';
     let currentDomains = [];
     let currentPagination = null;
+    let deletingJobId = null;
+    let deleteError = '';
     const selectedDomainState = {};
 
     function escapeHtml(value) {
@@ -149,9 +151,13 @@
           editingSourceUrls: false,
           editingValue: null,
           editingNoteId: null,
-          loading: false,
+          urlsLoading: false,
+          urlsError: '',
+          urlWarning: '',
+          urlSource: '',
+          notesLoading: false,
+          notesError: '',
           loaded: false,
-          error: '',
           statusMessage: ''
         };
       }
@@ -274,6 +280,8 @@
     }
 
     function renderDomainActions(domain, notesLabel) {
+      const activeStatuses = new Set(['pending', 'running', 'stopping']);
+      const canDelete = !activeStatuses.has(String(domain.status || '').toLowerCase());
       return `
         <ul class="review-row-actions" aria-label="Actions for ${escapeAttribute(domain.job_id)}">
           <li class="review-row-actions__item">
@@ -281,6 +289,13 @@
               ${escapeHtml(notesLabel)}
             </button>
           </li>
+          ${canDelete ? `
+            <li class="review-row-actions__item">
+              <button type="button" class="govuk-link govuk-!-font-size-16 review-row-action-link review-row-action-link--destructive delete-domain-action" data-job-id="${escapeAttribute(domain.job_id)}" aria-label="Delete ${escapeAttribute(domain.domain || 'this domain')}">
+                Delete domain
+              </button>
+            </li>
+          ` : ''}
         </ul>
       `;
     }
@@ -344,6 +359,10 @@
     }
 
     function renderDomainDetail(domain) {
+      if (deletingJobId === domain.job_id) {
+        return renderDeleteDomainConfirmation(domain);
+      }
+
       const state = detailState(domain.job_id);
       return `
         <div class="review-domain-detail">
@@ -352,13 +371,29 @@
             ${renderDetailTab('notes', 'Notes')}
           </div>
           <div class="review-detail-panel">
-            ${state.loading ? '<p class="govuk-body review-empty-state">Loading domain details...</p>' : ''}
-            ${state.error ? `<p class="govuk-body review-empty-state">${escapeHtml(state.error)}</p>` : ''}
-            ${!state.loading && selectedDetailSection === 'notes'
-              ? renderInlineNotes(domain, state.notes || [], state.editingNoteId)
-              : !state.loading
-                ? renderSourceUrls(domain, state)
-                : ''}
+            ${selectedDetailSection === 'notes'
+              ? renderInlineNotes(domain, state)
+              : renderSourceUrls(domain, state)}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderDeleteDomainConfirmation(domain) {
+      return `
+        <div class="review-domain-delete-confirmation">
+          <h2 class="govuk-heading-m">Delete ${escapeHtml(domain.domain || 'domain')}</h2>
+          <div class="govuk-warning-text">
+            <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+            <strong class="govuk-warning-text__text">
+              <span class="govuk-visually-hidden">Warning</span>
+              This removes the domain from Review domains. It does not delete historical jobs, notes, source URLs or files.
+            </strong>
+          </div>
+          ${deleteError ? `<p class="govuk-error-message">${escapeHtml(deleteError)}</p>` : ''}
+          <div class="govuk-button-group">
+            <button type="button" class="govuk-button govuk-button--warning confirm-delete-domain-action" data-job-id="${escapeAttribute(domain.job_id)}">Delete domain</button>
+            <button type="button" class="govuk-button govuk-button--secondary cancel-delete-domain-action" data-job-id="${escapeAttribute(domain.job_id)}">Cancel</button>
           </div>
         </div>
       `;
@@ -405,6 +440,14 @@
         <div class="review-detail-content">
           <h2 class="govuk-visually-hidden">Source URLs</h2>
           ${state.statusMessage ? `<p class="govuk-body review-domain-status-message">${escapeHtml(state.statusMessage)}</p>` : ''}
+          ${state.urlsLoading ? '<p class="govuk-body review-empty-state">Loading source URLs...</p>' : ''}
+          ${state.urlWarning ? `<div class="govuk-inset-text">${escapeHtml(state.urlWarning)}</div>` : ''}
+          ${state.urlsError ? `
+            <p class="govuk-error-message">${escapeHtml(state.urlsError)}</p>
+            <button type="button" class="govuk-button govuk-button--secondary retry-source-urls-action" data-job-id="${escapeAttribute(domain.job_id)}">
+              Retry source URLs
+            </button>
+          ` : ''}
           ${visibleUrls.length ? `
             <p class="govuk-body-s review-source-url-count">Showing ${start + 1} to ${rangeEnd} of ${urls.length} source URLs</p>
             <div class="review-source-url-list">
@@ -426,10 +469,14 @@
       `;
     }
 
-    function renderInlineNotes(domain, notes, editingNoteId) {
+    function renderInlineNotes(domain, state) {
+      const notes = state.notes || [];
+      const editingNoteId = state.editingNoteId;
       return `
         <div class="review-detail-content">
           <h2 class="govuk-heading-s">Notes</h2>
+          ${state.notesLoading ? '<p class="govuk-body review-empty-state">Loading notes...</p>' : ''}
+          ${state.notesError ? `<p class="govuk-error-message">${escapeHtml(state.notesError)}</p>` : ''}
           <div class="review-inline-notes">
             ${notes.length ? notes.map(note => renderNoteItem(domain.job_id, note, editingNoteId)).join('') : '<p class="govuk-body review-empty-state">No notes recorded for this domain.</p>'}
           </div>
@@ -472,46 +519,53 @@
     }
 
     async function loadSelectedDomainData(jobId) {
+      loadSelectedDomainUrls(jobId);
+      loadSelectedDomainNotes(jobId);
+    }
+
+    async function loadSelectedDomainUrls(jobId) {
       const state = detailState(jobId);
-      state.loading = true;
-      state.error = '';
+      state.urlsLoading = true;
+      state.urlsError = '';
       state.statusMessage = '';
       renderCurrentDomains();
       try {
-        const [urlPayload, notes] = await Promise.all([
-          fetchJson(`/ontology/domains/review/${encodeURIComponent(jobId)}/urls`),
-          fetchJson(`/ontology/jobs/${encodeURIComponent(jobId)}/notes`)
-        ]);
+        const urlPayload = await fetchJson(`/ontology/domains/review/${encodeURIComponent(jobId)}/urls`);
         state.urls = urlPayload.urls || [];
+        state.urlWarning = urlPayload.warning || '';
+        state.urlSource = urlPayload.source || '';
         state.editingSourceUrls = false;
         state.editingValue = null;
-        state.notes = notes || [];
         state.loaded = true;
       } catch (err) {
-        state.error = err.message;
+        state.urlsError = err.message || 'Unable to load source URLs.';
       } finally {
-        state.loading = false;
+        state.urlsLoading = false;
+        renderCurrentDomains();
+      }
+    }
+
+    async function loadSelectedDomainNotes(jobId) {
+      const state = detailState(jobId);
+      state.notesLoading = true;
+      state.notesError = '';
+      renderCurrentDomains();
+      try {
+        state.notes = await fetchJson(`/ontology/jobs/${encodeURIComponent(jobId)}/notes`) || [];
+      } catch (err) {
+        state.notesError = err.message || 'Unable to load notes.';
+      } finally {
+        state.notesLoading = false;
         renderCurrentDomains();
       }
     }
 
     async function refreshSelectedDomain(jobId) {
       const state = detailState(jobId);
-      try {
-        const [urlPayload, notes] = await Promise.all([
-          fetchJson(`/ontology/domains/review/${encodeURIComponent(jobId)}/urls`),
-          fetchJson(`/ontology/jobs/${encodeURIComponent(jobId)}/notes`)
-        ]);
-        state.urls = urlPayload.urls || [];
-        state.editingSourceUrls = false;
-        state.editingValue = null;
-        state.notes = notes || [];
-        state.editingNoteId = null;
-        await fetchReviewDomains();
-      } catch (err) {
-        state.error = err.message;
-        renderCurrentDomains();
-      }
+      state.editingNoteId = null;
+      await loadSelectedDomainUrls(jobId);
+      await loadSelectedDomainNotes(jobId);
+      await fetchReviewDomains();
     }
 
     domainsTbody.addEventListener('click', async event => {
@@ -524,9 +578,59 @@
 
       const openNotesButton = event.target.closest('.open-notes-action');
       if (openNotesButton) {
+        event.preventDefault();
+        event.stopPropagation();
         selectedJobId = openNotesButton.dataset.jobId;
         selectedDetailSection = 'notes';
+        deletingJobId = null;
+        deleteError = '';
         loadSelectedDomainData(selectedJobId);
+        return;
+      }
+
+      const deleteDomainButton = event.target.closest('.delete-domain-action');
+      if (deleteDomainButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        deletingJobId = deleteDomainButton.dataset.jobId;
+        deleteError = '';
+        selectedJobId = deletingJobId;
+        renderDomainsTable(currentDomains);
+        return;
+      }
+
+      const cancelDeleteButton = event.target.closest('.cancel-delete-domain-action');
+      if (cancelDeleteButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        deletingJobId = null;
+        deleteError = '';
+        renderDomainsTable(currentDomains);
+        return;
+      }
+
+      const confirmDeleteButton = event.target.closest('.confirm-delete-domain-action');
+      if (confirmDeleteButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        const jobId = confirmDeleteButton.dataset.jobId;
+        try {
+          await fetchJson(`/ontology/domains/review/${encodeURIComponent(jobId)}`, { method: 'DELETE' });
+          deletingJobId = null;
+          deleteError = '';
+          selectedJobId = null;
+          await fetchReviewDomains();
+        } catch (error) {
+          deleteError = error.message || 'Unable to delete domain.';
+          renderDomainsTable(currentDomains);
+        }
+        return;
+      }
+
+      const retryUrlsButton = event.target.closest('.retry-source-urls-action');
+      if (retryUrlsButton) {
+        event.preventDefault();
+        await loadSelectedDomainUrls(retryUrlsButton.dataset.jobId);
         return;
       }
 
@@ -653,6 +757,8 @@
       if (domainRow) {
         selectedJobId = selectedJobId === domainRow.dataset.jobId ? null : domainRow.dataset.jobId;
         selectedDetailSection = 'source-urls';
+        deletingJobId = null;
+        deleteError = '';
         renderCurrentDomains();
         if (selectedJobId) loadSelectedDomainData(selectedJobId);
       }
@@ -673,6 +779,8 @@
       event.preventDefault();
       selectedJobId = selectedJobId === domainRow.dataset.jobId ? null : domainRow.dataset.jobId;
       selectedDetailSection = 'source-urls';
+      deletingJobId = null;
+      deleteError = '';
       renderCurrentDomains();
       if (selectedJobId) loadSelectedDomainData(selectedJobId);
     });
@@ -951,7 +1059,8 @@
       padding: 0;
   }
 
-  .review-note-action-link--destructive {
+  .review-note-action-link--destructive,
+  .review-row-action-link--destructive {
       color: #d4351c;
   }
 
