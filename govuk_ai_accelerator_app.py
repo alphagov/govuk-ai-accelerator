@@ -55,6 +55,8 @@ DEFAULT_CONFIG_TEMPLATE_PATH = (
     / "config-template.yaml"
 )
 
+PROTECTED_REVIEW_DOMAIN_NAMES = {"ontology-harness-baseline"}
+
 
 class ProcessingJob(db.Model):
     """Model to track the status of submitted jobs."""
@@ -478,6 +480,10 @@ def _domain_source_urls(job: ProcessingJob) -> list[str]:
     if sidecar_urls is not None:
         return sidecar_urls
     return _submitted_domain_links(job)
+
+
+def _is_protected_review_domain(domain: str | None) -> bool:
+    return (domain or "").strip().lower() in PROTECTED_REVIEW_DOMAIN_NAMES
 
 
 def _list_s3_objects(s3_client, bucket_name: str, prefix: str) -> list[dict]:
@@ -960,7 +966,11 @@ def create_blueprints():
         latest_by_domain: dict[str, ProcessingJob] = {}
         for job in ingestion_jobs:
             domain = (job.domain or "").strip()
-            if domain and domain not in latest_by_domain:
+            if (
+                domain
+                and not _is_protected_review_domain(domain)
+                and domain not in latest_by_domain
+            ):
                 latest_by_domain[domain] = job
 
         domain_jobs = list(latest_by_domain.values())
