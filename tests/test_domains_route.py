@@ -43,7 +43,7 @@ def test_header_links_to_create_domains_page():
     assert response.status_code == 200
     body = response.get_data(as_text=True)
     assert "/ontology/domains" in body
-    assert "Create Domains" in body
+    assert "Create Domain" in body
 
 
 def test_header_links_to_review_tests_after_create_domains():
@@ -52,11 +52,13 @@ def test_header_links_to_review_tests_after_create_domains():
     assert response.status_code == 200
     body = response.get_data(as_text=True)
     assert "/ontology/review-domains" in body
-    assert "Review Domains" in body
+    assert "Review Domain" in body
     assert "/ontology/review-tests" in body
     assert "Review Tests" in body
-    assert body.index("Create Domains") < body.index("Review Domains")
-    assert body.index("Review Domains") < body.index("Review Tests")
+    assert body.index("Create Ontology") < body.index("Review Ontologies")
+    assert body.index("Review Ontologies") < body.index("Create Domain")
+    assert body.index("Create Domain") < body.index("Review Domain")
+    assert body.index("Review Domain") < body.index("Review Tests")
     assert "File Explorer" not in body
     assert "/viewer/bucket/govuk-ai-accelerator-data-integration" not in body
 
@@ -121,7 +123,7 @@ def test_review_domains_page_renders_govuk_review_table():
     assert "materialize.min.js" not in body
     assert "Material+Icons" not in body
     assert "material-icons" not in body
-    assert body.index("Create Domains") < body.index("Review Tests")
+    assert body.index("Create Domain") < body.index("Review Tests")
     assert "File Explorer" not in body
     assert "/viewer/bucket/govuk-ai-accelerator-data-integration" not in body
 

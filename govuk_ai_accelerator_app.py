@@ -918,6 +918,10 @@ def create_blueprints():
 
     @ontology_bp.route("/", methods=['GET'])
     def index():
+        return render_template('home.html', active_page='home')
+
+    @ontology_bp.route("/create", methods=['GET'])
+    def create_ontology():
         try:
             default_config = _load_default_config_template()
         except Exception as e:

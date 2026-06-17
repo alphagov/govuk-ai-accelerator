@@ -2,8 +2,24 @@
 
 {% block content %}
     <style>
+        body {
+            background-color: #ffffff !important;
+        }
+        main {
+            padding: 24px 0 !important;
+            display: block !important;
+            max-width: 960px !important;
+        }
+        .content-area {
+            background: transparent;
+            box-shadow: none;
+            border-radius: 0;
+            padding: 0;
+        }
         .domain-wizard-step {
             min-height: 200px;
+            max-width: 660px;
+            margin-bottom: 20px;
         }
         /* Override Materialize textarea styling */
         textarea.govuk-textarea {
@@ -135,12 +151,13 @@
                                     Job ID: <strong id="domain-job-id"></strong>
                                 </div>
                             </div>
-                            <p class="govuk-body" style="margin-top: 30px;">
-                                The URLs are now being ingested into your domain. You can track the job status from the dashboard.
+                            <h3 class="govuk-heading-m" style="margin-top: 30px;">What happens next</h3>
+                            <p class="govuk-body">
+                                The URLs are now being ingested into your domain. You can track the ingestion status and review results from the Review Domain dashboard.
                             </p>
                             <div class="govuk-button-group" style="margin-top: 30px;">
                                 <button type="button" class="govuk-button" id="domain-wizard-reset-btn" data-module="govuk-button">Create another domain</button>
-                                <a href="{{ url_for('ontology.index') }}" class="govuk-button govuk-button--secondary" role="button" data-module="govuk-button">Go to Create Ontology</a>
+                                <a href="{{ url_for('ontology.review_domains') }}" class="govuk-button govuk-button--secondary" role="button" data-module="govuk-button">Review Domain</a>
                             </div>
                         </div>
                     </form>

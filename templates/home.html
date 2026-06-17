@@ -1,4 +1,104 @@
-{% extends "base.html" %} {% block content %}
-    <a href="/ontology" class="nav-link">File Uploader</a>
-    <a href="/visualizer/" class="nav-link">Visualizer</a>
+{% extends "base.html" %}
+
+{% block title %}Home - Ontology Generator{% endblock %}
+
+{% block content %}
+    <style>
+        /* Override base layout to look like create ontology */
+        body {
+            background-color: #ffffff !important;
+        }
+        main {
+            padding: 24px 0 !important;
+            display: block !important;
+            max-width: 960px !important;
+        }
+        .content-area {
+            background: transparent;
+            box-shadow: none;
+            border-radius: 0;
+            padding: 0;
+        }
+
+        .home-hero {
+            padding: 30px 0 10px 0;
+            margin-bottom: 20px;
+        }
+        .home-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+        .feature-card {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-bottom: 5px solid #1d70b8;
+            padding: 24px;
+            box-sizing: border-box;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 250px;
+        }
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border-bottom-color: #005a8f;
+        }
+        .feature-card__number {
+            font-family: "GDS Transport", arial, sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: #1d70b8;
+            margin-bottom: 10px;
+        }
+        .feature-card__title {
+            margin-top: 0;
+            margin-bottom: 12px;
+            color: #0b0c0c;
+        }
+        .feature-card__description {
+            color: #505a5f;
+            margin-bottom: 20px;
+            flex-grow: 1;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .feature-card__action {
+            margin-top: auto;
+            align-self: flex-start;
+        }
+        .govuk-list--bullet {
+            list-style-type: disc !important;
+            padding-left: 20px !important;
+            margin-bottom: 30px !important;
+        }
+        .govuk-list--bullet li {
+            display: list-item !important;
+            list-style-type: disc !important;
+            margin-bottom: 10px !important;
+        }
+    </style>
+ 
+    <div class="govuk-width-container">
+        <div class="home-hero">
+            <h1 class="govuk-heading-xl">Ontology Generator</h1>
+            <p class="govuk-body">
+                This tool allows you to create a seed ontology from GOV.UK content in a given domain using LLMs. It's important to remember that all Ontology generations have a token cost to GDS, so please use tool mindfully.
+            </p>
+        </div>
+ 
+        <h2 class="govuk-heading-l">Steps to creating an Ontology</h2>
+        <ul class="govuk-list govuk-list--bullet">
+            <li><a id="action-create-domain" href="{{ url_for('ontology.domains_page') }}" class="govuk-link">Create a content domain</a> by inserting all URLs of the content you want your Ontology to be based on.</li>
+            <li>Go to <a id="action-create-ontology" href="{{ url_for('ontology.create_ontology') }}" class="govuk-link">Create Ontology</a>, select domain, and add prompt and define settings.</li>
+            <li>If you want to review the generated ontologies and domains go to the <a id="action-review-ontologies" href="{{ url_for('ontology.review_ontologies') }}" class="govuk-link">Review Ontologies</a> and <a id="action-review-domains" href="{{ url_for('ontology.review_domains') }}" class="govuk-link">Review Domains</a>.</li>
+        </ul>
+        <a id="action-review-tests" href="{{ url_for('ontology.review_tests') }}" style="display: none;">Review Tests</a>
+
+       
+    
+    </div>
 {% endblock %}
