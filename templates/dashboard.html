@@ -2325,6 +2325,7 @@
                     // Append custom prompt text if typed directly and file isn't uploaded
                     const customPromptText = document.getElementById('custom-prompt-text').value;
                     if (!txtFileInput.files.length && customPromptText.trim() !== '') {
+                        formData.delete('text_file');
                         const blob = new Blob([customPromptText], { type: 'text/plain' });
                         formData.append('text_file', blob, 'domain_prompt.txt');
                     }
