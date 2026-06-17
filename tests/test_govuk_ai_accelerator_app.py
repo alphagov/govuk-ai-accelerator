@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 import pytest
 import yaml
 from flask import Flask
+from werkzeug.datastructures import MultiDict
 from werkzeug.test import Client
 from werkzeug.wrappers import Response
 
@@ -530,6 +531,33 @@ def test_submit_uses_uploaded_prompt_when_supplied(tmp_path):
 
     assert response.status_code == 202
     assert job.domain_prompt == "custom prompt"
+
+
+def test_submit_uses_typed_prompt_when_hidden_file_input_is_empty(tmp_path):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+    client = flask_app.test_client()
+
+    response = client.post(
+        "/ontology/submit",
+        data=MultiDict(
+            [
+                ("domain", "visa"),
+                ("text_file", (io.BytesIO(b""), "")),
+                ("text_file", (io.BytesIO(b"typed prompt"), "domain_prompt.txt")),
+            ]
+        ),
+        content_type="multipart/form-data",
+    )
+
+    with flask_app.app_context():
+        job = app_module.db.session.query(app_module.ProcessingJob).one()
+
+    prompt_response = client.get(f"/ontology/jobs/{job.id}/downloads/prompts.txt")
+
+    assert response.status_code == 202
+    assert job.domain_prompt == "typed prompt"
+    assert prompt_response.status_code == 200
+    assert prompt_response.get_data(as_text=True) == "typed prompt"
 
 
 def _jobs_test_app(tmp_path):
