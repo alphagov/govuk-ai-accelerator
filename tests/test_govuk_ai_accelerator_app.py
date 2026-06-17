@@ -429,6 +429,46 @@ def test_review_domains_endpoint_returns_latest_ingestion_job_per_domain(tmp_pat
     assert visa["latest_note"]["text"] == "Needs policy review"
 
 
+def test_review_domains_endpoint_hides_archived_domain(tmp_path):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+    created_at = datetime(2026, 5, 11, 13, 0, tzinfo=timezone.utc)
+
+    with flask_app.app_context():
+        app_module.db.session.add_all(
+            [
+                app_module.ProcessingJob(
+                    id="visa-job",
+                    status="completed",
+                    pipeline="ingestion",
+                    domain="visa",
+                    created_at=created_at,
+                ),
+                app_module.ProcessingJob(
+                    id="asylum-job",
+                    status="completed",
+                    pipeline="ingestion",
+                    domain="asylum",
+                    created_at=created_at + timedelta(minutes=1),
+                ),
+                app_module.ReviewDomainArchive(
+                    domain="visa",
+                    source_job_id="visa-job",
+                    deleted_at=created_at + timedelta(minutes=2),
+                ),
+            ]
+        )
+        app_module.db.session.commit()
+
+    response = flask_app.test_client().get("/ontology/domains/review")
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert [domain["domain"] for domain in payload["domains"]] == ["asylum"]
+
+    with flask_app.app_context():
+        assert app_module.db.session.get(app_module.ProcessingJob, "visa-job") is not None
+
+
 def test_review_domains_endpoint_hides_protected_harness_baseline_domain(tmp_path):
     app_module, flask_app = _jobs_test_app(tmp_path)
     created_at = datetime(2026, 5, 11, 13, 0, tzinfo=timezone.utc)
@@ -459,6 +499,100 @@ def test_review_domains_endpoint_hides_protected_harness_baseline_domain(tmp_pat
     assert response.status_code == 200
     payload = response.get_json()
     assert [domain["domain"] for domain in payload["domains"]] == ["visa"]
+
+
+def test_delete_review_domain_archives_domain_without_deleting_jobs_or_notes(tmp_path):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+    created_at = datetime(2026, 5, 11, 13, 0, tzinfo=timezone.utc)
+
+    with flask_app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="visa-job",
+                status="completed",
+                pipeline="ingestion",
+                domain="visa",
+                created_at=created_at,
+            )
+        )
+        app_module.db.session.add(
+            app_module.ProcessingJobNote(job_id="visa-job", text="Keep this note")
+        )
+        app_module.db.session.commit()
+
+    response = flask_app.test_client().delete("/ontology/domains/review/visa-job")
+
+    assert response.status_code == 200
+    assert response.get_json()["domain"] == "visa"
+
+    review_response = flask_app.test_client().get("/ontology/domains/review")
+    assert review_response.get_json()["domains"] == []
+
+    with flask_app.app_context():
+        assert app_module.db.session.get(app_module.ProcessingJob, "visa-job") is not None
+        assert app_module.db.session.query(app_module.ProcessingJobNote).count() == 1
+        archive = app_module.db.session.get(app_module.ReviewDomainArchive, "visa")
+        assert archive is not None
+        assert archive.source_job_id == "visa-job"
+
+
+@pytest.mark.parametrize("status", ["pending", "running", "stopping"])
+def test_delete_review_domain_rejects_active_latest_job(tmp_path, status):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+
+    with flask_app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="visa-job",
+                status=status,
+                pipeline="ingestion",
+                domain="visa",
+                created_at=datetime(2026, 5, 11, 13, 0, tzinfo=timezone.utc),
+            )
+        )
+        app_module.db.session.commit()
+
+    response = flask_app.test_client().delete("/ontology/domains/review/visa-job")
+
+    assert response.status_code == 409
+    assert response.get_json()["error"] == "Domain is currently being processed."
+
+    with flask_app.app_context():
+        assert app_module.db.session.get(app_module.ReviewDomainArchive, "visa") is None
+
+
+def test_delete_review_domain_rejects_stale_domain_job(tmp_path):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+    created_at = datetime(2026, 5, 11, 13, 0, tzinfo=timezone.utc)
+
+    with flask_app.app_context():
+        app_module.db.session.add_all(
+            [
+                app_module.ProcessingJob(
+                    id="visa-old",
+                    status="completed",
+                    pipeline="ingestion",
+                    domain="visa",
+                    created_at=created_at,
+                ),
+                app_module.ProcessingJob(
+                    id="visa-new",
+                    status="completed",
+                    pipeline="ingestion",
+                    domain="visa",
+                    created_at=created_at + timedelta(minutes=1),
+                ),
+            ]
+        )
+        app_module.db.session.commit()
+
+    response = flask_app.test_client().delete("/ontology/domains/review/visa-old")
+
+    assert response.status_code == 409
+    assert response.get_json()["error"] == "Domain has changed. Refresh before deleting."
+
+    with flask_app.app_context():
+        assert app_module.db.session.get(app_module.ReviewDomainArchive, "visa") is None
 
 
 def test_review_domains_endpoint_searches_latest_note_text(tmp_path):
@@ -562,7 +696,53 @@ def test_review_domain_urls_falls_back_to_submitted_links(tmp_path, monkeypatch)
     response = flask_app.test_client().get("/ontology/domains/review/pending-job/urls")
 
     assert response.status_code == 200
-    assert response.get_json()["urls"] == ["https://www.gov.uk/a", "https://www.gov.uk/b"]
+    payload = response.get_json()
+    assert payload["urls"] == ["https://www.gov.uk/a", "https://www.gov.uk/b"]
+    assert payload["source"] == "submitted_links"
+    assert (
+        payload["warning"]
+        == "Using submitted source URLs because generated source metadata could not be loaded."
+    )
+
+
+def test_review_domain_urls_returns_stored_links_when_sidecar_loading_errors(
+    tmp_path,
+    monkeypatch,
+):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+
+    with flask_app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="visa-job",
+                status="completed",
+                pipeline="ingestion",
+                domain="visa",
+                config_data=json.dumps({"links": ["https://www.gov.uk/visa"]}),
+                created_at=datetime(2026, 5, 11, 13, 0, tzinfo=timezone.utc),
+            )
+        )
+        app_module.db.session.commit()
+
+    def raise_sidecar_error(job):
+        raise RuntimeError("temporary source URL sidecar failure")
+
+    monkeypatch.setattr(
+        app_module,
+        "_domain_source_urls_from_sidecar",
+        raise_sidecar_error,
+    )
+
+    response = flask_app.test_client().get("/ontology/domains/review/visa-job/urls")
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["urls"] == ["https://www.gov.uk/visa"]
+    assert payload["source"] == "submitted_links"
+    assert (
+        payload["warning"]
+        == "Using submitted source URLs because generated source metadata could not be loaded."
+    )
 
 
 def test_review_domain_urls_returns_empty_list_without_sources_or_links(tmp_path, monkeypatch):
