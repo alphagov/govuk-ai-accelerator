@@ -1562,6 +1562,17 @@ def test_jobs_page_uses_selected_job_artifact_api_and_download_only_rows():
     assert "renderArtifactLink('Graph', visualiserLink, 'view')" not in html
 
 
+def test_jobs_page_wraps_long_artifact_names_instead_of_forcing_single_line():
+    template = Path(__file__).parents[1] / "templates" / "jobs.html"
+    html = template.read_text(encoding="utf-8")
+    artifact_name_css = html.split(".review-artifact-name span {", 1)[1].split(".review-artifact-actions {", 1)[0]
+
+    assert "display: block;" in artifact_name_css
+    assert "overflow-wrap: anywhere;" in artifact_name_css
+    assert "white-space: normal;" in artifact_name_css
+    assert "text-overflow: ellipsis;" not in artifact_name_css
+
+
 def test_jobs_page_uses_govuk_pagination_markup_without_custom_button_tiles():
     response = _client().get("/ontology/review-ontologies")
     html = response.get_data(as_text=True)
