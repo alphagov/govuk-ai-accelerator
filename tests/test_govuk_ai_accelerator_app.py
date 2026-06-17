@@ -429,6 +429,38 @@ def test_review_domains_endpoint_returns_latest_ingestion_job_per_domain(tmp_pat
     assert visa["latest_note"]["text"] == "Needs policy review"
 
 
+def test_review_domains_endpoint_hides_protected_harness_baseline_domain(tmp_path):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+    created_at = datetime(2026, 5, 11, 13, 0, tzinfo=timezone.utc)
+
+    with flask_app.app_context():
+        app_module.db.session.add_all(
+            [
+                app_module.ProcessingJob(
+                    id="harness-baseline-ingestion",
+                    status="completed",
+                    pipeline="ingestion",
+                    domain="ontology-harness-baseline",
+                    created_at=created_at,
+                ),
+                app_module.ProcessingJob(
+                    id="visa-job",
+                    status="completed",
+                    pipeline="ingestion",
+                    domain="visa",
+                    created_at=created_at + timedelta(minutes=1),
+                ),
+            ]
+        )
+        app_module.db.session.commit()
+
+    response = flask_app.test_client().get("/ontology/domains/review")
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert [domain["domain"] for domain in payload["domains"]] == ["visa"]
+
+
 def test_review_domains_endpoint_searches_latest_note_text(tmp_path):
     app_module, flask_app = _jobs_test_app(tmp_path)
     created_at = datetime(2026, 5, 11, 13, 0, tzinfo=timezone.utc)
