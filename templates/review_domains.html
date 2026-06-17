@@ -1,0 +1,983 @@
+{% extends "base.html" %}
+
+{% block title %}Review domains - GOV.UK Ontology Generator{% endblock %}
+
+{% block content %}
+<style>
+  body,
+  body.govuk-template--rebranded {
+      background-color: #ffffff;
+  }
+
+  main {
+      padding: 24px 0;
+      display: block;
+      max-width: 960px;
+  }
+
+  .content-area {
+      background: transparent;
+      box-shadow: none;
+      border-radius: 0;
+      padding: 0;
+  }
+
+  .review-domains-page {
+      background: #ffffff;
+  }
+</style>
+
+<div class="review-domains-page govuk-width-container">
+  <div class="review-domains-header">
+    <h1 class="govuk-heading-l">Review domains</h1>
+    <p class="govuk-body">View your available domains below. Click any row to audit its source URLs.</p>
+  </div>
+
+  <div class="govuk-form-group">
+    <label class="govuk-label govuk-visually-hidden" for="domains-search">Search domains</label>
+    <input class="govuk-input" id="domains-search" type="search" placeholder="Search domain, status, job, or notes...">
+  </div>
+
+  <div class="review-table-container">
+    <table class="govuk-table review-domains-table" id="domains-table">
+      <caption class="govuk-visually-hidden">Available domains</caption>
+      <thead>
+        <tr class="govuk-table__row">
+          <th scope="col" class="govuk-table__header" aria-sort="none">
+            <button type="button" class="review-sort-button" data-sort-key="domain">
+              <span>Domain Name</span>
+            </button>
+          </th>
+          <th scope="col" class="govuk-table__header" aria-sort="descending">
+            <button type="button" class="review-sort-button" data-sort-key="created_at">
+              <span>Created At</span>
+            </button>
+          </th>
+          <th scope="col" class="govuk-table__header" aria-sort="none">
+            <button type="button" class="review-sort-button" data-sort-key="status">
+              <span>Status</span>
+            </button>
+          </th>
+          <th scope="col" class="govuk-table__header" aria-sort="none">
+            <button type="button" class="review-sort-button" data-sort-key="notes">
+              <span>Notes</span>
+            </button>
+          </th>
+        </tr>
+      </thead>
+      <tbody id="domains-tbody">
+        <tr class="govuk-table__row"><td colspan="4" class="govuk-table__cell review-table-empty">Loading domains...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <nav class="govuk-pagination review-pagination" id="domains-pagination" aria-label="Pagination"></nav>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const DOMAINS_API_URL = "{{ url_for('ontology.review_domain_jobs') }}";
+    const INGEST_API_URL = "{{ url_for('ontology.ingest_content') }}";
+    const domainsTbody = document.getElementById('domains-tbody');
+    const domainsSearch = document.getElementById('domains-search');
+    const paginationContainer = document.getElementById('domains-pagination');
+    const sortButtons = document.querySelectorAll('.review-sort-button');
+
+    let currentPage = 1;
+    const perPage = 10;
+    const urlPerPage = 10;
+    let sortKey = 'created_at';
+    let sortDirection = 'desc';
+    let selectedJobId = null;
+    let selectedDetailSection = 'source-urls';
+    let currentDomains = [];
+    let currentPagination = null;
+    const selectedDomainState = {};
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function escapeAttribute(value) {
+      return escapeHtml(value);
+    }
+
+    function formatDateTime(value) {
+      if (!value) return '-';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '-';
+      return date.toLocaleString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZone: 'Europe/London'
+      });
+    }
+
+    function statusLabel(statusValue) {
+      const status = String(statusValue || 'pending').toLowerCase();
+      if (status === 'completed') return 'Created';
+      return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+
+    function statusTagModifier(statusValue) {
+      const status = String(statusValue || 'pending').toLowerCase();
+      if (status === 'completed') return 'green';
+      if (status === 'failed') return 'red';
+      if (status === 'running') return 'blue';
+      if (status === 'pending') return 'yellow';
+      if (status === 'stopped') return 'grey';
+      return 'grey';
+    }
+
+    function detailState(jobId) {
+      if (!selectedDomainState[jobId]) {
+        selectedDomainState[jobId] = {
+          urls: [],
+          urlPage: 1,
+          notes: [],
+          editingSourceUrls: false,
+          editingValue: null,
+          editingNoteId: null,
+          loading: false,
+          loaded: false,
+          error: '',
+          statusMessage: ''
+        };
+      }
+      return selectedDomainState[jobId];
+    }
+
+    function uniqueUrlsFromText(value) {
+      const seen = new Set();
+      const urls = [];
+      String(value || '').split(/\r?\n/).forEach(line => {
+        const url = line.trim();
+        if (!url || seen.has(url)) return;
+        seen.add(url);
+        urls.push(url);
+      });
+      return urls;
+    }
+
+    async function fetchJson(url, options = {}) {
+      const response = await fetch(url, options);
+      if (response.status === 204) return null;
+
+      const contentType = response.headers.get('content-type') || '';
+      const responseText = await response.text();
+      let payload = null;
+      if (responseText && contentType.includes('application/json')) {
+        try {
+          payload = JSON.parse(responseText);
+        } catch (err) {
+          throw new Error('Unable to load job details.');
+        }
+      }
+      if (!response.ok) {
+        throw new Error((payload && payload.error) || 'Unable to load job details.');
+      }
+      return payload;
+    }
+
+    async function fetchReviewDomains() {
+      const url = new URL(DOMAINS_API_URL, window.location.origin);
+      url.searchParams.set('page', currentPage);
+      url.searchParams.set('per_page', perPage);
+      url.searchParams.set('sort', sortKey);
+      url.searchParams.set('direction', sortDirection);
+      const search = domainsSearch.value.trim();
+      if (search) url.searchParams.set('search', search);
+
+      try {
+        const payload = await fetchJson(url);
+        currentDomains = payload.domains || [];
+        currentPagination = payload.pagination || null;
+        if (selectedJobId && !currentDomains.some(domain => domain.job_id === selectedJobId)) {
+          selectedJobId = null;
+        }
+        renderCurrentDomains();
+        renderPagination(currentPagination);
+      } catch (err) {
+        domainsTbody.innerHTML = `<tr class="govuk-table__row"><td colspan="4" class="govuk-table__cell review-table-empty">Error fetching domains: ${escapeHtml(err.message)}</td></tr>`;
+        paginationContainer.innerHTML = '';
+      }
+    }
+
+    function renderCurrentDomains() {
+      renderDomainsTable(currentDomains);
+    }
+
+    function updateSortIndicators() {
+      sortButtons.forEach(button => {
+        const active = button.dataset.sortKey === sortKey;
+        const tableHeader = button.closest('th');
+        if (tableHeader) {
+          tableHeader.setAttribute(
+            'aria-sort',
+            active ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'
+          );
+        }
+      });
+    }
+
+    function renderDomainsTable(domains) {
+      updateSortIndicators();
+      if (!domains.length) {
+        domainsTbody.innerHTML = '<tr class="govuk-table__row"><td colspan="4" class="govuk-table__cell review-table-empty">No domains found.</td></tr>';
+        return;
+      }
+
+      domainsTbody.innerHTML = '';
+      domains.forEach(domain => {
+        const status = String(domain.status || 'pending').toLowerCase();
+        const isSelected = selectedJobId === domain.job_id;
+        const notesCount = Number(domain.notes_count || 0);
+        const notesLabel = notesCount > 0 ? `Notes (${notesCount})` : 'Add note';
+
+        const tr = document.createElement('tr');
+        tr.className = `govuk-table__row review-domain-row${isSelected ? ' is-selected' : ''}`;
+        tr.dataset.jobId = domain.job_id;
+        tr.tabIndex = 0;
+        tr.setAttribute('aria-expanded', isSelected ? 'true' : 'false');
+        tr.innerHTML = `
+          <td class="govuk-table__cell">
+            <strong class="govuk-!-font-weight-bold">${escapeHtml(domain.domain || '-')}</strong>
+          </td>
+          <td class="govuk-table__cell">${formatDateTime(domain.created_at)}</td>
+          <td class="govuk-table__cell">
+            <span class="govuk-tag govuk-tag--${statusTagModifier(status)}">${escapeHtml(statusLabel(status))}</span>
+          </td>
+          <td class="govuk-table__cell">
+            ${renderDomainActions(domain, notesLabel)}
+          </td>
+        `;
+        domainsTbody.appendChild(tr);
+
+        if (isSelected) {
+          const detailTr = document.createElement('tr');
+          detailTr.className = 'govuk-table__row review-detail-row';
+          detailTr.innerHTML = `<td class="govuk-table__cell" colspan="4">${renderDomainDetail(domain)}</td>`;
+          domainsTbody.appendChild(detailTr);
+        }
+      });
+    }
+
+    function renderDomainActions(domain, notesLabel) {
+      return `
+        <ul class="review-row-actions" aria-label="Actions for ${escapeAttribute(domain.job_id)}">
+          <li class="review-row-actions__item">
+            <button type="button" class="govuk-link govuk-!-font-size-16 review-row-action-link open-notes-action" data-job-id="${escapeAttribute(domain.job_id)}" aria-label="${escapeAttribute(notesLabel)} for this domain">
+              ${escapeHtml(notesLabel)}
+            </button>
+          </li>
+        </ul>
+      `;
+    }
+
+    function renderPagination(pagination) {
+      if (!pagination || pagination.total_pages <= 1) {
+        paginationContainer.innerHTML = '';
+        return;
+      }
+      paginationContainer.innerHTML = renderPaginationMarkup(pagination, 'Page');
+    }
+
+    function renderUrlPagination(state) {
+      const totalPages = Math.ceil((state.urls || []).length / urlPerPage);
+      if (totalPages <= 1) return '';
+      return `
+        <nav class="govuk-pagination review-url-pagination" aria-label="Source URL pagination">
+          ${renderPaginationMarkup({
+            page: state.urlPage,
+            total_pages: totalPages,
+            has_previous: state.urlPage > 1,
+            has_next: state.urlPage < totalPages
+          }, 'Source URL page')}
+        </nav>
+      `;
+    }
+
+    function renderPaginationMarkup(pagination, labelPrefix) {
+      const totalPages = pagination.total_pages;
+      const startPage = Math.floor((pagination.page - 1) / 10) * 10 + 1;
+      const endPage = Math.min(startPage + 9, totalPages);
+      let pageButtons = '';
+      for (let pageNumber = startPage; pageNumber <= endPage; pageNumber += 1) {
+        const current = pageNumber === pagination.page;
+        pageButtons += `
+          <li class="govuk-pagination__item${current ? ' govuk-pagination__item--current' : ''}">
+            <a class="govuk-link govuk-pagination__link" href="#" data-page="${pageNumber}" aria-label="${labelPrefix} ${pageNumber}" ${current ? 'aria-current="page"' : ''}>
+              ${pageNumber}
+            </a>
+          </li>
+        `;
+      }
+
+      return `
+        ${pagination.has_previous ? `
+          <div class="govuk-pagination__prev">
+            <a class="govuk-link govuk-pagination__link" href="#" rel="prev" data-page="${pagination.page - 1}">
+              <span class="govuk-pagination__link-title">Previous<span class="govuk-visually-hidden"> page</span></span>
+            </a>
+          </div>
+        ` : ''}
+        <ul class="govuk-pagination__list">${pageButtons}</ul>
+        ${pagination.has_next ? `
+          <div class="govuk-pagination__next">
+            <a class="govuk-link govuk-pagination__link" href="#" rel="next" data-page="${pagination.page + 1}">
+              <span class="govuk-pagination__link-title">Next<span class="govuk-visually-hidden"> page</span></span>
+            </a>
+          </div>
+        ` : ''}
+      `;
+    }
+
+    function renderDomainDetail(domain) {
+      const state = detailState(domain.job_id);
+      return `
+        <div class="review-domain-detail">
+          <div class="review-detail-menu" aria-label="Selected domain menu">
+            ${renderDetailTab('source-urls', 'Source URLs')}
+            ${renderDetailTab('notes', 'Notes')}
+          </div>
+          <div class="review-detail-panel">
+            ${state.loading ? '<p class="govuk-body review-empty-state">Loading domain details...</p>' : ''}
+            ${state.error ? `<p class="govuk-body review-empty-state">${escapeHtml(state.error)}</p>` : ''}
+            ${!state.loading && selectedDetailSection === 'notes'
+              ? renderInlineNotes(domain, state.notes || [], state.editingNoteId)
+              : !state.loading
+                ? renderSourceUrls(domain, state)
+                : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderDetailTab(section, label) {
+      const active = selectedDetailSection === section;
+      return `
+        <button type="button" class="govuk-!-font-size-19 govuk-!-font-weight-bold review-detail-tab${active ? ' is-active' : ''}" data-detail-section="${section}">
+          ${label}
+        </button>
+      `;
+    }
+
+    function renderSourceUrls(domain, state) {
+      const urls = state.urls || [];
+      const start = (state.urlPage - 1) * urlPerPage;
+      const visibleUrls = urls.slice(start, start + urlPerPage);
+      const textareaValue = state.editingValue === null ? urls.join('\n') : state.editingValue;
+      const rangeEnd = Math.min(start + visibleUrls.length, urls.length);
+      if (state.editingSourceUrls) {
+        return `
+          <div class="review-detail-content">
+            <h2 class="govuk-visually-hidden">Source URLs</h2>
+            ${state.statusMessage ? `<p class="govuk-body review-domain-status-message">${escapeHtml(state.statusMessage)}</p>` : ''}
+            <div class="review-url-editor">
+              <label for="domain-urls-${escapeAttribute(domain.job_id)}" class="govuk-label govuk-label--s">Edit source URLs</label>
+              <div id="domain-urls-hint-${escapeAttribute(domain.job_id)}" class="govuk-hint">Enter one URL per line. Saving starts a new domain build using this list.</div>
+              <textarea id="domain-urls-${escapeAttribute(domain.job_id)}" class="govuk-textarea domain-url-textarea" rows="10" data-job-id="${escapeAttribute(domain.job_id)}" aria-describedby="domain-urls-hint-${escapeAttribute(domain.job_id)}">${escapeHtml(textareaValue)}</textarea>
+              <div class="review-source-url-actions">
+                <button type="button" class="govuk-button save-domain-urls-action" data-job-id="${escapeAttribute(domain.job_id)}" data-domain="${escapeAttribute(domain.domain || '')}">
+                  Save and rebuild domain
+                </button>
+                <button type="button" class="govuk-button govuk-button--secondary cancel-source-url-edit-action" data-job-id="${escapeAttribute(domain.job_id)}">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="review-detail-content">
+          <h2 class="govuk-visually-hidden">Source URLs</h2>
+          ${state.statusMessage ? `<p class="govuk-body review-domain-status-message">${escapeHtml(state.statusMessage)}</p>` : ''}
+          ${visibleUrls.length ? `
+            <p class="govuk-body-s review-source-url-count">Showing ${start + 1} to ${rangeEnd} of ${urls.length} source URLs</p>
+            <div class="review-source-url-list">
+              ${visibleUrls.map((url, index) => `
+                <div class="review-source-url-row">
+                  <span class="govuk-body-s review-source-url-index">${start + index + 1}</span>
+                  <a class="govuk-link govuk-!-font-size-16 review-source-url-link" href="${escapeAttribute(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>
+                </div>
+              `).join('')}
+            </div>
+            ${renderUrlPagination(state)}
+          ` : '<p class="govuk-body review-empty-state">No source URLs are available for this domain.</p>'}
+          <div class="review-source-url-actions">
+            <button type="button" class="govuk-button govuk-button--secondary edit-source-urls-action" data-job-id="${escapeAttribute(domain.job_id)}">
+              Edit source URLs
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderInlineNotes(domain, notes, editingNoteId) {
+      return `
+        <div class="review-detail-content">
+          <h2 class="govuk-heading-s">Notes</h2>
+          <div class="review-inline-notes">
+            ${notes.length ? notes.map(note => renderNoteItem(domain.job_id, note, editingNoteId)).join('') : '<p class="govuk-body review-empty-state">No notes recorded for this domain.</p>'}
+          </div>
+          <div class="review-inline-note-form">
+            <label for="new-note-${escapeAttribute(domain.job_id)}" class="govuk-label govuk-label--s">Add a note</label>
+            <textarea id="new-note-${escapeAttribute(domain.job_id)}" class="govuk-textarea" rows="4"></textarea>
+            <button type="button" class="govuk-button add-inline-note-action" data-job-id="${escapeAttribute(domain.job_id)}">
+              Add note
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderNoteItem(jobId, note, editingNoteId) {
+      const isEditing = String(editingNoteId || '') === String(note.id);
+      if (isEditing) {
+        return `
+          <div class="review-note-item">
+            <label class="govuk-visually-hidden" for="edit-note-${note.id}">Edit note</label>
+            <textarea id="edit-note-${note.id}" class="govuk-textarea" rows="3">${escapeHtml(note.text)}</textarea>
+            <div class="review-note-item__actions">
+              <button type="button" class="govuk-link govuk-!-font-size-16 review-note-action-link save-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}">Save</button>
+              <button type="button" class="govuk-link govuk-!-font-size-16 review-note-action-link review-note-action-link--secondary cancel-inline-note-action" data-job-id="${escapeAttribute(jobId)}">Cancel</button>
+            </div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="review-note-item">
+          <div class="govuk-body-s review-note-item__meta">${formatDateTime(note.created_at)}</div>
+          <div class="govuk-body review-note-item__text">${escapeHtml(note.text)}</div>
+          <div class="review-note-item__actions">
+            <button type="button" class="govuk-link govuk-!-font-size-16 review-note-action-link edit-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}">Edit</button>
+            <button type="button" class="govuk-link govuk-!-font-size-16 review-note-action-link review-note-action-link--destructive delete-inline-note-action" data-job-id="${escapeAttribute(jobId)}" data-note-id="${note.id}">Delete</button>
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadSelectedDomainData(jobId) {
+      const state = detailState(jobId);
+      state.loading = true;
+      state.error = '';
+      state.statusMessage = '';
+      renderCurrentDomains();
+      try {
+        const [urlPayload, notes] = await Promise.all([
+          fetchJson(`/ontology/domains/review/${encodeURIComponent(jobId)}/urls`),
+          fetchJson(`/ontology/jobs/${encodeURIComponent(jobId)}/notes`)
+        ]);
+        state.urls = urlPayload.urls || [];
+        state.editingSourceUrls = false;
+        state.editingValue = null;
+        state.notes = notes || [];
+        state.loaded = true;
+      } catch (err) {
+        state.error = err.message;
+      } finally {
+        state.loading = false;
+        renderCurrentDomains();
+      }
+    }
+
+    async function refreshSelectedDomain(jobId) {
+      const state = detailState(jobId);
+      try {
+        const [urlPayload, notes] = await Promise.all([
+          fetchJson(`/ontology/domains/review/${encodeURIComponent(jobId)}/urls`),
+          fetchJson(`/ontology/jobs/${encodeURIComponent(jobId)}/notes`)
+        ]);
+        state.urls = urlPayload.urls || [];
+        state.editingSourceUrls = false;
+        state.editingValue = null;
+        state.notes = notes || [];
+        state.editingNoteId = null;
+        await fetchReviewDomains();
+      } catch (err) {
+        state.error = err.message;
+        renderCurrentDomains();
+      }
+    }
+
+    domainsTbody.addEventListener('click', async event => {
+      const tabButton = event.target.closest('.review-detail-tab');
+      if (tabButton) {
+        selectedDetailSection = tabButton.dataset.detailSection;
+        renderCurrentDomains();
+        return;
+      }
+
+      const openNotesButton = event.target.closest('.open-notes-action');
+      if (openNotesButton) {
+        selectedJobId = openNotesButton.dataset.jobId;
+        selectedDetailSection = 'notes';
+        loadSelectedDomainData(selectedJobId);
+        return;
+      }
+
+      const editUrlsButton = event.target.closest('.edit-source-urls-action');
+      if (editUrlsButton) {
+        const state = detailState(editUrlsButton.dataset.jobId);
+        state.editingSourceUrls = true;
+        state.editingValue = (state.urls || []).join('\n');
+        state.statusMessage = '';
+        renderCurrentDomains();
+        return;
+      }
+
+      const cancelUrlsButton = event.target.closest('.cancel-source-url-edit-action');
+      if (cancelUrlsButton) {
+        const state = detailState(cancelUrlsButton.dataset.jobId);
+        state.editingSourceUrls = false;
+        state.editingValue = null;
+        state.statusMessage = '';
+        renderCurrentDomains();
+        return;
+      }
+
+      const saveUrlsButton = event.target.closest('.save-domain-urls-action');
+      if (saveUrlsButton) {
+        const jobId = saveUrlsButton.dataset.jobId;
+        const state = detailState(jobId);
+        const textarea = document.getElementById(`domain-urls-${jobId}`);
+        state.editingValue = textarea ? textarea.value : '';
+        const urls = uniqueUrlsFromText(textarea ? textarea.value : '');
+        if (!urls.length) {
+          state.statusMessage = 'Enter at least one URL before rebuilding this domain.';
+          renderCurrentDomains();
+          return;
+        }
+        try {
+          await fetchJson(INGEST_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              domain: saveUrlsButton.dataset.domain,
+              links: urls,
+              source_job_id: jobId
+            })
+          });
+          selectedJobId = null;
+          await fetchReviewDomains();
+        } catch (err) {
+          state.statusMessage = err.message;
+          state.editingSourceUrls = true;
+          renderCurrentDomains();
+        }
+        return;
+      }
+
+      const addNoteButton = event.target.closest('.add-inline-note-action');
+      if (addNoteButton) {
+        const jobId = addNoteButton.dataset.jobId;
+        const textarea = document.getElementById(`new-note-${jobId}`);
+        const text = textarea ? textarea.value.trim() : '';
+        if (!text) return;
+        await fetchJson(`/ontology/jobs/${encodeURIComponent(jobId)}/notes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
+        });
+        if (textarea) textarea.value = '';
+        await refreshSelectedDomain(jobId);
+        return;
+      }
+
+      const editNoteButton = event.target.closest('.edit-inline-note-action');
+      if (editNoteButton) {
+        const state = detailState(editNoteButton.dataset.jobId);
+        state.editingNoteId = editNoteButton.dataset.noteId;
+        renderCurrentDomains();
+        return;
+      }
+
+      const cancelNoteButton = event.target.closest('.cancel-inline-note-action');
+      if (cancelNoteButton) {
+        const state = detailState(cancelNoteButton.dataset.jobId);
+        state.editingNoteId = null;
+        renderCurrentDomains();
+        return;
+      }
+
+      const saveNoteButton = event.target.closest('.save-inline-note-action');
+      if (saveNoteButton) {
+        const jobId = saveNoteButton.dataset.jobId;
+        const noteId = saveNoteButton.dataset.noteId;
+        const textarea = document.getElementById(`edit-note-${noteId}`);
+        const text = textarea ? textarea.value.trim() : '';
+        if (!text) return;
+        await fetchJson(`/ontology/jobs/${encodeURIComponent(jobId)}/notes/${noteId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
+        });
+        await refreshSelectedDomain(jobId);
+        return;
+      }
+
+      const deleteNoteButton = event.target.closest('.delete-inline-note-action');
+      if (deleteNoteButton) {
+        const jobId = deleteNoteButton.dataset.jobId;
+        await fetch(`/ontology/jobs/${encodeURIComponent(jobId)}/notes/${deleteNoteButton.dataset.noteId}`, {
+          method: 'DELETE'
+        });
+        await refreshSelectedDomain(jobId);
+        return;
+      }
+
+      const urlPageLink = event.target.closest('.review-url-pagination [data-page]');
+      if (urlPageLink) {
+        event.preventDefault();
+        const state = detailState(selectedJobId);
+        state.urlPage = Number(urlPageLink.dataset.page);
+        renderCurrentDomains();
+        return;
+      }
+
+      const domainRow = event.target.closest('.review-domain-row');
+      if (domainRow) {
+        selectedJobId = selectedJobId === domainRow.dataset.jobId ? null : domainRow.dataset.jobId;
+        selectedDetailSection = 'source-urls';
+        renderCurrentDomains();
+        if (selectedJobId) loadSelectedDomainData(selectedJobId);
+      }
+    });
+
+    domainsTbody.addEventListener('input', event => {
+      const textarea = event.target.closest('.domain-url-textarea');
+      if (!textarea) return;
+      const state = detailState(textarea.dataset.jobId);
+      state.editingValue = textarea.value;
+    });
+
+    domainsTbody.addEventListener('keydown', event => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const domainRow = event.target.closest('.review-domain-row');
+      if (!domainRow) return;
+
+      event.preventDefault();
+      selectedJobId = selectedJobId === domainRow.dataset.jobId ? null : domainRow.dataset.jobId;
+      selectedDetailSection = 'source-urls';
+      renderCurrentDomains();
+      if (selectedJobId) loadSelectedDomainData(selectedJobId);
+    });
+
+    sortButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const nextSortKey = button.dataset.sortKey;
+        if (sortKey === nextSortKey) {
+          sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+          sortKey = nextSortKey;
+          sortDirection = nextSortKey === 'created_at' ? 'desc' : 'asc';
+        }
+        currentPage = 1;
+        fetchReviewDomains();
+      });
+    });
+
+    paginationContainer.addEventListener('click', event => {
+      const link = event.target.closest('[data-page]');
+      if (!link) return;
+      event.preventDefault();
+      currentPage = Number(link.dataset.page);
+      fetchReviewDomains();
+    });
+
+    domainsSearch.addEventListener('input', () => {
+      currentPage = 1;
+      fetchReviewDomains();
+    });
+
+    fetchReviewDomains();
+  });
+</script>
+<style>
+  .review-table-container {
+      width: 100%;
+      overflow-x: auto;
+      background: #ffffff;
+  }
+
+  .review-domains-table {
+      width: 100%;
+      min-width: 920px;
+      table-layout: fixed;
+      overflow-wrap: anywhere;
+  }
+
+  .review-sort-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      font: inherit;
+      text-align: left;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+  }
+
+  .review-sort-button:hover span:first-child {
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
+      text-underline-offset: 3px;
+  }
+
+  .review-sort-button:focus,
+  .review-sort-button:active {
+      background: transparent !important;
+      color: inherit;
+  }
+
+  .review-sort-button:focus,
+  .review-detail-tab:focus,
+  .review-row-action-link:focus,
+  .review-note-action-link:focus,
+  .review-pagination .govuk-pagination__link:focus,
+  .review-url-pagination .govuk-pagination__link:focus {
+      outline: 3px solid #ffdd00;
+      outline-offset: 0;
+      box-shadow: 0 4px #0b0c0c;
+  }
+
+  .review-sort-button:focus:not(:focus-visible) {
+      background: transparent !important;
+      color: inherit;
+      outline: none;
+      box-shadow: none;
+  }
+
+  .review-domains-table th:nth-child(1) {
+      width: 32%;
+  }
+
+  .review-domains-table th:nth-child(2) {
+      width: 28%;
+  }
+
+  .review-domains-table th:nth-child(3) {
+      width: 16%;
+  }
+
+  .review-domains-table th:nth-child(4) {
+      width: 20%;
+  }
+
+  .review-domains-table th:nth-child(4),
+  .review-domains-table td:nth-child(4) {
+      min-width: 180px;
+  }
+
+  .review-domain-row {
+      cursor: pointer;
+  }
+
+  .review-domain-row:hover {
+      background: #f3f8ff;
+  }
+
+  .review-domain-row:focus {
+      outline: 3px solid #ffdd00;
+      outline-offset: -3px;
+  }
+
+  .review-domain-row td:first-child {
+      border-left: 4px solid transparent;
+      padding-left: 14px;
+  }
+
+  .review-domain-row.is-selected {
+      background: #eaf2ff;
+      border-top: 2px solid #b1b4b6;
+  }
+
+  .review-domain-row.is-selected td:first-child {
+      border-left-color: #1d70b8;
+  }
+
+  .review-detail-row td {
+      padding: 0;
+      background: #ffffff;
+      border-bottom: 2px solid #b1b4b6;
+  }
+
+  .review-domain-detail {
+      min-height: 230px;
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      background: #ffffff;
+  }
+
+  .review-detail-menu {
+      border-right: 1px solid #e5e7eb;
+      background: #fafafa;
+  }
+
+  .review-detail-panel {
+      min-width: 0;
+      padding: 24px 28px;
+  }
+
+  .review-detail-tab {
+      width: 100%;
+      min-height: 56px;
+      display: block;
+      background: transparent;
+      border: 0;
+      border-left: 4px solid transparent;
+      border-bottom: 1px solid #e5e7eb;
+      color: #0b0c0c;
+      cursor: pointer;
+      font: inherit;
+      padding: 16px 18px;
+      text-align: left;
+      text-decoration: none;
+  }
+
+  .review-detail-tab:hover {
+      background: #f3f2f1;
+  }
+
+  .review-detail-tab.is-active {
+      border-left-color: #1d70b8;
+      background: #ffffff;
+  }
+
+  .review-source-url-count {
+      color: #505a5f;
+      margin-bottom: 10px;
+  }
+
+  .review-source-url-list {
+      border-top: 1px solid #b1b4b6;
+  }
+
+  .review-source-url-row {
+      display: grid;
+      grid-template-columns: 36px minmax(0, 1fr);
+      column-gap: 12px;
+      border-bottom: 1px solid #b1b4b6;
+      padding: 8px 0;
+  }
+
+  .review-source-url-index {
+      color: #505a5f;
+      margin: 0;
+  }
+
+  .review-source-url-link {
+      align-self: start;
+      overflow-wrap: anywhere;
+  }
+
+  .review-source-url-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 20px;
+  }
+
+  .review-url-editor,
+  .review-inline-note-form {
+      margin-top: 24px;
+  }
+
+  .review-note-item {
+      border-top: 1px solid #b1b4b6;
+      padding: 14px 0;
+  }
+
+  .review-note-item__actions {
+      display: flex;
+      gap: 18px;
+      margin-top: 8px;
+  }
+
+  .review-note-action-link,
+  .review-row-action-link {
+      margin: 0;
+      background: transparent;
+      border: 0;
+      color: #1d70b8;
+      cursor: pointer;
+      font: inherit;
+      padding: 0;
+      text-align: left;
+      text-decoration: underline;
+      text-decoration-thickness: max(1px, 0.0625rem);
+      text-underline-offset: 0.1em;
+      white-space: nowrap;
+  }
+
+  .review-row-action-link:hover,
+  .review-note-action-link:hover {
+      color: #003078;
+      text-decoration-thickness: max(3px, 0.1875rem);
+  }
+
+  .review-row-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+  }
+
+  .review-row-actions__item {
+      margin: 0;
+      padding: 0;
+  }
+
+  .review-note-action-link--destructive {
+      color: #d4351c;
+  }
+
+  .review-note-action-link--secondary {
+      color: #505a5f;
+  }
+
+  .review-empty-state,
+  .review-domain-status-message {
+      color: #505a5f;
+  }
+
+  .review-pagination,
+  .review-url-pagination {
+      margin-top: 20px;
+  }
+
+  @media (max-width: 760px) {
+      .review-domain-detail {
+          grid-template-columns: 1fr;
+      }
+
+      .review-detail-menu {
+          border-right: 0;
+          border-bottom: 1px solid #e5e7eb;
+      }
+  }
+</style>
+{% endblock %}

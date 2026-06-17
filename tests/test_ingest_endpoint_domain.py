@@ -1,6 +1,8 @@
 """Tests for POST /ontology/ingest handling the domain parameter end-to-end."""
 import importlib
+import json
 import sys
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 import pytest
@@ -102,3 +104,117 @@ def test_ingest_persists_domain_on_processing_job(_stub_background_deps):
         assert job is not None
         assert job.domain == "asylum"
         assert job.pipeline == "ingestion"
+
+
+def test_ingest_persists_submitted_links_in_config_data(_stub_background_deps):
+    client = _client()
+    response = client.post(
+        "/ontology/ingest",
+        json={
+            "domain": "visa",
+            "links": ["https://www.gov.uk/a/print", "https://www.gov.uk/b/print"],
+        },
+    )
+    assert response.status_code == 202
+    job_id = response.get_json()["job_id"]
+
+    app_module = _app_module()
+    app = app_module.create_flask_app()
+    with app.app_context():
+        job = app_module.db.session.get(app_module.ProcessingJob, job_id)
+        config_data = json.loads(job.config_data)
+
+    assert config_data["links"] == [
+        "https://www.gov.uk/a/print",
+        "https://www.gov.uk/b/print",
+    ]
+    assert "config_content" in config_data
+
+
+def test_reingest_from_review_domains_copies_notes_for_same_domain(_stub_background_deps):
+    client = _client()
+    app_module = _app_module()
+    app = app_module.create_flask_app()
+
+    with app.app_context():
+        source_job = app_module.ProcessingJob(
+            id="source-job",
+            status="completed",
+            pipeline="ingestion",
+            domain="visa",
+            created_at=datetime(2026, 5, 11, 13, 0, tzinfo=timezone.utc),
+        )
+        app_module.db.session.add(source_job)
+        app_module.db.session.add(
+            app_module.ProcessingJobNote(
+                job_id="source-job",
+                text="Keep this note with the domain",
+                created_at=datetime(2026, 5, 11, 14, 0, tzinfo=timezone.utc),
+            )
+        )
+        app_module.db.session.commit()
+
+    response = client.post(
+        "/ontology/ingest",
+        json={
+            "domain": "visa",
+            "links": ["https://www.gov.uk/rebuilt/print"],
+            "source_job_id": "source-job",
+        },
+    )
+
+    assert response.status_code == 202
+    new_job_id = response.get_json()["job_id"]
+    with app.app_context():
+        notes = (
+            app_module.db.session.query(app_module.ProcessingJobNote)
+            .filter(app_module.ProcessingJobNote.job_id == new_job_id)
+            .all()
+        )
+
+    assert [note.text for note in notes] == ["Keep this note with the domain"]
+
+
+def test_reingest_does_not_copy_notes_from_different_domain(_stub_background_deps):
+    client = _client()
+    app_module = _app_module()
+    app = app_module.create_flask_app()
+
+    with app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="source-job",
+                status="completed",
+                pipeline="ingestion",
+                domain="asylum",
+                created_at=datetime(2026, 5, 11, 13, 0, tzinfo=timezone.utc),
+            )
+        )
+        app_module.db.session.add(
+            app_module.ProcessingJobNote(
+                job_id="source-job",
+                text="Do not copy this note",
+                created_at=datetime(2026, 5, 11, 14, 0, tzinfo=timezone.utc),
+            )
+        )
+        app_module.db.session.commit()
+
+    response = client.post(
+        "/ontology/ingest",
+        json={
+            "domain": "visa",
+            "links": ["https://www.gov.uk/rebuilt/print"],
+            "source_job_id": "source-job",
+        },
+    )
+
+    assert response.status_code == 202
+    new_job_id = response.get_json()["job_id"]
+    with app.app_context():
+        notes_count = (
+            app_module.db.session.query(app_module.ProcessingJobNote)
+            .filter(app_module.ProcessingJobNote.job_id == new_job_id)
+            .count()
+        )
+
+    assert notes_count == 0
