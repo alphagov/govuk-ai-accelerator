@@ -517,7 +517,7 @@
                     <!-- LLM Model Selection -->
                     <div class="govuk-form-group" style="margin-bottom: 1.5rem;">
                                         <label style="font-weight: bold; color: #0b0c0c; position: static; font-size: 0.95rem;">LLM Model <i class="material-icons help-icon tooltipped" data-position="top" data-tooltip="Select the Large Language Model to use for generating the ontology.">info_outline</i></label>
-                                        <select id="model-selector" class="browser-default">
+                                        <select id="model-selector" class="govuk-select browser-default">
                             <option value="bedrock:eu.anthropic.claude-sonnet-4-6" selected>Claude 4.6 Sonnet</option>
                             <option value="custom">-- Custom Model --</option>
                         </select>
@@ -1520,7 +1520,7 @@
                         <div id="step-5" class="wizard-step" style="display: none;">
                             <div class="govuk-panel govuk-panel--confirmation">
                                 <h1 class="govuk-panel__title">
-                                    Ontology creation started
+                                    Ontology generation started
                                 </h1>
                                 <div class="govuk-panel__body">
                                     Your job ID is<br><strong id="success-job-id"></strong>
