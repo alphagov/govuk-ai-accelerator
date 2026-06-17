@@ -56,7 +56,7 @@ def test_create_app_serves_visualizer_root():
 
 
 def test_create_app_still_serves_ontology_dashboard():
-    response = _client().get("/ontology/")
+    response = _client().get("/ontology/create")
 
     assert response.status_code == 200
 
@@ -75,7 +75,7 @@ def test_create_flask_app_can_disable_task_manager(monkeypatch):
 
 
 def test_ontology_dashboard_includes_stop_job_action():
-    response = _client().get("/ontology/")
+    response = _client().get("/ontology/create")
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
@@ -87,7 +87,7 @@ def test_ontology_dashboard_includes_stop_job_action():
 
 
 def test_ontology_dashboard_describes_default_config_flow():
-    response = _client().get("/ontology/")
+    response = _client().get("/ontology/create")
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
@@ -1534,17 +1534,24 @@ def test_header_navigation_links_map_labels_to_paths():
     response = _client().get("/ontology/domains")
     html = response.get_data(as_text=True)
 
-    assert '<a class="govuk-service-navigation__link" href="/ontology"' in html
+    assert 'class="govuk-header__link govuk-header__link--homepage"' in html
+    assert '<a class="govuk-service-navigation__link" href="/ontology/"' in html
     assert "Home" in html
+    assert '<a class="govuk-service-navigation__link" href="/ontology/domains"' in html
+    assert "Create Domain" in html
+    assert '<a class="govuk-service-navigation__link" href="/ontology/create"' in html
+    assert "Create Ontology" in html
+    assert '<a class="govuk-service-navigation__link" href="/ontology/review-domains"' in html
+    assert "Review Domain" in html
     assert '<a class="govuk-service-navigation__link" href="/ontology/review-ontologies"' in html
     assert "Review Ontologies" in html
-    assert "Create Domains" in html
-    assert '<a class="govuk-service-navigation__link" href="/ontology/review-domains"' in html
-    assert "Review Domains" in html
     assert '<a class="govuk-service-navigation__link" href="/ontology/review-tests"' in html
     assert "Review Tests" in html
-    assert html.index("Create Domains") < html.index("Review Domains")
-    assert html.index("Review Domains") < html.index("Review Tests")
+    assert html.index("Home") < html.index("Create Ontology")
+    assert html.index("Create Ontology") < html.index("Review Ontologies")
+    assert html.index("Review Ontologies") < html.index("Create Domain")
+    assert html.index("Create Domain") < html.index("Review Domain")
+    assert html.index("Review Domain") < html.index("Review Tests")
     assert "File Explorer" not in html
     assert "/viewer/bucket/govuk-ai-accelerator-data-integration" not in html
 
@@ -1597,15 +1604,15 @@ def test_file_explorer_download_route_still_redirects(monkeypatch):
     )
 
 
-def test_header_marks_home_active_on_dashboard():
+def test_header_logo_links_to_dashboard():
     response = _client().get("/ontology/")
     html = response.get_data(as_text=True)
 
-    assert '<a class="govuk-service-navigation__link" href="/ontology" aria-current="page">' in html
-    assert '<strong class="govuk-service-navigation__active-fallback">Home</strong>' in html
+    assert 'class="govuk-header__link govuk-header__link--homepage"' in html
+    assert 'href="/ontology/" class="govuk-header__link govuk-header__link--homepage"' not in html
 
 
-def test_header_marks_create_domains_active_on_domains():
+def test_header_marks_create_domain_active_on_domains():
     response = _client().get("/ontology/domains")
     html = response.get_data(as_text=True)
 
@@ -1614,12 +1621,26 @@ def test_header_marks_create_domains_active_on_domains():
         'aria-current="page">' in html
     )
     assert (
-        '<strong class="govuk-service-navigation__active-fallback">Create Domains</strong>'
+        '<strong class="govuk-service-navigation__active-fallback">Create Domain</strong>'
         in html
     )
 
 
-def test_header_marks_review_domains_active_on_review_domains():
+def test_header_marks_create_ontology_active_on_dashboard():
+    response = _client().get("/ontology/create")
+    html = response.get_data(as_text=True)
+
+    assert (
+        '<a class="govuk-service-navigation__link" href="/ontology/create" '
+        'aria-current="page">' in html
+    )
+    assert (
+        '<strong class="govuk-service-navigation__active-fallback">Create Ontology</strong>'
+        in html
+    )
+
+
+def test_header_marks_review_domain_active_on_review_domains():
     response = _client().get("/ontology/review-domains")
     html = response.get_data(as_text=True)
 
@@ -1629,7 +1650,7 @@ def test_header_marks_review_domains_active_on_review_domains():
         'aria-current="page">' in html
     )
     assert (
-        '<strong class="govuk-service-navigation__active-fallback">Review Domains</strong>'
+        '<strong class="govuk-service-navigation__active-fallback">Review Domain</strong>'
         in html
     )
 
@@ -2005,7 +2026,7 @@ def test_header_uses_graph_tools_brand_row_styling():
     assert "padding-bottom: 14px;" in html
     assert "align-items: flex-end;" in html
     assert "gap: 24px;" in html
-    assert ".govuk-header__logo {" in html
+    assert ".govuk-header__logo" in html
     assert "gap: 16px;" in html
     assert ".govuk-header__logotype {" in html
     assert "width: 150px;" in html
@@ -2017,14 +2038,14 @@ def test_header_uses_graph_tools_brand_row_styling():
     assert "line-height: 1.1;" in html
     assert "letter-spacing: -0.01em;" in html
     assert "body.govuk-template--rebranded .govuk-header {" in html
-    assert "body.govuk-template--rebranded .govuk-header__logo {" in html
+    assert "body.govuk-template--rebranded .govuk-header__logo" in html
     assert "body.govuk-template--rebranded .govuk-header__logotype {" in html
     assert ".govuk-header .govuk-service-navigation {" in html
     assert "font-size: 19px;" in html
     assert ".govuk-header .govuk-service-navigation__item {" in html
     assert ".govuk-header .govuk-service-navigation__link {" in html
     assert "display: inline;" in html
-    assert "margin-right: auto;" in html
+    assert "margin-left: 0 !important;" in html
 
 
 def test_header_preloads_govuk_fonts_to_avoid_navigation_font_swap():
@@ -2092,3 +2113,20 @@ def test_review_ontologies_actions_column_has_room_for_actions():
     assert ".review-jobs-table th:nth-child(6)" not in html
     assert "width: 20%;" in html
     assert "min-width: 180px;" in html
+
+
+def test_home_page_renders_intro_and_functionalities():
+    response = _client().get("/ontology/")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "Create Domain" in html
+    assert "Create Ontology" in html
+    assert "Review Domain" in html
+    assert "Review Ontologies" in html
+    assert "Review Tests" in html
+    assert 'id="action-create-domain"' in html
+    assert 'id="action-create-ontology"' in html
+    assert 'id="action-review-domains"' in html
+    assert 'id="action-review-ontologies"' in html
+    assert 'id="action-review-tests"' in html
