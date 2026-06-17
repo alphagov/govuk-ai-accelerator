@@ -469,6 +469,38 @@ def test_review_domains_endpoint_hides_archived_domain(tmp_path):
         assert app_module.db.session.get(app_module.ProcessingJob, "visa-job") is not None
 
 
+def test_review_domains_endpoint_hides_protected_harness_baseline_domain(tmp_path):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+    created_at = datetime(2026, 5, 11, 13, 0, tzinfo=timezone.utc)
+
+    with flask_app.app_context():
+        app_module.db.session.add_all(
+            [
+                app_module.ProcessingJob(
+                    id="harness-baseline-ingestion",
+                    status="completed",
+                    pipeline="ingestion",
+                    domain="ontology-harness-baseline",
+                    created_at=created_at,
+                ),
+                app_module.ProcessingJob(
+                    id="visa-job",
+                    status="completed",
+                    pipeline="ingestion",
+                    domain="visa",
+                    created_at=created_at + timedelta(minutes=1),
+                ),
+            ]
+        )
+        app_module.db.session.commit()
+
+    response = flask_app.test_client().get("/ontology/domains/review")
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert [domain["domain"] for domain in payload["domains"]] == ["visa"]
+
+
 def test_delete_review_domain_archives_domain_without_deleting_jobs_or_notes(tmp_path):
     app_module, flask_app = _jobs_test_app(tmp_path)
     created_at = datetime(2026, 5, 11, 13, 0, tzinfo=timezone.utc)
@@ -502,6 +534,36 @@ def test_delete_review_domain_archives_domain_without_deleting_jobs_or_notes(tmp
         archive = app_module.db.session.get(app_module.ReviewDomainArchive, "visa")
         assert archive is not None
         assert archive.source_job_id == "visa-job"
+
+
+def test_delete_review_domain_rejects_protected_harness_baseline_domain(tmp_path):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+
+    with flask_app.app_context():
+        app_module.db.session.add(
+            app_module.ProcessingJob(
+                id="harness-baseline-ingestion",
+                status="completed",
+                pipeline="ingestion",
+                domain="ontology-harness-baseline",
+                created_at=datetime(2026, 5, 11, 13, 0, tzinfo=timezone.utc),
+            )
+        )
+        app_module.db.session.commit()
+
+    response = flask_app.test_client().delete(
+        "/ontology/domains/review/harness-baseline-ingestion"
+    )
+
+    assert response.status_code == 409
+    assert response.get_json()["error"] == "Domain is protected."
+
+    with flask_app.app_context():
+        archive = app_module.db.session.get(
+            app_module.ReviewDomainArchive,
+            "ontology-harness-baseline",
+        )
+        assert archive is None
 
 
 @pytest.mark.parametrize("status", ["pending", "running", "stopping"])
