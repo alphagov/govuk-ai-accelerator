@@ -945,7 +945,11 @@ def create_blueprints():
             return error_response("Invalid YAML file. Please upload a .yaml or .yml file.")
 
         domain_prompt = DEFAULT_DOMAIN_PROMPT
-        domain_prompt_file = request.files.get('text_file')
+        domain_prompt_files = request.files.getlist('text_file')
+        domain_prompt_file = next(
+            (uploaded_file for uploaded_file in domain_prompt_files if uploaded_file.filename),
+            None,
+        )
 
         try:
             if config_json:
