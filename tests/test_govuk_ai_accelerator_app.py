@@ -1530,11 +1530,74 @@ def test_header_uses_govuk_service_navigation():
     assert "vendor/govuk-frontend/govuk-frontend.min.css" in html
 
 
+def test_header_uses_govuk_alpha_phase_banner():
+    response = _client().get("/ontology/")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert 'class="app-phase-banner govuk-width-container"' in html
+    assert 'class="govuk-phase-banner"' in html
+    assert 'class="govuk-phase-banner govuk-width-container"' not in html
+    assert 'class="govuk-tag govuk-phase-banner__content__tag"' in html
+    assert "Alpha" in html
+    assert "This is a new service." in html
+    assert (
+        html.index("govuk-service-navigation")
+        < html.index("govuk-phase-banner")
+        < html.index("<main>")
+    )
+
+
+def test_alpha_phase_banner_is_visible_across_ontology_workflow_pages():
+    for path in (
+        "/ontology/",
+        "/ontology/create",
+        "/ontology/domains",
+        "/ontology/review-domains",
+        "/ontology/review-ontologies",
+        "/ontology/review-tests",
+    ):
+        response = _client().get(path)
+        html = response.get_data(as_text=True)
+
+        assert response.status_code == 200
+        assert 'class="app-phase-banner govuk-width-container"' in html
+        assert 'class="govuk-phase-banner"' in html
+        assert "Alpha" in html
+        assert "This is a new service." in html
+
+
+def test_alpha_phase_banner_aligns_with_service_navigation_without_bottom_border():
+    response = _client().get("/ontology/")
+    html = response.get_data(as_text=True)
+
+    assert (
+        ".app-phase-banner {\n"
+        "          background-color: #ffffff;\n"
+        "          width: 100%;"
+    ) in html
+    assert ".app-phase-banner .govuk-phase-banner {" in html
+    assert "border-bottom: 0;" in html
+
+
+def test_base_layout_sets_consistent_font_size_when_materialize_is_loaded():
+    response = _client().get("/ontology/")
+    html = response.get_data(as_text=True)
+
+    assert "html {" in html
+    assert "font-size: 16px;" in html
+    assert "body {" in html
+    assert "font-size: 16px;" in html
+
+
 def test_header_navigation_links_map_labels_to_paths():
     response = _client().get("/ontology/domains")
     html = response.get_data(as_text=True)
 
-    assert 'class="govuk-header__link govuk-header__link--homepage"' in html
+    assert (
+        '<a href="/ontology/" class="app-header-brand" '
+        'aria-label="Ontology Generator home">'
+    ) in html
     assert '<a class="govuk-service-navigation__link" href="/ontology/"' in html
     assert "Home" in html
     assert '<a class="govuk-service-navigation__link" href="/ontology/domains"' in html
@@ -1604,12 +1667,20 @@ def test_file_explorer_download_route_still_redirects(monkeypatch):
     )
 
 
-def test_header_logo_links_to_dashboard():
+def test_header_brand_links_to_home():
     response = _client().get("/ontology/")
     html = response.get_data(as_text=True)
 
-    assert 'class="govuk-header__link govuk-header__link--homepage"' in html
-    assert 'href="/ontology/" class="govuk-header__link govuk-header__link--homepage"' not in html
+    brand_link = (
+        '<a href="/ontology/" class="app-header-brand" '
+        'aria-label="Ontology Generator home">'
+    )
+
+    assert brand_link in html
+    assert html.index(brand_link) < html.index('<svg class="govuk-header__logotype"')
+    assert html.index(brand_link) < html.index("<h1>Ontology Generator</h1>")
+    assert "govuk-logotype-link" not in html
+    assert "govuk-header__link--homepage" not in html
 
 
 def test_header_marks_create_domain_active_on_domains():
@@ -2010,9 +2081,15 @@ def test_header_matches_graph_tools_brand_layout():
     response = _client().get("/ontology/")
     html = response.get_data(as_text=True)
 
+    assert (
+        '<a href="/ontology/" class="app-header-brand" '
+        'aria-label="Ontology Generator home">'
+    ) in html
     assert '<svg class="govuk-header__logotype"' in html
     assert 'height="28" width="150"' in html
     assert "<h1>Ontology Generator</h1>" in html
+    assert "govuk-logotype-link" not in html
+    assert "govuk-header__link--homepage" not in html
     assert 'class="govuk-header__content"' not in html
     assert html.index('<section aria-label="Service information"') < html.index("</header>")
 
@@ -2028,15 +2105,24 @@ def test_header_uses_graph_tools_brand_row_styling():
     assert "gap: 24px;" in html
     assert ".govuk-header__logo" in html
     assert "gap: 16px;" in html
+    assert ".app-header-brand {" in html
+    assert "color: #ffffff !important;" in html
+    assert "text-decoration: none !important;" in html
+    assert "border-bottom: 0 !important;" in html
+    assert "box-shadow: none !important;" in html
+    assert ".app-header-brand:hover," in html
+    assert ".app-header-brand:hover *," in html
     assert ".govuk-header__logotype {" in html
     assert "width: 150px;" in html
     assert "height: 28px;" in html
+    assert "box-sizing: content-box !important;" in html
+    assert "flex-shrink: 0;" in html
     assert "padding-right: 16px;" in html
     assert "border-right: 1px solid rgba(255, 255, 255, 0.4);" in html
     assert ".govuk-header h1 {" in html
     assert "font-size: 24px;" in html
     assert "line-height: 1.1;" in html
-    assert "letter-spacing: -0.01em;" in html
+    assert "letter-spacing: 0;" in html
     assert "body.govuk-template--rebranded .govuk-header {" in html
     assert "body.govuk-template--rebranded .govuk-header__logo" in html
     assert "body.govuk-template--rebranded .govuk-header__logotype {" in html
