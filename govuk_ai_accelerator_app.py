@@ -1628,6 +1628,36 @@ def create_blueprints():
 
         return redirect(url)
 
+    @viewer_bp.route("/bucket/delete/<path:path>", methods=['POST', 'DELETE'])
+    def delete_s3_file(path: str) -> Response:
+        bucket_name = os.getenv("S3_BUCKET_NAME", DEFAULT_S3_BUCKET)
+        s3_client = boto3.client("s3")
+        try:
+            # Check if this prefix/path has children (e.g. folder delete)
+            paginator = s3_client.get_paginator('list_objects_v2')
+            pages = paginator.paginate(Bucket=bucket_name, Prefix=path)
+            
+            delete_keys = []
+            for page in pages:
+                if 'Contents' in page:
+                    for obj in page['Contents']:
+                        delete_keys.append({'Key': obj['Key']})
+            
+            if delete_keys:
+                for i in range(0, len(delete_keys), 1000):
+                    chunk = delete_keys[i:i + 1000]
+                    s3_client.delete_objects(
+                        Bucket=bucket_name,
+                        Delete={'Objects': chunk}
+                    )
+                return jsonify({"success": True, "deleted_count": len(delete_keys)})
+            else:
+                # If prefix listing is empty, delete the path directly
+                s3_client.delete_object(Bucket=bucket_name, Key=path)
+                return jsonify({"success": True, "deleted_count": 1})
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 500
+
     return healthcheck_bp, ontology_bp, viewer_bp, home_bp
 
 
