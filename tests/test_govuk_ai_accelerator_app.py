@@ -1505,8 +1505,11 @@ def test_virtual_and_review_s3_file_download_routes(tmp_path, monkeypatch):
 
 def test_govuk_frontend_assets_are_served():
     response = _client().get("/assets/images/favicon.ico")
+    crest_response = _client().get("/assets/images/govuk-crest.svg")
 
     assert response.status_code == 200
+    assert crest_response.status_code == 200
+    assert crest_response.content_type.startswith("image/svg+xml")
 
 
 def test_govuk_frontend_assets_are_cached_immutably():
@@ -1608,6 +1611,17 @@ def test_footer_shows_crown_copyright_without_ogl_licence():
         ".app-footer__meta .govuk-footer__meta-item {\n"
         "          margin-right: 0;\n"
         "          margin-left: 0;\n"
+        "      }"
+    ) in html
+    assert (
+        ".app-footer .govuk-footer__copyright-logo::before {\n"
+        "          background-color: transparent;\n"
+        '          background-image: url("/assets/images/govuk-crest.svg");\n'
+        "          background-repeat: no-repeat;\n"
+        "          background-position: 50% 0;\n"
+        "          background-size: 125px 102px;\n"
+        "          -webkit-mask-image: none;\n"
+        "          mask-image: none;\n"
         "      }"
     ) in html
     assert "border-bottom: 1px solid #b1b4b6;" in html
@@ -2317,5 +2331,3 @@ def test_delete_s3_file_recursively(tmp_path, monkeypatch):
         Bucket="my-bucket",
         Delete={"Objects": [{"Key": "my-domain/data.json"}, {"Key": "my-domain/extra.json"}]}
     )
-
-
