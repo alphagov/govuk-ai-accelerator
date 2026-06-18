@@ -2216,3 +2216,24 @@ def test_home_page_renders_intro_and_functionalities():
     assert 'id="action-review-domains"' in html
     assert 'id="action-review-ontologies"' in html
     assert 'id="action-review-tests"' in html
+
+
+def test_list_domains_excludes_archived(tmp_path, monkeypatch):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+
+    # Mock get_domain_list to return visa, driving, benefits
+    mock_domains = ["visa", "driving", "benefits"]
+    monkeypatch.setattr("govuk_ai_accelerator_app.get_domain_list", lambda bucket: mock_domains)
+
+    with flask_app.app_context():
+        # Archive "visa" in the database
+        app_module.db.session.add(app_module.ReviewDomainArchive(domain="visa"))
+        app_module.db.session.commit()
+
+    response = flask_app.test_client().get("/ontology/list_domains")
+    assert response.status_code == 200
+    data = response.get_json()
+    assert "visa" not in data
+    assert "driving" in data
+    assert "benefits" in data
+
