@@ -1122,6 +1122,7 @@ def create_blueprints():
         if (job.status or "").lower() in ACTIVE_DOMAIN_DELETE_STATUSES:
             return error_response("Domain is currently being processed.", 409)
 
+
         archive = db.session.get(ReviewDomainArchive, domain)
         if archive is None:
             archive = ReviewDomainArchive(domain=domain)
@@ -1606,7 +1607,15 @@ def create_blueprints():
 
     @ontology_bp.route("/list_domains")
     def list_domains():
-        return get_domain_list('govuk-ai-accelerator-data-integration')
+        bucket_name = os.getenv("S3_BUCKET_NAME", DEFAULT_S3_BUCKET)
+        domains = get_domain_list(bucket_name) or []
+        try:
+            archived_records = db.session.query(ReviewDomainArchive.domain).all()
+            archived_domains = {r[0] for r in archived_records}
+        except Exception:
+            archived_domains = set()
+        available_domains = [d for d in domains if d not in archived_domains]
+        return jsonify(available_domains)
 
     @viewer_bp.route("/bucket/download/buckets/<bucket_name>/<path:path>")
     def download_file(bucket_name: str, path: str) -> Response:
