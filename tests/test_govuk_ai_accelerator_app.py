@@ -1580,6 +1580,58 @@ def test_alpha_phase_banner_aligns_with_service_navigation_without_bottom_border
     assert "border-bottom: 0;" in html
 
 
+def test_footer_shows_crown_copyright_without_ogl_licence():
+    response = _client().get("/ontology/")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert 'class="govuk-footer app-footer"' in html
+    assert ".app-footer {" in html
+    assert "width: 100%;" in html
+    assert "border-top: 0;" in html
+    assert "border-top-width: 4px;" not in html
+    assert "max-width: 870px;" not in html
+    assert "max-width: none;" in html
+    assert (
+        ".app-footer__meta {\n"
+        "          width: 100%;\n"
+        "          max-width: none;\n"
+        "          margin-right: 0;\n"
+        "          margin-left: 0;\n"
+        "          justify-content: flex-end;\n"
+        "      }"
+    ) in html
+    assert (
+        ".app-footer__meta .govuk-footer__meta-item {\n"
+        "          margin-right: 0;\n"
+        "          margin-left: 0;\n"
+        "      }"
+    ) in html
+    assert "border-bottom: 1px solid #b1b4b6;" in html
+    assert 'class="govuk-footer__crown"' in html
+    assert 'class="govuk-footer__section app-footer__support"' in html
+    assert '<h2 class="govuk-footer__heading govuk-heading-m">Support and feedback</h2>' in html
+    assert (
+        '<a class="govuk-footer__link" href="https://gds.slack.com/archives/C0A7AC7QFKR">'
+        "Raise a support request</a>"
+    ) in html
+    assert "How to write, publish, and improve content" not in html
+    assert "Check if publishing apps are working" not in html
+    assert "Accessibility statement" not in html
+    assert "govuk-footer__section-break" not in html
+    assert "app-footer__section-break" not in html
+    assert 'class="govuk-footer__meta app-footer__meta"' in html
+    assert 'class="govuk-footer__link govuk-footer__copyright-logo"' in html
+    assert (
+        "https://www.nationalarchives.gov.uk/information-management/"
+        "re-using-public-sector-information/uk-government-licensing-framework/"
+        "crown-copyright/"
+    ) in html
+    assert "© Crown copyright" in html
+    assert "govuk-footer__licence-logo" not in html
+    assert "Open Government Licence" not in html
+
+
 def test_base_layout_sets_consistent_font_size_when_materialize_is_loaded():
     response = _client().get("/ontology/")
     html = response.get_data(as_text=True)
@@ -2175,7 +2227,7 @@ def test_review_ontologies_page_uses_service_navigation_width():
 
     assert response.status_code == 200
     assert '<div class="review-jobs-page govuk-width-container">' in html
-    assert "max-width: none;" not in html
+    assert ".review-jobs-page {\n      max-width: none;" not in html
 
 
 def test_review_ontologies_page_uses_white_background():
