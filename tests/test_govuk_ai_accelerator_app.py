@@ -1567,17 +1567,20 @@ def test_alpha_phase_banner_is_visible_across_ontology_workflow_pages():
         assert "This is a new service." in html
 
 
-def test_alpha_phase_banner_aligns_with_service_navigation_without_bottom_border():
+def test_alpha_phase_banner_aligns_with_service_navigation_with_default_bottom_border():
     response = _client().get("/ontology/")
     html = response.get_data(as_text=True)
+    phase_banner_styles = html.split(".app-phase-banner {", 1)[1].split(
+        ".app-footer {", 1
+    )[0]
 
     assert (
         ".app-phase-banner {\n"
         "          background-color: #ffffff;\n"
         "          width: 100%;"
     ) in html
-    assert ".app-phase-banner .govuk-phase-banner {" in html
-    assert "border-bottom: 0;" in html
+    assert ".app-phase-banner .govuk-phase-banner" not in phase_banner_styles
+    assert "border-bottom: 0;" not in phase_banner_styles
 
 
 def test_footer_shows_crown_copyright_without_ogl_licence():
