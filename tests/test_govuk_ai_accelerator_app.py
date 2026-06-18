@@ -2292,3 +2292,30 @@ def test_list_domains_excludes_archived(tmp_path, monkeypatch):
     assert "driving" in data
     assert "benefits" in data
 
+
+def test_delete_s3_file_recursively(tmp_path, monkeypatch):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+    _, _, viewer_bp, _ = app_module.create_blueprints()
+    flask_app.register_blueprint(viewer_bp)
+
+    monkeypatch.setenv("S3_BUCKET_NAME", "my-bucket")
+    mock_s3_client = MagicMock()
+    mock_paginator = MagicMock()
+    mock_paginator.paginate.return_value = [
+        {"Contents": [{"Key": "my-domain/data.json"}, {"Key": "my-domain/extra.json"}]}
+    ]
+    mock_s3_client.get_paginator.return_value = mock_paginator
+    monkeypatch.setattr("boto3.client", lambda service_name: mock_s3_client)
+
+    response = flask_app.test_client().delete("/viewer/bucket/delete/my-domain")
+    assert response.status_code == 200
+    assert response.get_json() == {"success": True, "deleted_count": 2}
+
+    mock_s3_client.get_paginator.assert_called_once_with('list_objects_v2')
+    mock_paginator.paginate.assert_called_once_with(Bucket="my-bucket", Prefix="my-domain")
+    mock_s3_client.delete_objects.assert_called_once_with(
+        Bucket="my-bucket",
+        Delete={"Objects": [{"Key": "my-domain/data.json"}, {"Key": "my-domain/extra.json"}]}
+    )
+
+
