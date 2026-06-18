@@ -1544,12 +1544,12 @@ def test_header_navigation_links_map_labels_to_paths():
     assert '<a class="govuk-service-navigation__link" href="/ontology/review-domains"' in html
     assert "Review Domain" in html
     assert '<a class="govuk-service-navigation__link" href="/ontology/review-ontologies"' in html
-    assert "Review Ontologies" in html
+    assert "Review Ontology" in html
     assert '<a class="govuk-service-navigation__link" href="/ontology/review-tests"' in html
     assert "Review Tests" in html
     assert html.index("Home") < html.index("Create Ontology")
-    assert html.index("Create Ontology") < html.index("Review Ontologies")
-    assert html.index("Review Ontologies") < html.index("Create Domain")
+    assert html.index("Create Ontology") < html.index("Review Ontology")
+    assert html.index("Review Ontology") < html.index("Create Domain")
     assert html.index("Create Domain") < html.index("Review Domain")
     assert html.index("Review Domain") < html.index("Review Tests")
     assert "File Explorer" not in html
@@ -1664,7 +1664,7 @@ def test_header_marks_review_ontologies_active_on_all_jobs():
         'aria-current="page">' in html
     )
     assert (
-        '<strong class="govuk-service-navigation__active-fallback">Review Ontologies</strong>'
+        '<strong class="govuk-service-navigation__active-fallback">Review Ontology</strong>'
         in html
     )
 

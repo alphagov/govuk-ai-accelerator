@@ -55,8 +55,8 @@ def test_header_links_to_review_tests_after_create_domains():
     assert "Review Domain" in body
     assert "/ontology/review-tests" in body
     assert "Review Tests" in body
-    assert body.index("Create Ontology") < body.index("Review Ontologies")
-    assert body.index("Review Ontologies") < body.index("Create Domain")
+    assert body.index("Create Ontology") < body.index("Review Ontology")
+    assert body.index("Review Ontology") < body.index("Create Domain")
     assert body.index("Create Domain") < body.index("Review Domain")
     assert body.index("Review Domain") < body.index("Review Tests")
     assert "File Explorer" not in body
