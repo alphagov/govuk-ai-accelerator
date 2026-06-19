@@ -1616,7 +1616,7 @@ def test_footer_shows_crown_copyright_without_ogl_licence():
     assert (
         ".app-footer .govuk-footer__copyright-logo::before {\n"
         "          background-color: transparent;\n"
-        '          background-image: url("/assets/images/govuk-crest.svg");\n'
+        '          background-image: url("/static/vendor/govuk-frontend/assets/images/govuk-crest.svg");\n'
         "          background-repeat: no-repeat;\n"
         "          background-position: 50% 0;\n"
         "          background-size: 125px 102px;\n"
