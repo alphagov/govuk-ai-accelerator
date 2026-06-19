@@ -1624,14 +1624,12 @@ def test_footer_shows_crown_copyright_without_ogl_licence():
         "          mask-image: none;\n"
         "      }"
     ) in html
-    assert "border-bottom: 1px solid #b1b4b6;" in html
-    assert 'class="govuk-footer__crown"' in html
-    assert 'class="govuk-footer__section app-footer__support"' in html
-    assert '<h2 class="govuk-footer__heading govuk-heading-m">Support and feedback</h2>' in html
-    assert (
-        '<a class="govuk-footer__link" href="https://gds.slack.com/archives/C0A7AC7QFKR">'
-        "Raise a support request</a>"
-    ) in html
+    assert "border-bottom: 1px solid #b1b4b6;" not in html
+    assert 'class="govuk-footer__crown"' not in html
+    assert "app-footer__support" not in html
+    assert "Support and feedback" not in html
+    assert "Raise a support request" not in html
+    assert "https://gds.slack.com/archives/C0A7AC7QFKR" not in html
     assert "How to write, publish, and improve content" not in html
     assert "Check if publishing apps are working" not in html
     assert "Accessibility statement" not in html
