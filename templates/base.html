@@ -310,7 +310,7 @@
       }
       .app-footer .govuk-footer__copyright-logo::before {
           background-color: transparent;
-          background-image: url("/assets/images/govuk-crest.svg");
+          background-image: url("{{ url_for('static', filename='vendor/govuk-frontend/assets/images/govuk-crest.svg') }}");
           background-repeat: no-repeat;
           background-position: 50% 0;
           background-size: 125px 102px;
