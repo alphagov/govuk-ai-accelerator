@@ -2288,8 +2288,8 @@ def test_home_page_renders_intro_and_functionalities():
 def test_list_domains_excludes_archived(tmp_path, monkeypatch):
     app_module, flask_app = _jobs_test_app(tmp_path)
 
-    # Mock get_domain_list to return visa, driving, benefits
-    mock_domains = ["visa", "driving", "benefits"]
+    # Mock get_domain_list to return visa, driving, benefits, graph_tools
+    mock_domains = ["visa", "driving", "benefits", "graph_tools"]
     monkeypatch.setattr("govuk_ai_accelerator_app.get_domain_list", lambda bucket: mock_domains)
 
     with flask_app.app_context():
@@ -2301,6 +2301,7 @@ def test_list_domains_excludes_archived(tmp_path, monkeypatch):
     assert response.status_code == 200
     data = response.get_json()
     assert "visa" not in data
+    assert "graph_tools" not in data
     assert "driving" in data
     assert "benefits" in data
 
