@@ -1614,7 +1614,10 @@ def create_blueprints():
             archived_domains = {r[0] for r in archived_records}
         except Exception:
             archived_domains = set()
-        available_domains = [d for d in domains if d not in archived_domains]
+        available_domains = [
+            d for d in domains
+            if d not in archived_domains and d != "graph_tools"
+        ]
         return jsonify(available_domains)
 
     @viewer_bp.route("/bucket/download/buckets/<bucket_name>/<path:path>")
