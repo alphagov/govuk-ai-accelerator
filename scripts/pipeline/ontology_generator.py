@@ -58,6 +58,13 @@ def _mark_job_progress(job_id: str | None, stage: str) -> None:
         logger.exception(f"[job={job_id}] error recording progress stage={stage}: {exc}")
 
 
+def _clear_toa_runtime_caches(job_id: str | None = None) -> None:
+    from taxonomy_ontology_accelerator.ontology_engine.storage.cache import clear_caches
+
+    clear_caches()
+    logger.debug(f"[job={job_id}] cleared ontology engine runtime caches")
+
+
 def _raise_if_job_stopped(job_id: str | None) -> None:
     if not job_id:
         return
@@ -116,6 +123,8 @@ async def run_ontology_pipeline(
     from taxonomy_ontology_accelerator.ontology_engine.pipeline_builder import (
         OntologyPipelineBuilder,
     )
+
+    _clear_toa_runtime_caches(job_id)
 
     ontology_config, pipeline_config = load_config_for_domain(config=config_data)
     _mark_job_progress(job_id, "config-loaded")
