@@ -1672,7 +1672,7 @@
             setVal('config-relationship-type-casing', config.naming_conventions?.relationship_type_casing, 'lowerCamelCase');
 
             // Pipeline & Performance
-            setVal('config-parallel-files', config.parallel_files, 20);
+            setVal('config-parallel-files', config.parallel_files, 1);
             setCheck('config-batch-api', config.batch_api_enabled, false);
             setCheck('config-term-extraction', config.term_extraction?.enabled, true);
             setCheck('config-auto-resume', config.checkpointing?.auto_resume, true);
@@ -1857,7 +1857,7 @@
             config.output.type_aware_canonical_keys = document.getElementById('config-type-aware-keys').checked;
 
             // Pipeline & Performance
-            config.parallel_files = parseInt(document.getElementById('config-parallel-files').value) || 20;
+            config.parallel_files = parseInt(document.getElementById('config-parallel-files').value) || 1;
             config.batch_api_enabled = document.getElementById('config-batch-api').checked;
             if (!config.term_extraction) config.term_extraction = {};
             config.term_extraction.enabled = document.getElementById('config-term-extraction').checked;
