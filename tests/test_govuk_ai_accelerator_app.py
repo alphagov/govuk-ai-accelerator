@@ -2026,6 +2026,7 @@ def test_jobs_page_orders_detail_menu_by_artifact_context():
     assert html.index("renderDetailTab('reports', 'Reports')") < html.index(
         "renderDetailTab('notes', 'Notes')"
     )
+    assert 'class="intermediary-sub-tab' in html
 
 
 def test_jobs_page_uses_gds_tags_and_notes_modal_controls():
