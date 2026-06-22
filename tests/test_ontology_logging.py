@@ -99,6 +99,7 @@ def test_pipeline_logs_three_phase_per_step(monkeypatch, caplog):
     monkeypatch.setattr(og, "_mark_job_progress", lambda *a, **k: None)
     monkeypatch.setattr(og, "_raise_if_job_stopped", lambda *a, **k: None)
     monkeypatch.setattr(og, "_raise_if_superseded", lambda *a, **k: None)
+    monkeypatch.setattr(og, "_clear_toa_runtime_caches", lambda *a, **k: None)
 
     pipeline_builder = types.ModuleType("taxonomy_ontology_accelerator.ontology_engine.pipeline_builder")
     pipeline_builder.OntologyPipelineBuilder = lambda **kwargs: _FakePipeline()
@@ -134,6 +135,52 @@ def test_pipeline_logs_three_phase_per_step(monkeypatch, caplog):
     assert any("Successfully set up ontology pipeline in" in m and "job=JID-1" in m for m in messages)
     assert any("Successfully processed ontology data in" in m and "job=JID-1" in m for m in messages)
     assert any("Successfully saved pipeline output in" in m and "job=JID-1" in m for m in messages)
+
+
+def test_pipeline_clears_toa_runtime_caches_before_setup(monkeypatch):
+    events = []
+
+    class _RecordingPipeline(_FakePipeline):
+        def setup_pipeline(self, **kwargs):
+            events.append("setup")
+            return self
+
+    monkeypatch.setattr(og, "load_config_for_domain", lambda config: _fake_configs(config))
+    monkeypatch.setattr(og.fsspec, "filesystem", lambda protocol: object())
+    monkeypatch.setattr(og, "_save_version_info", _async_noop)
+    monkeypatch.setattr(og, "_mark_job_progress", lambda *a, **k: None)
+    monkeypatch.setattr(og, "_raise_if_job_stopped", lambda *a, **k: None)
+    monkeypatch.setattr(og, "_raise_if_superseded", lambda *a, **k: None)
+    monkeypatch.setattr(
+        og,
+        "_clear_toa_runtime_caches",
+        lambda job_id=None: events.append("clear"),
+        raising=False,
+    )
+
+    pipeline_builder = types.ModuleType("taxonomy_ontology_accelerator.ontology_engine.pipeline_builder")
+    pipeline_builder.OntologyPipelineBuilder = lambda **kwargs: _RecordingPipeline()
+    ontology_engine = types.ModuleType("taxonomy_ontology_accelerator.ontology_engine")
+    ontology_engine.pipeline_builder = pipeline_builder
+    taxonomy_root = types.ModuleType("taxonomy_ontology_accelerator")
+    taxonomy_root.ontology_engine = ontology_engine
+    monkeypatch.setitem(sys.modules, "taxonomy_ontology_accelerator", taxonomy_root)
+    monkeypatch.setitem(sys.modules, "taxonomy_ontology_accelerator.ontology_engine", ontology_engine)
+    monkeypatch.setitem(
+        sys.modules, "taxonomy_ontology_accelerator.ontology_engine.pipeline_builder", pipeline_builder
+    )
+
+    asyncio.run(
+        og.run_ontology_pipeline(
+            config_data={"domain": "visa"},
+            domain_prompt="",
+            job_id="JID-2",
+            attempt_count=1,
+            worker_id="W1",
+        )
+    )
+
+    assert events[:2] == ["clear", "setup"]
 
 
 def test_harness_failure_log_includes_job_and_domain(monkeypatch, caplog):
