@@ -320,8 +320,7 @@ text_processing:
     punctuation_handling: remove # Punctuation handling: 'remove', 'preserve', 'normalize'
     remove_common_words: [] # Common words to remove
 
-parallel_files: 20
+parallel_files: 1
 batch_api_enabled: false
 term_extraction:
   enabled: false
-

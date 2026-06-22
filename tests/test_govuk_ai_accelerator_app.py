@@ -95,6 +95,11 @@ def test_ontology_dashboard_describes_default_config_flow():
     assert "Please select a YAML configuration file." not in html
     assert "Configuration Panel" in html
     assert "Add a domain prompt" in html
+    assert "setVal('config-parallel-files', config.parallel_files, 1);" in html
+    assert (
+        "config.parallel_files = "
+        "parseInt(document.getElementById('config-parallel-files').value) || 1;"
+    ) in html
 
 
 def test_historical_jobs_uses_review_action_set():
@@ -836,6 +841,7 @@ def test_source_config_template_uses_ui_selected_domain():
     assert "domain_name" not in config
     assert "<path-to-input>" not in template_text
     assert "<path-to-output>" not in template_text
+    assert config["parallel_files"] == 1
 
 
 def test_root_config_template_omits_manual_domain_and_path_placeholders():
@@ -848,6 +854,7 @@ def test_root_config_template_omits_manual_domain_and_path_placeholders():
     assert "<path-to-output>" not in template_text
     assert "domain_name" not in config
     assert config.get("path", {}) == {}
+    assert config["parallel_files"] == 1
 
 
 def test_submit_template_injects_selected_domain_paths(tmp_path):
