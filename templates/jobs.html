@@ -94,6 +94,7 @@
     let sortDirection = 'desc';
     let selectedJobId = null;
     let selectedDetailSection = 'ontology-files';
+    let selectedIntermediarySubSection = 'input';
     let currentJobs = [];
     let currentPagination = null;
     const selectedJobState = {};
@@ -367,6 +368,12 @@
       `;
     }
 
+    function formatArtifactNameForDisplay(name) {
+      if (!name) return '';
+      const parts = name.split('/');
+      return parts[parts.length - 1];
+    }
+
     function renderJobDetail(job) {
       const state = detailState(job.job_id);
       const groups = (state.artifacts && state.artifacts.groups) || emptyArtifactGroups();
@@ -386,10 +393,57 @@
               : !state.loading && selectedDetailSection === 'reports'
                 ? renderArtifactSection('Reports', groups.reports)
               : !state.loading && selectedDetailSection === 'intermediary-files'
-                ? renderArtifactSection('Intermediary Files', groups.intermediary_files)
-                : !state.loading
+                ? renderIntermediaryFilesPanel(job, groups.intermediary_files)
+                : !state.loading && selectedDetailSection === 'ontology-files'
                   ? renderArtifactSection('Ontology Files', groups.ontology_files)
                   : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderIntermediaryFilesPanel(job, artifacts) {
+      const inputs = (artifacts || []).filter(a => a.name.startsWith('input/'));
+      const configs = (artifacts || []).filter(a => a.name === 'config.yaml' || a.name === 'prompts.txt');
+      const outputs = (artifacts || []).filter(a => !a.name.startsWith('input/') && a.name !== 'config.yaml' && a.name !== 'prompts.txt');
+
+      let currentList = [];
+      let sectionTitle = '';
+      if (selectedIntermediarySubSection === 'input') {
+        currentList = inputs;
+        sectionTitle = 'Input Files';
+      } else if (selectedIntermediarySubSection === 'config') {
+        currentList = configs;
+        sectionTitle = 'Configuration Files';
+      } else {
+        currentList = outputs;
+        sectionTitle = 'Output Files';
+      }
+
+      return `
+        <div class="review-detail-content">
+          <div class="govuk-tabs" data-module="govuk-tabs">
+            <ul class="govuk-tabs__list" role="tablist">
+              <li class="govuk-tabs__list-item${selectedIntermediarySubSection === 'input' ? ' govuk-tabs__list-item--selected' : ''}" role="presentation">
+                <a class="intermediary-sub-tab govuk-tabs__tab" href="#input" data-sub-section="input" role="tab" aria-selected="${selectedIntermediarySubSection === 'input'}">
+                  Input
+                </a>
+              </li>
+              <li class="govuk-tabs__list-item${selectedIntermediarySubSection === 'output' ? ' govuk-tabs__list-item--selected' : ''}" role="presentation">
+                <a class="intermediary-sub-tab govuk-tabs__tab" href="#output" data-sub-section="output" role="tab" aria-selected="${selectedIntermediarySubSection === 'output'}">
+                  Output
+                </a>
+              </li>
+              <li class="govuk-tabs__list-item${selectedIntermediarySubSection === 'config' ? ' govuk-tabs__list-item--selected' : ''}" role="presentation">
+                <a class="intermediary-sub-tab govuk-tabs__tab" href="#config" data-sub-section="config" role="tab" aria-selected="${selectedIntermediarySubSection === 'config'}">
+                  Config
+                </a>
+              </li>
+            </ul>
+            <div class="govuk-tabs__panel">
+              <h3 class="govuk-heading-s">${escapeHtml(sectionTitle)}</h3>
+              ${renderArtifactRows(currentList)}
+            </div>
           </div>
         </div>
       `;
@@ -422,7 +476,7 @@
           ${artifacts.map(artifact => `
             <div class="review-artifact-row">
               <span class="review-artifact-name">
-                <span>${escapeHtml(artifact.name)}</span>
+                <span>${escapeHtml(formatArtifactNameForDisplay(artifact.name))}</span>
               </span>
               ${renderArtifactActions(artifact)}
             </div>
@@ -617,10 +671,19 @@
         return;
       }
 
+      const subTabButton = event.target.closest('.intermediary-sub-tab');
+      if (subTabButton) {
+        event.preventDefault();
+        selectedIntermediarySubSection = subTabButton.dataset.subSection;
+        renderCurrentJobs();
+        return;
+      }
+
       const jobRow = event.target.closest('.review-job-row');
       if (jobRow) {
         selectedJobId = selectedJobId === jobRow.dataset.jobId ? null : jobRow.dataset.jobId;
         selectedDetailSection = 'ontology-files';
+        selectedIntermediarySubSection = 'input';
         renderCurrentJobs();
         if (selectedJobId) loadSelectedJobData(selectedJobId);
       }
@@ -634,6 +697,7 @@
       event.preventDefault();
       selectedJobId = selectedJobId === jobRow.dataset.jobId ? null : jobRow.dataset.jobId;
       selectedDetailSection = 'ontology-files';
+      selectedIntermediarySubSection = 'input';
       renderCurrentJobs();
       if (selectedJobId) loadSelectedJobData(selectedJobId);
     });
