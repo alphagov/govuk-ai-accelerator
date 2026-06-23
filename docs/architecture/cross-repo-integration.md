@@ -18,20 +18,23 @@ between stages.
 
 ## Lifecycle
 
+The diagram uses short labels so it renders cleanly in GitHub. The repository
+table above gives the full ownership names.
+
 ```mermaid
 flowchart TD
-    source["GOV.UK URLs or domain source list"]
-    ingest["govuk-ai-accelerator\n/ontology/ingest"]
-    ingested["Cleaned markdown/text content\nS3 or local storage"]
-    submit["govuk-ai-accelerator\n/ontology/submit"]
-    generator["govuk-ai-accelerator-tw-accelerator\nOntologyPipelineBuilder"]
-    artifacts["Run output artifacts\nschema.json\ngraph.json\nontology.ttl\nowl_ontology_metrics.csv"]
-    harness["govuk-ai-accelerator\nontology harness"]
-    baseline["Accepted baseline manifest\nbaselines/accepted.json"]
-    report["Harness output\nregression_report.json\nmetrics CSV columns"]
-    validator["generator-e2e-testing-framework\nTTL validation and golden comparison"]
-    graphTools["govuk-ai-graph-tools\nGraph exploration and outlier workflows"]
-    tooling["govuk-ai-accelerator-tooling\nGround truth, experiments, matching utilities"]
+    source["Source URLs"]
+    ingest["Ingest content"]
+    ingested["Cleaned content"]
+    submit["Submit job"]
+    generator["Ontology generator"]
+    artifacts["Run artifacts"]
+    harness["Harness comparison"]
+    baseline["Accepted baseline"]
+    report["Regression report"]
+    validator["E2E validator"]
+    graphTools["Graph tools"]
+    tooling["Research tooling"]
 
     source --> ingest
     ingest --> ingested
@@ -43,9 +46,12 @@ flowchart TD
     harness --> report
     artifacts --> validator
     artifacts --> graphTools
-    tooling -. informs prompts, baselines, and validation expectations .-> generator
-    tooling -. provides ground truth and analysis inputs .-> validator
+    tooling -.-> generator
+    tooling -.-> validator
 ```
+
+The research tooling informs prompts, baselines, ground-truth checks, and
+validation expectations, but it is not part of the production run path.
 
 ## Stage Responsibilities
 
@@ -94,14 +100,26 @@ the normal generator against a dedicated harness domain, reads an accepted
 baseline manifest, compares baseline and candidate `ontology.ttl` metrics, and
 writes a regression report.
 
-Key inputs:
+Harness configuration:
 
-- `ONTOLOGY_HARNESS_ENABLED`;
-- `ONTOLOGY_HARNESS_DEPLOYMENT_ID`;
-- `ONTOLOGY_HARNESS_DOMAIN`;
-- `ONTOLOGY_HARNESS_CONFIG_URI`;
-- `ONTOLOGY_HARNESS_BASELINE_MANIFEST_URI`;
-- accepted baseline manifest at `baselines/accepted.json`.
+- `ONTOLOGY_HARNESS_ENABLED`: turns the scheduled harness on. If it is unset or
+  false-like, the app starts without queueing a harness job.
+- `ONTOLOGY_HARNESS_DEPLOYMENT_ID`: identifies the deployment or generator
+  revision being checked. This is required when the harness is enabled because
+  it becomes part of the one-job-per-deployment key.
+- `ONTOLOGY_HARNESS_DOMAIN`: optional domain/folder name for the harness input
+  and output. Defaults to `ontology-harness-baseline`.
+- `ONTOLOGY_HARNESS_CONFIG_URI`: optional config file location. Defaults to
+  `s3://<bucket>/<domain>/config.yaml`.
+- `ONTOLOGY_HARNESS_BASELINE_MANIFEST_URI`: optional accepted-baseline manifest
+  location. Defaults to `s3://<bucket>/<domain>/baselines/accepted.json`.
+- `baselines/accepted.json`: the manifest the harness reads to find the
+  immutable baseline run to compare against.
+
+Only `ONTOLOGY_HARNESS_ENABLED=true` and `ONTOLOGY_HARNESS_DEPLOYMENT_ID` are
+needed to schedule the harness with the default S3/domain layout. The other
+settings are overrides for non-default locations. If the post-deployment harness
+is not being run, none of these variables are needed.
 
 Primary artifacts:
 
