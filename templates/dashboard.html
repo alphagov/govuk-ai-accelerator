@@ -1591,6 +1591,9 @@
                 const valEl = document.getElementById(valId);
                 if (valEl) valEl.textContent = parseFloat(actual).toFixed(precision);
             };
+            const formatListValue = (items) => {
+                return (items || []).map(item => String(item).replace(/\n/g, '\\n')).join(', ');
+            };
 
             // Model Selector
             const modelVal = config.llm.model;
@@ -1620,10 +1623,25 @@
             setCheck('config-compress-output', config.output?.compress_output, false);
             setCheck('config-pretty-print', config.output?.pretty_print, false);
             setCheck('config-include-metadata', config.output?.include_metadata, true);
+            setVal('config-deduplication-log-filename', config.output?.deduplication_log_filename, 'deduplication.jsonl');
+            setVal('config-faiss-index-filename', config.output?.faiss_index_filename, 'embeddings_index.faiss');
+            setVal('config-graph-filename', config.output?.graph_filename, 'graph.json');
+            setVal('config-schema-filename', config.output?.schema_filename, 'schema.json');
+            setVal('config-timestamp-format', config.output?.timestamp_format, '%Y-%m-%dT%H:%M:%SZ');
+            setCheck('config-emit-deduplication-logs', config.output?.emit_deduplication_logs, true);
+            setCheck('config-emit-pipeline-stage-lists', config.output?.emit_pipeline_stage_lists, false);
 
             // Chunking & Text
             setVal('config-chunk-size', config.text_processing?.chunking?.chunk_size, 2500);
             setVal('config-chunk-overlap', config.text_processing?.chunking?.chunk_overlap, 250);
+            setVal('config-chunking-chars-per-token', config.text_processing?.chunking?.chars_per_token_estimate, 4);
+            setVal('config-chunking-max-chunks', config.text_processing?.chunking?.max_chunks, '');
+            setVal('config-chunking-min-chunk-size', config.text_processing?.chunking?.min_chunk_size, 100);
+            setVal(
+                'config-chunking-separators',
+                formatListValue(config.text_processing?.chunking?.separators || ['\n\n', '\n', '. ', ' ']),
+                '\\n\\n, \\n, . ,  '
+            );
             setVal('config-max-tokens', config.llm?.max_tokens, 16000);
             setVal('config-embedding-model', config.embeddings?.model, 'bedrock:cohere.embed-multilingual-v3');
             setVal('config-embedding-dimension', config.embeddings?.dimension, 1024);
@@ -1782,6 +1800,18 @@
         }
 
         function syncConfigFromUI(config) {
+            const parseOptionalInt = (id) => {
+                const parsed = parseInt(document.getElementById(id).value);
+                return isNaN(parsed) ? null : parsed;
+            };
+            const parseSeparatorList = (id) => {
+                return document.getElementById(id).value
+                    .split(',')
+                    .map((part, index) => (index === 0 ? part : part.replace(/^ /, '')))
+                    .map(s => s.replace(/\\n/g, '\n'))
+                    .filter(s => s.length > 0);
+            };
+
             // Model
             const modelSel = document.getElementById('model-selector');
             if (modelSel.value === 'custom') {
@@ -1800,12 +1830,26 @@
             config.output.compress_output = document.getElementById('config-compress-output').checked;
             config.output.pretty_print = document.getElementById('config-pretty-print').checked;
             config.output.include_metadata = document.getElementById('config-include-metadata').checked;
+            config.output.deduplication_log_filename = document.getElementById('config-deduplication-log-filename').value || 'deduplication.jsonl';
+            config.output.faiss_index_filename = document.getElementById('config-faiss-index-filename').value || 'embeddings_index.faiss';
+            config.output.graph_filename = document.getElementById('config-graph-filename').value || 'graph.json';
+            config.output.schema_filename = document.getElementById('config-schema-filename').value || 'schema.json';
+            config.output.timestamp_format = document.getElementById('config-timestamp-format').value || '%Y-%m-%dT%H:%M:%SZ';
+            config.output.emit_deduplication_logs = document.getElementById('config-emit-deduplication-logs').checked;
+            config.output.emit_pipeline_stage_lists = document.getElementById('config-emit-pipeline-stage-lists').checked;
 
             // Chunking & Text
             if (!config.text_processing) config.text_processing = {};
             if (!config.text_processing.chunking) config.text_processing.chunking = {};
             config.text_processing.chunking.chunk_size = parseInt(document.getElementById('config-chunk-size').value) || 2500;
             config.text_processing.chunking.chunk_overlap = parseInt(document.getElementById('config-chunk-overlap').value) || 250;
+            config.text_processing.chunking.chars_per_token_estimate = parseInt(document.getElementById('config-chunking-chars-per-token').value) || 4;
+            config.text_processing.chunking.max_chunks = parseOptionalInt('config-chunking-max-chunks');
+            config.text_processing.chunking.min_chunk_size = parseInt(document.getElementById('config-chunking-min-chunk-size').value) || 100;
+            config.text_processing.chunking.separators = parseSeparatorList('config-chunking-separators');
+            if (!config.text_processing.chunking.separators.length) {
+                config.text_processing.chunking.separators = ['\n\n', '\n', '. ', ' '];
+            }
             config.llm.max_tokens = parseInt(document.getElementById('config-max-tokens').value) || 16000;
             if (!config.embeddings) config.embeddings = {};
             config.embeddings.model = document.getElementById('config-embedding-model').value;
