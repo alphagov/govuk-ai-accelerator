@@ -2317,10 +2317,7 @@
 
                     const formData = new FormData(uploadForm);
                     
-                    // Only send config_json if NO custom yaml config file is uploaded
-                    if (!fileInput.files.length) {
-                        formData.append('config_json', JSON.stringify(activeConfig));
-                    }
+                    formData.append('config_json', JSON.stringify(activeConfig));
 
                     // Append custom prompt text if typed directly and file isn't uploaded
                     const customPromptText = document.getElementById('custom-prompt-text').value;
