@@ -100,6 +100,8 @@ def test_ontology_dashboard_describes_default_config_flow():
         "config.parallel_files = "
         "parseInt(document.getElementById('config-parallel-files').value) || 1;"
     ) in html
+    assert "formData.append('config_json', JSON.stringify(activeConfig));" in html
+    assert "if (!fileInput.files.length)" not in html
 
 
 def test_historical_jobs_uses_review_action_set():
@@ -909,6 +911,40 @@ def test_submit_uses_default_config_and_prompt_when_files_are_omitted(tmp_path):
     assert config_data["version"]["number"] == "0.1.2"
 
 
+def test_submit_persists_ui_config_json_and_downloads_it(tmp_path):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+    client = flask_app.test_client()
+    ui_config = {
+        "version": {"number": "0.1.2"},
+        "filesystem": {"protocol": "s3"},
+        "path": {},
+        "parallel_files": 20,
+        "batch_api_enabled": False,
+        "term_extraction": {"enabled": True},
+    }
+
+    response = client.post(
+        "/ontology/submit",
+        data={
+            "domain": "visa",
+            "config_json": json.dumps(ui_config),
+        },
+    )
+
+    with flask_app.app_context():
+        job = app_module.db.session.query(app_module.ProcessingJob).one()
+        config_data = json.loads(job.config_data)
+
+    config_response = client.get(f"/ontology/jobs/{job.id}/downloads/config.yaml")
+    downloaded_config = yaml.safe_load(config_response.get_data(as_text=True))
+
+    assert response.status_code == 202
+    assert config_data["parallel_files"] == 20
+    assert config_data["term_extraction"]["enabled"] is True
+    assert downloaded_config["parallel_files"] == 20
+    assert downloaded_config["term_extraction"]["enabled"] is True
+
+
 def test_submit_uses_default_prompt_when_prompt_file_is_omitted(tmp_path):
     app_module, flask_app = _jobs_test_app(tmp_path)
     template = Path(__file__).parents[1] / "static/assets/templates/config-template.yaml"
@@ -1253,7 +1289,7 @@ def test_job_artifacts_endpoint_groups_downloadable_flat_s3_files(tmp_path, monk
                             {"Key": "visa/run-20260605-1/output/bedrock_costs.csv", "Size": 13},
                             {"Key": "visa/run-20260605-1/output/deduplication.jsonl", "Size": 14},
                             {"Key": "visa/run-20260605-1/output/checkpoints/state.json", "Size": 15},
-                            {"Key": "visa/run-20260605-1/output/term_extraction/terms.jsonl", "Size": 18},
+                            {"Key": "visa/run-20260605-1/output/intermediate/term_extraction/terms.raw.jsonl", "Size": 18},
                             {"Key": "visa/run-20260605-1/output/regression_report.json", "Size": 16},
                             {"Key": "visa/run-20260605-1/output/stdout.log", "Size": 19},
                         ]
@@ -1282,7 +1318,7 @@ def test_job_artifacts_endpoint_groups_downloadable_flat_s3_files(tmp_path, monk
         "input/source.md",
         "output/deduplication.jsonl",
         "output/checkpoints/state.json",
-        "output/term_extraction/terms.jsonl",
+        "output/intermediate/term_extraction/terms.raw.jsonl",
     } <= intermediary_names
     assert "Submitted config.yaml" not in intermediary_names
     assert "Prompt used" not in intermediary_names
@@ -1361,8 +1397,11 @@ def test_job_artifacts_endpoint_includes_flat_local_input_and_output_downloads(t
     (output_dir / "stdout.log").write_text("log", encoding="utf-8")
     (output_dir / "checkpoints").mkdir()
     (output_dir / "checkpoints" / "state.json").write_text("state", encoding="utf-8")
-    (output_dir / "term_extraction").mkdir()
-    (output_dir / "term_extraction" / "terms.jsonl").write_text("terms", encoding="utf-8")
+    (output_dir / "intermediate" / "term_extraction").mkdir(parents=True)
+    (output_dir / "intermediate" / "term_extraction" / "terms.raw.jsonl").write_text(
+        "terms",
+        encoding="utf-8",
+    )
 
     with flask_app.app_context():
         app_module.db.session.add(
@@ -1398,7 +1437,7 @@ def test_job_artifacts_endpoint_includes_flat_local_input_and_output_downloads(t
         "input/source.md",
         "input/guidance/nested.md",
         "output/checkpoints/state.json",
-        "output/term_extraction/terms.jsonl",
+        "output/intermediate/term_extraction/terms.raw.jsonl",
     } <= intermediary_names
     assert {"output/bedrock_costs.csv", "output/stdout.log"} <= report_names
     assert "input" not in intermediary_names
