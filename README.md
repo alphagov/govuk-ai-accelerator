@@ -4,8 +4,8 @@ A Python Flask application for asynchronous ontology generation using the `taxon
 
 ## Cross-Repo Ontology Lifecycle
 
-For a technical overview of how the workflow app, generator, harness, E2E
-testing framework, tooling, and graph tools fit together, see
+For a technical overview of how the Workflow, Generator, Ontology Validator,
+Data Science Repo, and Content Workflow fit together, see
 [docs/architecture/cross-repo-integration.md](docs/architecture/cross-repo-integration.md).
 
 ## Local Setup
@@ -109,7 +109,7 @@ The app runs on **http://localhost:3000**.
 
 ## Ontology Harness Baseline
 
-The post-deployment ontology harness runs the normal generator against a dedicated
+The post-deployment ontology harness runs the normal Generator against a dedicated
 baseline domain and compares the candidate output against a promoted baseline run.
 It is disabled by default.
 
@@ -143,10 +143,10 @@ Each deployment queues one harness job using the key
 `ontology-harness-baseline:<deployment-id>`, so multiple pods do not run the same
 check independently. The deployment workflow resolves the current
 `govuk-ai-accelerator-tw-accelerator` `main` commit SHA, pins the Docker image to
-install that generator revision, and uses `tw-accelerator-<generator-git-sha>` as
+install that Generator revision, and uses `tw-accelerator-<generator-git-sha>` as
 the harness deployment ID. Workflow-only deploys therefore reuse the same harness
-job key until the generator commit changes. The candidate output remains a normal
-run-numbered generator output. The harness writes `regression_report.json` to the
+job key until the Generator commit changes. The candidate output remains a normal
+run-numbered Generator output. The harness writes `regression_report.json` to the
 candidate run output folder and the Historical Jobs page links to the run
 artifacts and report, including failed regression checks.
 It also summarises the result on the candidate row in
