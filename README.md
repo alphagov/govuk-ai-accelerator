@@ -2,6 +2,12 @@
 
 A Python Flask application for asynchronous ontology generation using the `taxonomy-ontology-accelerator` library.
 
+## Cross-Repo Ontology Lifecycle
+
+For a technical overview of how the workflow app, generator, harness, E2E
+testing framework, tooling, and graph tools fit together, see
+[docs/architecture/cross-repo-integration.md](docs/architecture/cross-repo-integration.md).
+
 ## Local Setup
 
 ### Prerequisites
