@@ -18,27 +18,24 @@ between stages.
 
 ## Lifecycle
 
-The diagram uses short labels so it renders cleanly in GitHub. The repository
-table above gives the full ownership names.
-
 ```mermaid
 flowchart TD
-    source["Source URLs"]
-    ingest["Ingest content"]
-    ingested["Cleaned content"]
-    submit["Submit job"]
-    generator["Ontology generator"]
-    artifacts["Run artifacts"]
-    harness["Harness comparison"]
-    baseline["Accepted baseline"]
-    report["Regression report"]
-    validator["E2E validator"]
-    graphTools["Graph tools"]
-    tooling["Research tooling"]
+    urls["Source URLs"]
+    ingest["App ingest\n/ontology/ingest"]
+    cleaned["Cleaned content\nS3 or local"]
+    submit["App submit\n/ontology/submit"]
+    tooling["Tooling\nresearch + ground truth"]
+    generator["TW generator\nOntologyPipelineBuilder"]
+    artifacts["Run artifacts\nschema.json\ngraph.json\nontology.ttl\nmetrics CSV"]
+    baseline["Accepted baseline\naccepted.json"]
+    harness["App harness\nbaseline comparison"]
+    report["Harness report\nregression_report.json"]
+    validator["E2E validator\nTTL rules + golden checks"]
+    graphTools["Graph tools\nexplore graph output"]
 
-    source --> ingest
-    ingest --> ingested
-    ingested --> submit
+    urls --> ingest
+    ingest --> cleaned
+    cleaned --> submit
     submit --> generator
     generator --> artifacts
     artifacts --> harness
@@ -52,6 +49,46 @@ flowchart TD
 
 The research tooling informs prompts, baselines, ground-truth checks, and
 validation expectations, but it is not part of the production run path.
+
+## Runtime And Support Paths
+
+The production runtime path is the app plus the generator library:
+`govuk-ai-accelerator` ingests content, accepts ontology jobs, stores job state,
+and invokes `govuk-ai-accelerator-tw-accelerator` to produce ontology artifacts.
+
+The supporting repositories sit around that path:
+
+- `govuk-ai-accelerator-generator-e2e-testing-framework` checks generated
+  `ontology.ttl` files against agreed validation rules.
+- `govuk-ai-accelerator-tooling` contains the notebooks, ground-truth files, and
+  experiments that informed prompts, baselines, and validation expectations.
+- `govuk-ai-graph-tools` consumes generated graph output for downstream graph,
+  duplicate, and outlier exploration.
+
+## Integration Contracts
+
+These files are the main contracts between repositories. Treat their names,
+formats, and meanings as cross-repo dependencies.
+
+| Artifact | Produced by | Consumed by | Contract |
+| --- | --- | --- | --- |
+| `ontology.ttl` | Generator library via the app | Harness, E2E validator, reviewers | OWL/RDF Turtle export for the generated ontology. |
+| `schema.json` | Generator library via the app | App UI, reviewers, downstream tooling | Entity and relationship type definitions. |
+| `graph.json` | Generator library via the app | App UI, graph tools, reviewers | Generated ontology/knowledge graph structure. |
+| `owl_ontology_metrics.csv` | Generator and harness workflows | App historical jobs view, deployment review | Run metrics, with harness result columns when the harness has run. |
+| `regression_report.json` | `govuk-ai-accelerator` harness | Deployment/review workflow | Baseline comparison report for the candidate run. |
+| `baselines/accepted.json` | Maintained baseline manifest | Harness | Pointer to the immutable accepted baseline run. |
+
+## Version Coupling
+
+The app orchestrates the generator, but generator changes can alter the artifact
+shape, ontology terms, metrics, and validation results. A generator update can
+therefore affect the app UI, harness baseline, E2E validator expectations, and
+graph-tool consumers.
+
+When promoting or deploying generator changes, check whether the accepted
+baseline, validator fixtures, and graph-tool assumptions still match the new
+outputs.
 
 ## Stage Responsibilities
 
@@ -131,10 +168,9 @@ Primary artifacts:
 
 Owned by `govuk-ai-accelerator-generator-e2e-testing-framework`.
 
-The E2E testing framework validates generated `ontology.ttl` files. Its CLI is
-currently named `evaluate`, but the workflow is validation/testing rather than
-LLM evaluation. It checks naming conventions, US-English spelling conventions,
-and optional golden-schema comparison.
+The E2E testing framework validates generated `ontology.ttl` files. The workflow
+is validation/testing rather than LLM scoring. It checks naming conventions,
+US-English spelling conventions, and optional golden-schema comparison.
 
 Primary inputs:
 
@@ -206,6 +242,16 @@ Primary artifacts:
 | E2E validation | Generated `ontology.ttl`, optional golden `.ttl` | Pass/fail result, optional JSON, violation reports | Generator maintainers and handover reviewers |
 | Graph tools | Knowledge graph JSON and source documents | Graph visualisations, duplicate/outlier reports | Content quality review |
 | Tooling | Ground truth, generated runs, experiment data | Matching results, notebooks, prompts/analysis | Generator and validation design decisions |
+
+## Change Impact Guide
+
+| Change | Check these repositories |
+| --- | --- |
+| Change `ontology.ttl` structure or naming conventions | `govuk-ai-accelerator`, `govuk-ai-accelerator-generator-e2e-testing-framework`, `govuk-ai-graph-tools`. |
+| Change `schema.json` or `graph.json` shape | `govuk-ai-accelerator`, `govuk-ai-graph-tools`, any notebooks in `govuk-ai-accelerator-tooling` that read generated output. |
+| Change generator prompts, models, or extraction logic | Harness baseline, E2E validator fixtures, ground-truth assumptions in `govuk-ai-accelerator-tooling`. |
+| Change harness metrics or report fields | `govuk-ai-accelerator` historical jobs view, deployment review process, `owl_ontology_metrics.csv` consumers. |
+| Promote a new accepted baseline | `baselines/accepted.json`, harness run history, any handover notes explaining why the baseline changed. |
 
 ## Where To Start When Debugging
 
