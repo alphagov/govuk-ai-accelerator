@@ -2,6 +2,7 @@ import builtins
 import io
 import importlib
 import json
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -102,6 +103,64 @@ def test_ontology_dashboard_describes_default_config_flow():
     ) in html
     assert "formData.append('config_json', JSON.stringify(activeConfig));" in html
     assert "if (!fileInput.files.length)" not in html
+
+
+def test_dashboard_config_controls_are_synchronised_by_config_editor():
+    template = Path(__file__).parents[1] / "templates" / "dashboard.html"
+    html = template.read_text(encoding="utf-8")
+
+    control_ids = sorted(
+        {
+            control_id
+            for control_id in re.findall(
+                r"<(?:input|select|textarea)[^>]*id=\"([^\"]+)\"",
+                html,
+            )
+            if control_id.startswith("config-")
+            or control_id in {"model-selector", "temp-slider", "custom-model-input"}
+        }
+    )
+
+    sync_ui = re.search(
+        r"function syncUIFromConfig\(config\) \{(.*?)\n        \}\n\n        function syncConfigFromUI",
+        html,
+        re.S,
+    )
+    sync_submit = re.search(
+        r"function syncConfigFromUI\(config\) \{(.*?)\n        \}\n\n\n        document\.addEventListener",
+        html,
+        re.S,
+    )
+    assert sync_ui is not None
+    assert sync_submit is not None
+
+    missing_from_ui_sync = [
+        control_id for control_id in control_ids if control_id not in sync_ui.group(1)
+    ]
+    missing_from_submit_sync = [
+        control_id for control_id in control_ids if control_id not in sync_submit.group(1)
+    ]
+
+    assert missing_from_ui_sync == []
+    assert missing_from_submit_sync == []
+
+
+def test_dashboard_chunking_separator_sync_preserves_spaces():
+    template = Path(__file__).parents[1] / "templates" / "dashboard.html"
+    html = template.read_text(encoding="utf-8")
+
+    separator_parser = re.search(
+        r"const parseSeparatorList = \(id\) => \{(.*?)\n            \};",
+        html,
+        re.S,
+    )
+
+    assert separator_parser is not None
+    assert ".map((part, index) => (index === 0 ? part : part.replace(/^ /, '')))" in (
+        separator_parser.group(1)
+    )
+    assert ".map(s => s.replace(/\\\\n/g, '\\n'))" in separator_parser.group(1)
+    assert "parseSeparatorList('config-chunking-separators')" in html
 
 
 def test_historical_jobs_uses_review_action_set():
