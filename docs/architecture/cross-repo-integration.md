@@ -21,31 +21,31 @@ are involved, and which artifacts move between stages.
 ```mermaid
 flowchart TD
     subgraph workflowRepo["Workflow"]
-        urls["Source URLs<br/><b>(Workflow)</b>"]
-        ingest["Ingest content<br/><b>(Workflow)</b><br/>/ontology/ingest"]
-        cleaned["Cleaned content<br/><b>(Workflow)</b><br/>S3 or local"]
-        submit["Submit job<br/><b>(Workflow)</b><br/>/ontology/submit"]
-        baseline["Accepted baseline<br/><b>(Workflow)</b><br/>accepted.json"]
-        harness["Compare baseline<br/><b>(Workflow)</b>"]
-        report["Harness report<br/><b>(Workflow)</b><br/>regression_report.json"]
+        urls["Source URLs"]
+        ingest["Ingest content<br/>/ontology/ingest"]
+        cleaned["Cleaned content<br/>S3 or local"]
+        submit["Submit job<br/>/ontology/submit"]
+        baseline["Accepted baseline<br/>accepted.json"]
+        harness["Compare baseline"]
+        report["Harness report<br/>regression_report.json"]
     end
 
     subgraph generatorRepo["Generator"]
-        generatorPackage["Installed package<br/><b>(Generator)</b><br/>taxonomy-ontology-accelerator"]
-        generator["Build ontology<br/><b>(Generator)</b><br/>OntologyPipelineBuilder"]
-        artifacts["Run artifacts<br/><b>(Generator)</b><br/>schema.json<br/>graph.json<br/>ontology.ttl<br/>metrics CSV"]
+        generatorPackage["Installed package<br/>taxonomy-ontology-accelerator"]
+        generator["Build ontology<br/>OntologyPipelineBuilder"]
+        artifacts["Run artifacts<br/>schema.json<br/>graph.json<br/>ontology.ttl<br/>metrics CSV"]
     end
 
     subgraph dataScienceRepo["Data Science Repo"]
-        dataScience["Research + ground truth<br/><b>(Data Science Repo)</b>"]
+        dataScience["Research + ground truth"]
     end
 
     subgraph validatorRepo["Ontology Validator"]
-        validator["Validate TTL<br/><b>(Ontology Validator)</b>"]
+        validator["Validate TTL"]
     end
 
     subgraph contentRepo["Content Workflow"]
-        contentWorkflow["Explore graph output<br/><b>(Content Workflow)</b>"]
+        contentWorkflow["Explore graph output"]
     end
 
     urls -->|"provide source list"| ingest
