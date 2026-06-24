@@ -15,7 +15,7 @@ from urllib.parse import quote, unquote, urlparse
 from flask import Flask, request, jsonify, render_template, Blueprint, Response, redirect
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, upgrade
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func, or_
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, and_, func, or_
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.exc import OperationalError
 from starlette.applications import Starlette
@@ -57,6 +57,7 @@ DEFAULT_CONFIG_TEMPLATE_PATH = (
 
 ACTIVE_DOMAIN_DELETE_STATUSES = {"pending", "running", "stopping"}
 PROTECTED_REVIEW_DOMAIN_NAMES = {"ontology-harness-baseline"}
+REVIEW_TEST_PIPELINES = {"ontology-harness"}
 
 
 class ProcessingJob(db.Model):
@@ -197,6 +198,32 @@ def _serialize_domain_job(job: ProcessingJob, note_metadata: dict[str, dict] | N
         "notes_count": metadata["notes_count"],
         "latest_note": metadata["latest_note"],
     }
+
+
+def _review_tests_filter():
+    return or_(
+        ProcessingJob.pipeline.in_(REVIEW_TEST_PIPELINES),
+        and_(
+            ProcessingJob.domain.in_(PROTECTED_REVIEW_DOMAIN_NAMES),
+            or_(
+                ProcessingJob.pipeline.is_(None),
+                ProcessingJob.pipeline == "ontology",
+            ),
+        ),
+    )
+
+
+def _review_ontologies_filter():
+    return and_(
+        or_(
+            ProcessingJob.pipeline.is_(None),
+            ProcessingJob.pipeline == "ontology",
+        ),
+        or_(
+            ProcessingJob.domain.is_(None),
+            ~ProcessingJob.domain.in_(PROTECTED_REVIEW_DOMAIN_NAMES),
+        ),
+    )
 
 
 def _legacy_notes_key(job: ProcessingJob) -> str | None:
@@ -1270,14 +1297,9 @@ def create_blueprints():
 
         query = db.session.query(ProcessingJob).filter(ProcessingJob.created_at >= today_start)
         if job_type == "test":
-            query = query.filter(ProcessingJob.pipeline == "ontology-harness")
+            query = query.filter(_review_tests_filter())
         else:
-            query = query.filter(
-                or_(
-                    ProcessingJob.pipeline.is_(None),
-                    ProcessingJob.pipeline == "ontology",
-                )
-            )
+            query = query.filter(_review_ontologies_filter())
 
         if search:
             search_term = f"%{search}%"
