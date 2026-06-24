@@ -21,17 +21,17 @@ are involved, and which artifacts move between stages.
 ```mermaid
 flowchart TD
     urls["Source URLs"]
-    ingest["Workflow ingest\n/ontology/ingest"]
+    ingest["Workflow\ngovuk-ai-accelerator\n/ontology/ingest"]
     cleaned["Cleaned content\nS3 or local"]
-    submit["Workflow submit\n/ontology/submit"]
-    dataScience["Data Science Repo\nresearch + ground truth"]
-    generator["Generator\nOntologyPipelineBuilder"]
+    submit["Workflow\ngovuk-ai-accelerator\n/ontology/submit"]
+    dataScience["Data Science Repo\ngovuk-ai-accelerator-tooling\nresearch + ground truth"]
+    generator["Generator\ngovuk-ai-accelerator-tw-accelerator\nOntologyPipelineBuilder"]
     artifacts["Run artifacts\nschema.json\ngraph.json\nontology.ttl\nmetrics CSV"]
     baseline["Accepted baseline\naccepted.json"]
-    harness["Workflow harness\nbaseline comparison"]
+    harness["Workflow\ngovuk-ai-accelerator\nbaseline comparison"]
     report["Harness report\nregression_report.json"]
-    validator["Ontology Validator\nTTL rules + golden checks"]
-    contentWorkflow["Content Workflow\nexplore graph output"]
+    validator["Ontology Validator\ngovuk-ai-accelerator-generator-e2e-testing-framework\nTTL rules + golden checks"]
+    contentWorkflow["Content Workflow\ngovuk-ai-graph-tools\nexplore graph output"]
 
     urls --> ingest
     ingest --> cleaned
@@ -264,12 +264,3 @@ Primary artifacts:
 | `ontology.ttl` violates naming/spelling/golden expectations | Ontology Validator run book and validator reports. |
 | Graph/outlier UI output is missing or surprising | Content Workflow README and generated graph artifacts. |
 | You need historical experiment context | Data Science Repo notebooks, ground truth data, and matching utilities. |
-
-## Confluence Run Books Index
-
-The Confluence run books index should link to this GitHub page rather than
-copying its contents:
-
-```text
-https://github.com/alphagov/govuk-ai-accelerator/blob/main/docs/architecture/cross-repo-integration.md
-```
