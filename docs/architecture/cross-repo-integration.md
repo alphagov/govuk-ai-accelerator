@@ -20,23 +20,39 @@ are involved, and which artifacts move between stages.
 
 ```mermaid
 flowchart TD
-    urls["Source URLs<br/><b>(Workflow)</b>"]
-    ingest["Ingest content<br/><b>(Workflow)</b><br/>govuk-ai-accelerator<br/>/ontology/ingest"]
-    cleaned["Cleaned content<br/><b>(Workflow)</b><br/>S3 or local"]
-    submit["Submit job<br/><b>(Workflow)</b><br/>govuk-ai-accelerator<br/>/ontology/submit"]
-    dataScience["Research + ground truth<br/><b>(Data Science Repo)</b><br/>govuk-ai-accelerator-<br/>tooling"]
-    generator["Build ontology<br/><b>(Generator)</b><br/>govuk-ai-accelerator-<br/>tw-accelerator<br/>OntologyPipelineBuilder"]
-    artifacts["Run artifacts<br/><b>(Generator)</b><br/>schema.json<br/>graph.json<br/>ontology.ttl<br/>metrics CSV"]
-    baseline["Accepted baseline<br/><b>(Workflow)</b><br/>accepted.json"]
-    harness["Compare baseline<br/><b>(Workflow)</b><br/>govuk-ai-accelerator"]
-    report["Harness report<br/><b>(Workflow)</b><br/>regression_report.json"]
-    validator["Validate TTL<br/><b>(Ontology Validator)</b><br/>govuk-ai-accelerator-<br/>generator-e2e-testing-<br/>framework"]
-    contentWorkflow["Explore graph output<br/><b>(Content Workflow)</b><br/>govuk-ai-graph-tools"]
+    subgraph workflowRepo["Workflow"]
+        urls["Source URLs<br/><b>(Workflow)</b>"]
+        ingest["Ingest content<br/><b>(Workflow)</b><br/>/ontology/ingest"]
+        cleaned["Cleaned content<br/><b>(Workflow)</b><br/>S3 or local"]
+        submit["Submit job<br/><b>(Workflow)</b><br/>/ontology/submit"]
+        baseline["Accepted baseline<br/><b>(Workflow)</b><br/>accepted.json"]
+        harness["Compare baseline<br/><b>(Workflow)</b>"]
+        report["Harness report<br/><b>(Workflow)</b><br/>regression_report.json"]
+    end
+
+    subgraph generatorRepo["Generator"]
+        generatorPackage["Installed package<br/><b>(Generator)</b><br/>taxonomy-ontology-accelerator"]
+        generator["Build ontology<br/><b>(Generator)</b><br/>OntologyPipelineBuilder"]
+        artifacts["Run artifacts<br/><b>(Generator)</b><br/>schema.json<br/>graph.json<br/>ontology.ttl<br/>metrics CSV"]
+    end
+
+    subgraph dataScienceRepo["Data Science Repo"]
+        dataScience["Research + ground truth<br/><b>(Data Science Repo)</b>"]
+    end
+
+    subgraph validatorRepo["Ontology Validator"]
+        validator["Validate TTL<br/><b>(Ontology Validator)</b>"]
+    end
+
+    subgraph contentRepo["Content Workflow"]
+        contentWorkflow["Explore graph output<br/><b>(Content Workflow)</b>"]
+    end
 
     urls -->|"provide source list"| ingest
     ingest -->|"extract and clean"| cleaned
     cleaned -->|"stored as input"| submit
-    submit -->|"starts ontology job"| generator
+    submit -->|"imports installed library"| generatorPackage
+    generatorPackage -->|"runs pipeline builder"| generator
     generator -->|"writes output files"| artifacts
     artifacts -->|"compare TTL and metrics"| harness
     baseline -->|"provides accepted run"| harness
@@ -53,8 +69,10 @@ validation expectations, but it is not part of the production run path.
 ## Runtime And Support Paths
 
 The production runtime path is the Workflow plus the Generator. The Workflow
-ingests content, accepts ontology jobs, stores job state, and invokes the
-Generator to produce ontology artifacts.
+ingests content, accepts ontology jobs, stores job state, and runs the Generator
+as an installed Python package (`taxonomy-ontology-accelerator`) to produce
+ontology artifacts. The Generator is a library dependency of the Workflow
+runtime, not a separate service endpoint.
 
 The supporting repositories sit around that path:
 
