@@ -21,17 +21,17 @@ are involved, and which artifacts move between stages.
 ```mermaid
 flowchart TD
     urls["Source URLs"]
-    ingest["Workflow\ngovuk-ai-accelerator\n/ontology/ingest"]
+    ingest["<b>Workflow</b><br/>govuk-ai-accelerator<br/>/ontology/ingest"]
     cleaned["Cleaned content\nS3 or local"]
-    submit["Workflow\ngovuk-ai-accelerator\n/ontology/submit"]
-    dataScience["Data Science Repo\ngovuk-ai-accelerator-tooling\nresearch + ground truth"]
-    generator["Generator\ngovuk-ai-accelerator-tw-accelerator\nOntologyPipelineBuilder"]
+    submit["<b>Workflow</b><br/>govuk-ai-accelerator<br/>/ontology/submit"]
+    dataScience["<b>Data Science Repo</b><br/>govuk-ai-accelerator-<br/>tooling<br/>research + ground truth"]
+    generator["<b>Generator</b><br/>govuk-ai-accelerator-<br/>tw-accelerator<br/>OntologyPipelineBuilder"]
     artifacts["Run artifacts\nschema.json\ngraph.json\nontology.ttl\nmetrics CSV"]
     baseline["Accepted baseline\naccepted.json"]
-    harness["Workflow\ngovuk-ai-accelerator\nbaseline comparison"]
+    harness["<b>Workflow</b><br/>govuk-ai-accelerator<br/>baseline comparison"]
     report["Harness report\nregression_report.json"]
-    validator["Ontology Validator\ngovuk-ai-accelerator-generator-e2e-testing-framework\nTTL rules + golden checks"]
-    contentWorkflow["Content Workflow\ngovuk-ai-graph-tools\nexplore graph output"]
+    validator["<b>Ontology Validator</b><br/>govuk-ai-accelerator-<br/>generator-e2e-testing-<br/>framework<br/>TTL rules + golden checks"]
+    contentWorkflow["<b>Content Workflow</b><br/>govuk-ai-graph-tools<br/>explore graph output"]
 
     urls --> ingest
     ingest --> cleaned
