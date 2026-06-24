@@ -20,31 +20,31 @@ are involved, and which artifacts move between stages.
 
 ```mermaid
 flowchart TD
-    urls["Source URLs"]
-    ingest["<b>Workflow</b><br/>govuk-ai-accelerator<br/>/ontology/ingest"]
-    cleaned["Cleaned content\nS3 or local"]
-    submit["<b>Workflow</b><br/>govuk-ai-accelerator<br/>/ontology/submit"]
-    dataScience["<b>Data Science Repo</b><br/>govuk-ai-accelerator-<br/>tooling<br/>research + ground truth"]
-    generator["<b>Generator</b><br/>govuk-ai-accelerator-<br/>tw-accelerator<br/>OntologyPipelineBuilder"]
-    artifacts["Run artifacts\nschema.json\ngraph.json\nontology.ttl\nmetrics CSV"]
-    baseline["Accepted baseline\naccepted.json"]
-    harness["<b>Workflow</b><br/>govuk-ai-accelerator<br/>baseline comparison"]
-    report["Harness report\nregression_report.json"]
-    validator["<b>Ontology Validator</b><br/>govuk-ai-accelerator-<br/>generator-e2e-testing-<br/>framework<br/>TTL rules + golden checks"]
-    contentWorkflow["<b>Content Workflow</b><br/>govuk-ai-graph-tools<br/>explore graph output"]
+    urls["Source URLs<br/><b>(Workflow)</b>"]
+    ingest["Ingest content<br/><b>(Workflow)</b><br/>govuk-ai-accelerator<br/>/ontology/ingest"]
+    cleaned["Cleaned content<br/><b>(Workflow)</b><br/>S3 or local"]
+    submit["Submit job<br/><b>(Workflow)</b><br/>govuk-ai-accelerator<br/>/ontology/submit"]
+    dataScience["Research + ground truth<br/><b>(Data Science Repo)</b><br/>govuk-ai-accelerator-<br/>tooling"]
+    generator["Build ontology<br/><b>(Generator)</b><br/>govuk-ai-accelerator-<br/>tw-accelerator<br/>OntologyPipelineBuilder"]
+    artifacts["Run artifacts<br/><b>(Generator)</b><br/>schema.json<br/>graph.json<br/>ontology.ttl<br/>metrics CSV"]
+    baseline["Accepted baseline<br/><b>(Workflow)</b><br/>accepted.json"]
+    harness["Compare baseline<br/><b>(Workflow)</b><br/>govuk-ai-accelerator"]
+    report["Harness report<br/><b>(Workflow)</b><br/>regression_report.json"]
+    validator["Validate TTL<br/><b>(Ontology Validator)</b><br/>govuk-ai-accelerator-<br/>generator-e2e-testing-<br/>framework"]
+    contentWorkflow["Explore graph output<br/><b>(Content Workflow)</b><br/>govuk-ai-graph-tools"]
 
-    urls --> ingest
-    ingest --> cleaned
-    cleaned --> submit
-    submit --> generator
-    generator --> artifacts
-    artifacts --> harness
-    baseline --> harness
-    harness --> report
-    artifacts --> validator
-    artifacts --> contentWorkflow
-    dataScience -.-> generator
-    dataScience -.-> validator
+    urls -->|"provide source list"| ingest
+    ingest -->|"extract and clean"| cleaned
+    cleaned -->|"stored as input"| submit
+    submit -->|"starts ontology job"| generator
+    generator -->|"writes output files"| artifacts
+    artifacts -->|"compare TTL and metrics"| harness
+    baseline -->|"provides accepted run"| harness
+    harness -->|"writes report"| report
+    artifacts -->|"process ontology.ttl"| validator
+    artifacts -->|"process graph.json"| contentWorkflow
+    dataScience -.->|"inform prompts and baselines"| generator
+    dataScience -.->|"inform validation rules"| validator
 ```
 
 The Data Science Repo informs prompts, baselines, ground-truth checks, and
