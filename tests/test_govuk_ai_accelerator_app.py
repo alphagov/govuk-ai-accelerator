@@ -428,6 +428,74 @@ def test_review_jobs_endpoint_filters_harness_jobs_for_review_tests(tmp_path):
     )
 
 
+def test_review_jobs_endpoint_routes_harness_baseline_domain_to_review_tests(tmp_path):
+    app_module, flask_app = _jobs_test_app(tmp_path)
+    created_at = datetime(2026, 5, 28, 20, 57, tzinfo=timezone.utc)
+
+    with flask_app.app_context():
+        app_module.db.session.add_all(
+            [
+                app_module.ProcessingJob(
+                    id="baseline-ontology-run",
+                    status="completed",
+                    pipeline="ontology",
+                    domain="ontology-harness-baseline",
+                    job_runs="run-20260528-18",
+                    created_at=created_at,
+                ),
+                app_module.ProcessingJob(
+                    id="baseline-legacy-run",
+                    status="completed",
+                    pipeline=None,
+                    domain="ontology-harness-baseline",
+                    job_runs="run-20260528-19",
+                    created_at=created_at + timedelta(minutes=1),
+                ),
+                app_module.ProcessingJob(
+                    id="scheduled-harness-run",
+                    status="failed",
+                    pipeline="ontology-harness",
+                    domain="ontology-harness-baseline",
+                    job_runs="run-20260529-26",
+                    created_at=created_at + timedelta(minutes=2),
+                ),
+                app_module.ProcessingJob(
+                    id="visa-ontology-run",
+                    status="completed",
+                    pipeline="ontology",
+                    domain="visa",
+                    created_at=created_at + timedelta(minutes=3),
+                ),
+                app_module.ProcessingJob(
+                    id="baseline-ingestion-run",
+                    status="completed",
+                    pipeline="ingestion",
+                    domain="ontology-harness-baseline",
+                    created_at=created_at + timedelta(minutes=4),
+                ),
+            ]
+        )
+        app_module.db.session.commit()
+
+    ontology_response = flask_app.test_client().get(
+        "/ontology/jobs/review?type=ontology&search=ontology-harness-baseline"
+    )
+    test_response = flask_app.test_client().get(
+        "/ontology/jobs/review?type=test&search=ontology-harness-baseline&per_page=10"
+    )
+
+    assert ontology_response.status_code == 200
+    assert ontology_response.get_json()["jobs"] == []
+
+    assert test_response.status_code == 200
+    payload = test_response.get_json()
+    assert [job["job_id"] for job in payload["jobs"]] == [
+        "scheduled-harness-run",
+        "baseline-legacy-run",
+        "baseline-ontology-run",
+    ]
+
+
 def test_review_domains_endpoint_returns_latest_ingestion_job_per_domain(tmp_path):
     app_module, flask_app = _jobs_test_app(tmp_path)
     created_at = datetime(2026, 5, 11, 13, 0, tzinfo=timezone.utc)
