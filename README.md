@@ -8,6 +8,10 @@ For a technical overview of how the Workflow, Generator, Ontology Validator,
 Data Science Repo, and Content Workflow fit together, see
 [docs/architecture/cross-repo-integration.md](docs/architecture/cross-repo-integration.md).
 
+## Run Books
+
+- [Ontology Generator Metrics Run Book](docs/runbooks/ontology-generator-metrics.md)
+
 ## Local Setup
 
 ### Prerequisites
