@@ -38,12 +38,233 @@ The domain prompt guides the LLM on what type of information and concepts to ext
 ![Domain Prompt Text Area Screen](images/domain_prompt_textarea.png)
 
 ### Step 4: Configure Advanced Settings (Optional)
-By default, if you do not modify any of the parameters in this step, the generator uses the **default configuration** settings automatically. However, you can toggle the **Advanced Parameters** checkbox to customize settings if needed:
-- **Model:** Specifies which LLM to use (e.g., Anthropic Claude or AWS Bedrock model).
-- **Temperature:** Controls LLM creativity. Set to `0.0` for maximum consistency and reproducibility.
-- **Max Tokens:** The maximum length of the model's response.
+By default, if you do not modify any of the parameters in this step, the generator uses the **default configuration** settings automatically. However, you can toggle the **Advanced Parameters** checkbox to customize settings if needed.
 
 ![Config Editor Panel](images/config_editor_panel.png)
+
+Below is the complete, parameter-by-parameter reference guide to all settings available in the configuration:
+
+---
+
+### 1. Large Language Model Settings (`llm`)
+
+| Parameter | Type / Format | Default | Description / Purpose |
+|---|---|---|---|
+| **`llm.model`** | String | `"bedrock:eu.anthropic.claude-sonnet-4-6"` | The target LLM. Supports Bedrock prefix (`bedrock:`) and models like Claude Sonnet. |
+| **`llm.temperature`** | Float | `0.0` | Controls AI randomness. Use `0.0` for predictable, deterministic extraction. |
+| **`llm.max_tokens`** | Integer | `16000` | Maximum token length for the model response. Higher values prevent text truncation. |
+| **`llm.aws_bedrock_enabled`** | Boolean | `true` | Toggles Bedrock API integration. |
+| **`llm.bedrock_enable_context_1m_beta`**| Boolean | `false` | Enables AWS Bedrock experimental 1M token context support. |
+| **`llm.bedrock_context_1m_beta_flag`** | String | `"context-1m-2025-08-07"` | Bedrock model flag for the beta context feature. |
+| **`llm.bedrock_read_timeout_seconds`** | Integer | `600` | Read timeout limit for Bedrock API calls. |
+| **`llm.extraction_prompt_file`** | String / Null | `null` | Custom path to an override system extraction prompt. |
+| **`llm.retries`** | Integer | `3` | Simple retry attempts count for API calls. |
+| **`llm.retry_strategy.enabled`** | Boolean | `true` | Enables exponential backoff retry handler for rate limits. |
+| **`llm.retry_strategy.strategy_type`** | Choice | `"exponential"` | Backoff mathematical strategy: `"exponential"`, `"linear"`, `"constant"`. |
+| **`llm.retry_strategy.initial_delay`** | Float | `1.0` | Delay in seconds before initiating the first retry attempt. |
+| **`llm.retry_strategy.max_delay`** | Float | `30.0` | Maximum limit on delays between retries. |
+| **`llm.retry_strategy.backoff_multiplier`**| Float | `2.0` | The factor by which delay increases each retry. |
+| **`llm.retry_strategy.jitter`** | Boolean | `true` | Adds random time variance to avoid coordinated request spikes. |
+| **`llm.retry_strategy.retry_on_rate_limit`**| Boolean | `true` | Automatically retry on API 429 rate limit exceptions. |
+| **`llm.retry_strategy.retry_on_timeout`** | Boolean | `true` | Automatically retry on API connection timeout errors. |
+| **`llm.bedrock_quota_governor.enabled`**| Boolean | `true` | Active rate-limit governor guarding Bedrock client calls. |
+| **`llm.bedrock_quota_governor.requests_per_minute`** | Integer | `7000` | Threshold of maximum requests allowed per minute. |
+| **`llm.bedrock_quota_governor.tokens_per_minute`** | Integer | `3500000` | Threshold of maximum tokens allowed per minute. |
+| **`llm.bedrock_quota_governor.max_concurrency`** | Integer | `10` | Maximum parallel threads communicating with AWS Bedrock. |
+| **`llm.bedrock_quota_governor.window_seconds`** | Integer | `60` | Time window length for rate limitation tracking. |
+| **`llm.bedrock_quota_governor.jitter_min_seconds`** | Float | `0.2` | Minimum random delay factor. |
+| **`llm.bedrock_quota_governor.jitter_max_seconds`** | Float | `1.5` | Maximum random delay factor. |
+
+---
+
+### 2. Batching Settings (`batching`)
+
+| Parameter | Type / Format | Default | Description / Purpose |
+|---|---|---|---|
+| **`batching.chunks_per_batch`** | Integer | `2` | Number of text chunks processed in a single LLM request. |
+| **`batching.chunk_separator`** | String | `"\n\n---\n\n"` | Character boundary marking different chunks within a batch. |
+| **`batching.file_level_scaffold_enabled`**| Boolean | `true` | Generates a per-file summary first to guide chunk-level consistency. |
+| **`batching.input_token_ratio`** | Float | `0.5` | Fraction of context window reserved for input chunks. |
+| **`batching.max_batch_size_anthropic`** | Integer | `4` | Hard limit on chunks per batch for Anthropic models. |
+| **`batching.max_batch_text_length`** | Integer / Null | `null` | Safety limit on character count in a single batch. |
+| **`batching.max_input_tokens`** | Integer | `32000` | Safety limit to prevent prompt sizing from collapsing batch size. |
+| **`batching.min_batch_size`** | Integer | `1` | Lower bound on batch size. |
+| **`batching.min_batch_tokens`** | Integer | `200` | Lower bound on tokens allocated per batch. |
+
+---
+
+### 3. Checkpointing Settings (`checkpointing`)
+
+| Parameter | Type / Format | Default | Description / Purpose |
+|---|---|---|---|
+| **`checkpointing.enabled`** | Boolean | `true` | Enable state saving to resume jobs that fail mid-run. |
+| **`checkpointing.auto_resume`** | Boolean | `true` | Automatically pick up progress from an existing checkpoint. |
+| **`checkpointing.checkpoint_filename`** | String | `"processing_checkpoint.json"` | Saved progress filename. |
+| **`checkpointing.flush_interval_batches`**| Integer | `100` | Write to disk interval based on batch count. |
+| **`checkpointing.flush_timeout_seconds`** | Integer | `600` | Force flush checkpointer after time elapsed. |
+| **`checkpointing.max_state_checkpoints`** | Integer | `3` | Limit on history retention of checkpoints. |
+| **`checkpointing.persist_state`** | Boolean | `false` | Deep persistence of extraction state (opt-in). |
+| **`checkpointing.state_checkpoint_stages`**| List | `['extraction', 'deduplication', 'schema']` | Specific stages where status checkpoints are persisted. |
+
+---
+
+### 4. Conflict Resolution & Deduplication Settings (`conflict_resolution`, `deduplication`)
+
+| Parameter | Type / Format | Default | Description / Purpose |
+|---|---|---|---|
+| **`conflict_resolution.enabled`** | Boolean | `true` | Resolve properties conflict automatically. |
+| **`conflict_resolution.strategy`** | Choice | `"higher_confidence"` | Resolving rule: pick value with higher LLM confidence score. |
+| **`deduplication.conflict_resolution_strategy`** | Choice | `"confidence"` | Merge strategy: `"confidence"` or `"latest"`. |
+| **`deduplication.enable_label_similarity_check`** | Boolean | `true` | Enforces lexical similarity on labels before allowing semantic merge. |
+| **`deduplication.exact_threshold`** | Float | `1.0` | Match score for string-identity based deduplication. |
+| **`deduplication.high_semantic_similarity`** | Float | `0.985` | Unconditional merge score for semantic vector distance. |
+| **`deduplication.min_label_similarity`** | Float | `0.75` | Required character/token overlap score before merging. |
+| **`deduplication.semantic_threshold`** | Float | `0.88` | General cosine similarity threshold for vector merges. |
+| **`deduplication.faiss.threshold`** | Integer | `100` | Entity count trigger to shift from array search to FAISS indexing. |
+| **`deduplication.faiss.batch_size`** | Integer | `100` | Search lookup batch size in FAISS. |
+| **`deduplication.faiss.index_type`** | Choice | `"auto"` | Index structure strategy. |
+| **`deduplication.faiss.rebuild_threshold`** | Integer | `10000` | Rebuild index after N insertions to maintain precision. |
+| **`deduplication.faiss.top_k`** | Integer | `50` | Nearest neighbors depth searched. |
+
+---
+
+### 5. Semantic Embeddings Settings (`embeddings`)
+
+| Parameter | Type / Format | Default | Description / Purpose |
+|---|---|---|---|
+| **`embeddings.model`** | String | `"bedrock:cohere.embed-multilingual-v3"` | Model used for semantic distance calculations. |
+| **`embeddings.dimension`** | Integer | `1024` | Cohere vector size. (Gemini: `3072`, OpenAI Large: `1536`). |
+| **`embeddings.batch_size`** | Integer | `100` | Text chunk array size dispatched for vector extraction. |
+| **`embeddings.max_batch_size`** | Integer | `100` | System safety batch cap to avoid request memory limits. |
+| **`embeddings.concurrency`** | Integer | `10` | Concurrency limit on embedding API workers. |
+| **`embeddings.task_type`** | String | `"SEMANTIC_SIMILARITY"`| Embedding downstream task flag. |
+| **`embeddings.cache.enabled`** | Boolean | `true` | Avoid recalculations by caching generated embeddings. |
+| **`embeddings.cache.directory`** | String | `"domains/.cache"` | Cache files storage destination folder. |
+| **`embeddings.cache.file`** | String | `"embeddings.json"` | Vector cache storage filename. |
+
+---
+
+### 6. Error Handling & Limits Settings (`error_handling`, `limits`)
+
+| Parameter | Type / Format | Default | Description / Purpose |
+|---|---|---|---|
+| **`error_handling.continue_on_error`** | Boolean | `true` | Continues processing on non-fatal chunk failures. |
+| **`error_handling.collect_severities`** | List | `['error', 'warning', 'info']` | Log details collected during execution. |
+| **`error_handling.max_errors`** | Integer / Null | `null` | Error count limit before halting pipeline. |
+| **`limits.max_entities`** | Integer / Null | `null` | Hard cap on total entities allowed. |
+| **`limits.max_entity_types`** | Integer / Null | `null` | Hard cap on total classes (Entity Types). |
+| **`limits.max_relationships`** | Integer / Null | `null` | Hard cap on total relationships allowed. |
+| **`limits.max_relationship_types`** | Integer / Null | `null` | Hard cap on unique relation properties. |
+
+---
+
+### 7. Filesystem & Storage Options (`filesystem`, `output`)
+
+| Parameter | Type / Format | Default | Description / Purpose |
+|---|---|---|---|
+| **`filesystem.protocol`** | Choice | `"s3"` | Storage interface: `"s3"`, `"local"`, `"gcs"`. |
+| **`filesystem.options`** | Map | `{}` | Backend parameters (e.g. region keys). |
+| **`output.base_directory`** | String | *(Auto-resolved)* | Run output files destination directory. |
+| **`output.append_domain_name`** | Boolean | `false` | Append domain subfolder suffix dynamically. |
+| **`output.compress_output`** | Boolean | `false` | Gzip output JSON files. |
+| **`output.pretty_print`** | Boolean | `false` | Human-readable pretty format for S3 outputs. |
+| **`output.include_metadata`** | Boolean | `true` | Include audit telemetry in output graphs. |
+| **`output.type_aware_canonical_keys`**| Boolean | `true` | Prefixes keys with types to block collision. |
+| **`output.graph_filename`** | String | `"graph.json"` | Network visualization target file. |
+| **`output.schema_filename`** | String | `"schema.json"` | Taxonomy mapping target file. |
+| **`output.export.enabled`** | Boolean | `true` | RDF translation activation flag. |
+| **`output.export.format`** | Choice | `"turtle"` | RDF encoding syntax (`"turtle"` or `"rdfxml"`). |
+| **`output.export.base_uri`** | String | `"http://example.org/ontology"`| Global RDF ontology target namespace. |
+| **`output.export.min_property_frequency`**| Integer | `4` | Ignore properties seen fewer than N times. |
+
+---
+
+### 8. Naming Conventions (`naming_conventions`)
+
+| Parameter | Type / Format | Default | Description / Purpose |
+|---|---|---|---|
+| **`naming_conventions.enabled`** | Boolean | `true` | Active normalization enforcement. |
+| **`naming_conventions.entity_type_casing`**| Choice | `"UpperCamelCase"` | Class casing (e.g. `MedicalConcept`). |
+| **`naming_conventions.property_casing`** | Choice | `"lowerCamelCase"` | Attribute casing (e.g. `startDate`). |
+| **`naming_conventions.relationship_type_casing`**| Choice | `"lowerCamelCase"`| Relationship type casing. |
+| **`naming_conventions.entity_label_spelling_variant`**| Choice | `"UK"` | Language mapping preference. |
+| **`naming_conventions.entity_iri_spelling_variant`**| Choice | `"US"` | Global identifier format. |
+
+---
+
+### 9. Relationship Processing (`relationship_processing`)
+
+| Parameter | Type / Format | Default | Description / Purpose |
+|---|---|---|---|
+| **`relationship_processing.auto_create_missing_entities`** | Boolean | `true` | Automatically create missing nodes to avoid losing relations. |
+| **`relationship_processing.auto_created_entity_confidence`**| Float | `0.5` | Lower confidence factor assigned to implied nodes. |
+| **`relationship_processing.auto_created_entity_default_type`**| String | `"entity"` | Default class type for implied nodes. |
+
+---
+
+### 10. Web Research Settings (`research`)
+
+| Parameter | Type / Format | Default | Description / Purpose |
+|---|---|---|---|
+| **`research.max_fetches`** | Integer | `50` | Maximum pages gathered during exploration. |
+| **`research.allowed_domains`** | List | `[]` | Limit lookup to specific domain patterns. |
+| **`research.blocked_domains`** | List | `[]` | Blacklist specific sites. |
+| **`research.num_queries`** | Integer | `5` | Generated LLM queries count. |
+| **`research.results_per_query`** | Integer | `10` | Results returned from search engine per query. |
+| **`research.http_timeout`** | Float | `30.0` | Maximum wait for web response. |
+
+---
+
+### 11. Schema Evolution Settings (`schema_evolution`)
+
+| Parameter | Type / Format | Default | Description / Purpose |
+|---|---|---|---|
+| **`schema_evolution.type_similarity_threshold`**| Float | `0.75` | Distance score allowed before merging classes. |
+| **`schema_evolution.default_entity_type`**| String | `"entity"` | Fallback type when missing. |
+| **`schema_evolution.initial_version`** | String | `"1.0"` | Baseline version. |
+| **`schema_evolution.version_increment`** | Choice | `"patch"` | Version progression: `"major"`, `"minor"`, `"patch"`. |
+
+---
+
+### 12. Source Grounding Settings (`source_grounding`)
+
+| Parameter | Type / Format | Default | Description / Purpose |
+|---|---|---|---|
+| **`source_grounding.enabled`** | Boolean | `true` | Maps data points back to source files. |
+| **`source_grounding.source_property_name`**| String | `"sourceUrls"` | Metadata key holding origin paths. |
+| **`source_grounding.merge_sources_on_deduplication`**| Boolean | `true` | Combines sources when merging duplicate terms. |
+
+---
+
+### 13. Text Processing Settings (`text_processing`)
+
+| Parameter | Type / Format | Default | Description / Purpose |
+|---|---|---|---|
+| **`text_processing.chunking.chunk_size`**| Integer | `2500` | Size in characters of chunks. |
+| **`text_processing.chunking.chunk_overlap`**| Integer | `250` | Character overlap. |
+| **`text_processing.chunking.min_chunk_size`**| Integer | `100` | Rejects tiny fragment chunks. |
+| **`text_processing.normalization.casing`**| Choice | `"lowercase"` | Target normalization casing. |
+| **`text_processing.normalization.punctuation_handling`**| Choice | `"remove"` | Casing/punctuation handler strategy. |
+
+---
+
+### 14. Performance & Feature Flags (`performance`, `features`)
+
+| Parameter | Type / Format | Default | Description / Purpose |
+|---|---|---|---|
+| **`performance.llm_cache_enabled`** | Boolean | `true` | Cache LLM text generation calls locally. |
+| **`performance.embedding_cache_enabled`**| Boolean | `true` | Cache embedding calculation responses. |
+| **`performance.max_cache_size_mb`** | Integer | `500` | Storage cache memory cap. |
+| **`features.schema_evolution`** | Boolean | `true` | Allow taxonomy discovery. |
+| **`features.incremental_updates`** | Boolean | `true` | Runs comparison on existing artifacts. |
+| **`features.conflict_resolution`** | Boolean | `true` | Resolve conflicts during merges. |
+| **`features.cross_session_deduplication`**| Boolean | `true` | Deduplicates terms across previous jobs. |
+| **`parallel_files`** | Integer | `1` | Number of files processed in parallel. |
+| **`batch_api_enabled`** | Boolean | `false` | Enable batch LLM request API. |
+| **`term_extraction.enabled`** | Boolean | `false` | Enable intermediate terminology phase. |
+| **`upper_ontology_enabled`** | Boolean | `true` | Enforces structural hierarchy consistency. |
+
+---
 
 ### Step 5: Submit the Generation Job
 Click the green **Create Ontology** button at the bottom of the page.
