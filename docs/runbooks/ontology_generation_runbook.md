@@ -23,6 +23,8 @@ Follow these steps to configure and trigger an ontology generation run:
 Navigate to the **Create Ontology** page in your web browser:
 Link: **[https://govuk-ai-accelerator-app.integration.publishing.service.gov.uk/ontology/create](https://govuk-ai-accelerator-app.integration.publishing.service.gov.uk/ontology/create)**
 
+![Ontology Generator Homepage](images/ontology_generator_homepage.png)
+
 ### Step 2: Choose Your Domain
 Select the domain you want to process from the dropdown list.
 - Only domains that have already been created and ingested successfully will appear in this list. If you do not see your domain, complete the domain ingestion process first.
@@ -270,6 +272,8 @@ Below is the complete, parameter-by-parameter reference guide to all settings av
 Click the green **Create Ontology** button at the bottom of the page.
 - Once submitted, you will receive a **Job ID** and a confirmation screen.
 
+![Ontology Generation Started](images/ontology_generation_started.png)
+
 ---
 
 ## Monitoring and Reviewing Generated Ontologies
@@ -291,7 +295,12 @@ Look for your domain name and Job ID in the dashboard. Jobs progress through the
 ### Step 3: Access Generated Artifacts
 Click on a completed job to expand its details and download the output files:
 
+![Job Details - Ontology Files](images/job_details_ontology_files.png)
+
+![Job Details - Reports](images/job_details_reports.png)
+
 | Artifact Name | Description | Recommended Action |
+
 |---|---|---|
 | **`ontology.ttl`** | The raw ontology file formatted in standard RDF Turtle syntax. | Download to import into external ontology editors (e.g., Protégé). |
 | **`graph.json`** | Visual representation of the ontology network. | Used by the interactive visualizer. |
