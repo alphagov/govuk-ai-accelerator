@@ -1,77 +1,65 @@
-# Modularisation Recommendations
+# Recommendations for splitting up the generator
 
 ## In a nutshell
 
-The ontology generator reads GOV.UK pages and turns them into a structured map of
-concepts: an *ontology*, also called a *knowledge graph*. Today it does the whole
-job in one big step. That makes it risky to change, because adjusting one thing
-can break several others at once.
+The generator reads GOV.UK pages and builds a map of the main terms and how they
+relate to each other. That map is the ontology, also called the knowledge graph.
 
-These recommendations are about splitting that one big step into smaller steps you
-can improve and check one at a time, with a person reviewing each step. The data
-science experiments tried exactly this and got better, more reviewable results
-than the all-in-one approach. That is the case for doing the work.
+At the moment it does too much in one go. One small prompt or code change can
+alter the schema, graph, ontology file, and the views built from them all at
+once.
 
-Treat this as a map for the next team, not a delivery plan. It shows where the
-safe boundaries are, what to protect, and where to start.
+The recommendation is to split the generator into smaller steps. Each step should
+be easy to test, review, and improve on its own. The Data Science Repo tried this
+approach and found the outputs easier to review than the current all-in-one run.
 
-## Where to start
-
-The heart of the work is recommendation 1: modularise the generator one step at a
-time. Two moves inside it matter most. First, protect the shared files the repos
-pass between each other, so a change cannot quietly break another team. Then take
-the next step in the pipeline (term enrichment), guided by the Data Science Repo
-and the IA (Information Architect) reviews. Keeping it safe is the job of the test
-harness and the quality gates (recommendations 2 and 5); the rest is tooling and
-model choices to pick up as they pay off.
+This is not a delivery plan. It is a handover note for the next team: what to
+protect, where to start, and what to check before changing the generator.
 
 ## The repos involved
 
-Five repositories touch this work. Each has one job.
+Five repositories touch this work. Each has a specific job.
 
 | Area | Repository | What it does |
 | --- | --- | --- |
-| Workflow | [`alphagov/govuk-ai-accelerator`](https://github.com/alphagov/govuk-ai-accelerator) | The web app: ingests pages, runs jobs, tracks them, and lets you browse and compare outputs. |
-| Generator | [`alphagov/govuk-ai-accelerator-tw-accelerator`](https://github.com/alphagov/govuk-ai-accelerator-tw-accelerator) | The engine (`taxonomy-ontology-accelerator`): turns page content into the ontology. |
-| Ontology Validator | [`alphagov/govuk-ai-accelerator-generator-e2e-testing-framework`](https://github.com/alphagov/govuk-ai-accelerator-generator-e2e-testing-framework) | The rule checker for the generated ontology file (`ontology.ttl`, written in the Turtle text format): naming, spelling, and golden-schema checks. The team also calls this the test harness. |
-| Data Science Repo | [`alphagov/govuk-ai-accelerator-tooling`](https://github.com/alphagov/govuk-ai-accelerator-tooling) | The research bench: experiments, ground-truth data, and tools to compare outputs. |
-| Content Workflow | [`alphagov/govuk-ai-graph-tools`](https://github.com/alphagov/govuk-ai-graph-tools) | The downstream tool: turns the graph into views and spots duplicates and outliers. |
+| Workflow | [`alphagov/govuk-ai-accelerator`](https://github.com/alphagov/govuk-ai-accelerator) | The web app. It ingests pages, runs jobs, tracks them, and lets users browse and compare outputs. |
+| Generator | [`alphagov/govuk-ai-accelerator-tw-accelerator`](https://github.com/alphagov/govuk-ai-accelerator-tw-accelerator) | The engine. It turns page content into the ontology. |
+| Ontology Validator | [`alphagov/govuk-ai-accelerator-generator-e2e-testing-framework`](https://github.com/alphagov/govuk-ai-accelerator-generator-e2e-testing-framework) | Checks the final ontology file for naming, spelling, and expected structure. The team also calls this the test harness. |
+| Data Science Repo | [`alphagov/govuk-ai-accelerator-tooling`](https://github.com/alphagov/govuk-ai-accelerator-tooling) | Experiments, reference examples, and tools to compare outputs. |
+| Content Workflow | [`alphagov/govuk-ai-graph-tools`](https://github.com/alphagov/govuk-ai-graph-tools) | Turns the graph into views and spots duplicates and outliers. |
 
-For the full technical picture, including a lifecycle diagram and a change-impact
-guide, see the cross-repo integration document,
+For the full technical picture, see
 [`docs/architecture/cross-repo-integration.md`](docs/architecture/cross-repo-integration.md).
-This document only summarises it.
+This file is the shorter recommendations version.
 
 ## How a run works today
 
-A normal run flows like this:
+A normal run works like this:
 
 1. [Workflow](https://github.com/alphagov/govuk-ai-accelerator) takes a list of GOV.UK URLs, cleans the content, and stores it.
 2. Workflow queues a generation job.
 3. Workflow calls the [Generator](https://github.com/alphagov/govuk-ai-accelerator-tw-accelerator), which it installs as a Python package.
-4. The Generator produces files: `schema.json`, `graph.json`, `ontology.ttl`, metrics, logs, and config.
-5. Workflow shows the job status and lets you download and compare runs.
-6. The [Ontology Validator](https://github.com/alphagov/govuk-ai-accelerator-generator-e2e-testing-framework) can check the `ontology.ttl`.
+4. The Generator writes `schema.json`, `graph.json`, `ontology.ttl`, metrics, logs, and config.
+5. Workflow shows the job status and lets users download and compare runs.
+6. The [Ontology Validator](https://github.com/alphagov/govuk-ai-accelerator-generator-e2e-testing-framework) can check `ontology.ttl`.
 7. [Content Workflow](https://github.com/alphagov/govuk-ai-graph-tools) turns `graph.json` into graph and outlier views.
-8. The [Data Science Repo](https://github.com/alphagov/govuk-ai-accelerator-tooling) provides the experiments and ground truth to compare against.
+8. The [Data Science Repo](https://github.com/alphagov/govuk-ai-accelerator-tooling) provides experiments and reference examples to compare against.
 
-The point to take away: this is not just an internal tidy-up of one codebase. The
-shared files travel between several repos, so a change in the Generator can reach
-all of them.
+The important point is that the files move between repos. A change in the
+Generator can affect the Workflow, the validator, the Data Science Repo, and
+Content Workflow.
 
-Under the bonnet, the Generator does every step from two prompts: a default prompt
-with the instructions, and a domain prompt that adds subject knowledge. For a
-large set of pages it splits the text into smaller pieces it can handle (called
-chunks), runs them through the model in parallel, then merges the overlapping
-results by matching them on meaning (*semantic matching*). It uses one model to
-generate and another to match, and both can be swapped. (Today those are Claude
-Sonnet 4.6 and Cohere Embed V3 multilingual, both on Amazon Bedrock.)
+Inside the Generator, two prompts tell the model what to do: one general prompt
+and one prompt with subject-specific context. For large page sets, the Generator
+splits the text into chunks, runs them through the model, then joins results that
+mean the same thing. Today it uses Claude Sonnet 4.6 for generation and Cohere
+Embed V3 multilingual for matching, both on Amazon Bedrock.
 
-## The pipeline inside the generator
+## Split graph building into clear stages
 
-The Generator builds the ontology in a sequence of steps. Today they run as one
-block; the recommendations are about splitting them up so each can be improved on
-its own. Only the first step is built so far.
+Think of the generator as a set of stages. Today most of those stages run as one
+block. The aim is to separate them so each stage can be checked before the next
+one starts. Only the first stage is built so far.
 
 ```mermaid
 flowchart TD
@@ -89,176 +77,159 @@ flowchart TD
 ```
 
 - **Green** is built: term extraction runs today.
-- **Yellow** was tested in the experiments (enrichment and typing), so there is
-  ground truth to compare a new version against.
-- **Grey** has no experiments yet; isolating these will mean building fresh ground
-  truth first.
+- **Yellow** has been tested in experiments, so there is something to compare
+  against.
+- **Grey** has not been tested yet. Those stages will need fresh examples before
+  they can be judged properly.
 
-Following a single word through the steps: *"passport"* is pulled out by **term
-extraction**, grouped with "travel document" by **enrichment**, labelled a
-`Document` by **typing**, slotted under broader classes by **hierarchy**, then
-linked to related terms by the **relationship** steps.
+For example, "passport" is found by **term extraction**, grouped with "travel
+document" by **enrichment**, labelled as a `Document` by **typing**, put under
+broader classes by **hierarchy**, then linked to related terms by the
+**relationship** stages.
 
-## The shared files that must not break
+## Files other tools rely on
 
-These files pass between repos, so treat them as contracts: their names, shapes,
-and meanings are promises other teams rely on.
+These files are used outside the Generator. If their names, structure, or meaning
+change without warning, another repo can break.
 
 | File | Made by | Used by | Why it matters |
 | --- | --- | --- | --- |
-| `schema.json` | Generator | Workflow, reviewers, analysis tools | Defines the entity and relationship types. |
-| `graph.json` | Generator | Workflow, Content Workflow | The main graph. Content Workflow depends on its entities, aliases, source files, and relationships. |
-| `ontology.ttl` | Generator | Ontology Validator, Workflow harness, reviewers | The main ontology file (in the RDF/OWL standards), used for automated checks. |
-| `owl_ontology_metrics.csv` | Generator and Workflow harness | Workflow history and deployment review | Flags regressions as you modularise. |
-| `regression_report.json` | Workflow harness | Deployment and review | Records how a run compares to the accepted baseline. |
-| `terms.raw.jsonl` | Built term-extraction stage | Generator continuation, reviewers, Data Science Repo | The reviewable output of term extraction. |
-| `graphNode.json` | Content Workflow | Content Workflow frontend | A view built downstream, separate from the Generator's `graph.json`. |
+| `schema.json` | Generator | Workflow, reviewers, analysis tools | Lists the types of things and relationships in the graph. |
+| `graph.json` | Generator | Workflow, Content Workflow | The main graph used by the app and other tools. |
+| `ontology.ttl` | Generator | Ontology Validator, Workflow harness, reviewers | The final ontology file used for automated checks. |
+| `owl_ontology_metrics.csv` | Generator and Workflow harness | Workflow history and deployment review | Shows whether a run has got better or worse. |
+| `regression_report.json` | Workflow harness | Deployment and review | Compares a new run with the accepted baseline. |
+| `terms.raw.jsonl` | Built term-extraction stage | Generator continuation, reviewers, Data Science Repo | The terms found in the first stage, ready for review. |
+| `graphNode.json` | Content Workflow | Content Workflow frontend | A view built from the graph. |
 
 ## Recommendations
 
-### 1. Modularise the generator, step by step
+### 1. Split up the generator one step at a time
 
 *Split the work so that when something breaks, you know which step did it.*
 
-The generator is where almost all the work happens, and where one change ripples
-everywhere: alter a single prompt and the schema, the graph, the Turtle file, and
-the views built on them can all shift at once. The other repos each have one clear
-job; the generator is the tangled one, so it is the place to focus. Do not rewrite
-it in one go. Take one step (see the pipeline diagram above), write down exactly
-what goes in and what comes out, compare it against the current behaviour, and only
-then move on. That turns "something broke somewhere" into "this step broke", which
-is the difference between a fix that takes an afternoon and one that takes a week.
+The generator is the complicated part. The other repos have clearer jobs. One
+generator change can affect the schema, graph, ontology file, metrics, and views
+built from the graph.
 
-Before you change anything, lock down the shared files the generator produces.
-Write down and test the contract for each one, its name, shape, and meaning, so a
-change cannot silently break another team downstream.
+Do not rewrite it in one go. Take one stage at a time. For each stage, write down
+what goes in, what comes out, and how the new output compares with the current
+one. That turns "something broke somewhere" into "this stage changed the output".
 
-With the contracts in place, the question is which step to take, and one is already
-done: term extraction is built. It runs as a step configured through `config.yaml`
-and switched on by a feature flag, and produces `terms.raw.jsonl` for review. Let
-the evidence decide the next one, not just the default order. The Data Science
-Repo's ground truth shows which step can be measured cleanly, and the IA reviews
-show whether the last step's output is good enough to build on. The default order
-puts term enrichment next, and the earliest steps are the ones with evidence to
-compare against: enrichment and typing were tested, while the later steps need
-fresh ground truth first. Even so, take the step the evidence actually points to.
+Before changing the stages, protect the files other repos use. For each file,
+document and test its name, structure, and meaning. A change should not silently
+break another repo.
 
-For each step, be clear about three things: what goes in, what comes out, and how
-you will measure quality. Run the new version on the same pages as before and put
-it through every quality gate in recommendation 5, not just the generator's own
-tests. Add a person reviewing the result, because the experiments found that human
-review is what makes the step-by-step approach hold up.
+Term extraction is already split out. It is configured through `config.yaml`, can
+be turned on or off with a feature flag, and writes `terms.raw.jsonl` for review.
 
-Put each new step behind its own feature flag, the way term extraction already is,
-and turn them on one at a time so you can roll a step out or back without
-disturbing the others. Keep the old and new versions side by side behind that flag
-just long enough to trust the new one, then delete the old path, otherwise the
-flags pile up into a maintenance headache.
+The next stage should be chosen using evidence, not just the order in the
+diagram. Term enrichment is a good candidate because the Data Science Repo has
+examples to compare against for enrichment and typing. The later stages need new
+examples first. IA review should also decide whether the previous stage is good
+enough to build on.
 
-*Example: when you split out the "typing" step, run it on the same pages as
-before. If a passport used to come out as a `Document` and now comes out as a
-`Person`, the step-by-step setup tells you straight away which step to look at.*
+For each new step, be clear about three things:
 
-### 2. Evolve the Ontology Validator (a.k.a. Test Harness) alongside the generator
+1. what goes in;
+2. what comes out;
+3. how quality will be measured.
 
-*The safety checks only protect you if they keep up with the generator as it
-changes.*
+Run the new stage on the same pages as the current version and use the quality
+signals in recommendation 5, not only the generator's own tests. Keep a person
+reviewing the output. The experiments showed that this is what makes the
+step-by-step approach useful.
 
-Recommendation 5 runs the Ontology Validator as one of its gates, and the Workflow
-harness separately checks each run against an accepted baseline. This is the other
-half: those checks only hold up while they keep pace with the Generator. As each
-step is modularised, what the Generator produces shifts, and a frozen set of checks
-fails in one of two ways.
+Put each stage behind its own feature flag, as term extraction already is. Turn
+stages on one at a time so they can be rolled out or rolled back without changing
+the rest of the process. Keep the old and new paths side by side only long enough
+to trust the new one, then remove the old path.
 
-It goes blind, letting a new kind of error through because no rule covers the new
-step's output. Or it cries wolf, tripping on output that is legitimately different,
-until the team starts ignoring failures and switching checks off, which is worse
-than having no checks at all.
+Example: when the typing step is split out, run it on the same pages as before.
+If `passport` used to be typed as a `Document` and now comes out as a `Person`,
+the split setup shows where to look.
 
-So treat the rules, the golden references, and the accepted baseline as code that
-ships with each Generator change, not a fixed backstop. When a step changes what
-`ontology.ttl` looks like or means, update the rules in the same change. When the
-output legitimately changes, set a new golden reference or baseline on purpose and
-record why, so it is a reviewed decision and not a silent overwrite. Read every
-failure as a question: did the Generator get worse, or has the check fallen behind?
-Grow the checks as each step is isolated (a new typing step arrives with typing
-checks of its own), and version them alongside the shared-file contracts in
-recommendation 1.
+### 2. Keep the validator in sync with the generator
 
-### 3. Build human-in-the-loop tooling for the intermediate outputs
+*The checks only protect us if they keep up with the generator.*
 
-*Turn the pipeline from a black box into something a person can see into, correct,
-and compare, step by step.*
+The Ontology Validator checks the final ontology file. The Workflow harness also
+compares each run with an accepted baseline. These checks need to change when the
+generator changes.
 
-The steps in between (extracted terms, enriched clusters, types) are just files
-today, not something a reviewer can easily read, fix, or compare. Three pieces of
-tooling would let an Information Architect steer the pipeline:
+If the checks stand still while the generator changes, two things can happen.
+They can miss new errors because no rule covers the new output. Or they can fail
+on output that is different for a good reason, until the team starts ignoring the
+checks.
 
-- **Resume from any step.** A run is all-or-nothing today: if step 5 goes wrong,
-  you start again at step 1. If each step saves its output in a form you can load
-  back in, you can pick up from any point instead of the top. This builds on the
-  stable intermediate files in recommendation 1.
-- **A screen to review and correct each step's output.** A simple view that shows
-  each step's output and lets a reviewer fix it. Combined with resuming, an edit
-  can pick up from that step onward instead of restarting the whole run.
-- **A/B-compare two runs, step by step.** When you change a step, the fastest way
-  to judge it is to put the new run next to the old one, with differences
-  highlighted at the terms, the types, and the final ontology. It turns "is this
-  better?" into something you can answer by looking, and gives the Data Science
-  Repo and the IAs a shared place to make the same call as the quality gates in
-  recommendation 5.
+Treat the rules and accepted baseline as part of each generator change. When a
+stage changes what `ontology.ttl` looks like or means, update the checks in the
+same change. When the output changes on purpose, approve a new baseline and
+record why.
 
-### 4. Automate setting the harness baseline
+Read every failure as a question: did the generator get worse, or does the check
+need updating? As each stage is split out, add checks for it. A new typing stage
+should come with typing checks of its own.
 
-*Make accepting a new "known-good" run a deliberate button, not a manual file
-edit.*
+### 3. Give reviewers a way to check each stage
 
-The harness compares each run against an accepted baseline. Today, promoting a new
-baseline means editing files by hand, which is easy to get wrong and hard to audit.
-A small automation (review the candidate, then promote it with one action that
-records who, when, and why) makes baseline changes deliberate and traceable. This
-supports recommendation 2, where moving the baseline on purpose is the whole point.
+*Make the process something a person can inspect, correct, and compare.*
 
-### 5. Use the surrounding repos as quality gates
+The outputs from each stage, such as extracted terms, grouped terms, and types,
+are just files today. They are not easy for an IA to read, fix, or compare.
 
-*Each surrounding repo catches a different kind of problem; run them all before
-you ship a change.*
+Three small tools would make the process easier to steer:
 
-Each surrounding repo guards a different kind of quality. Run all three before
-accepting a change.
+- **Resume from any step.** A run is all-or-nothing today. If step 5 goes wrong,
+  you start again at step 1. If each step saves an output that can be loaded back
+  in, the team can restart from that point instead of rerunning everything.
+- **Review and correct each step's output.** Add a simple screen for each step
+  where a reviewer can make corrections. With resume support, the run can then
+  continue from the corrected step.
+- **Compare two runs side by side.** When a stage changes, put the new run next
+  to the old one and highlight differences at the term, type, and final ontology
+  levels. This gives the Data Science Repo and IAs a shared way to make the same
+  judgement as the quality signals in recommendation 5.
 
-**The Ontology Validator, for the Turtle file.** Leave it doing what it does well:
-checking the generated Turtle for naming, spelling, and golden-schema rules. Being
-small and focused is a strength, not a gap. For now, run it on candidate
-`ontology.ttl` files whenever a Generator step changes, and treat a failure as a
-prompt to investigate, not automatic proof that something is broken. Its job can
-grow later (see recommendation 2).
+### 4. Make it easy to approve a new baseline
 
-**Content Workflow, for whether the graph is still useful.** After a meaningful
-change, run real `graph.json` outputs through it. A change can keep the JSON
-perfectly valid while making the graph far less useful to explore, and the only
-way to catch that is to run it. Check that `graphNode.json` still builds and that
-aliases and source files still link back to the right GOV.UK content.
+*Make accepting a new known-good run a deliberate action, not a manual file edit.*
 
-**The Data Science Repo, for whether the meaning is right.** Structural checks are
-not enough to tell you an ontology is good. Things like term completeness, false
-positives, and whether the terms are genuinely useful need comparison against
-ground truth and human judgement, and that evidence lives here. Reuse its method:
-hand-model a small slice of the content as ground truth, small enough that the
-model can read it all at once so it does not need splitting up, then measure output
-against it. Record which prompt and model produced each comparison, because both
-can be swapped and that record is the only thing that keeps the numbers repeatable.
+The harness compares each run with an accepted previous run, called the baseline.
+Today, promoting a new baseline means editing files by hand. That is easy to get
+wrong and hard to audit.
+
+Add a small promotion flow: review the candidate run, promote it with one action,
+and record who promoted it, when, and why. This supports recommendation 2, where
+changing the baseline deliberately is the important bit.
+
+### 5. Use the other repos to assess quality
+
+*The other repos give different views of whether the generator output is good.*
+
+The generator's own tests are not enough to tell whether the output is useful.
+The other repos can help assess quality from different angles: whether the final
+ontology file is valid, and whether the graph still works for content tooling.
+
+**The Ontology Validator, for the final ontology file.** Use it to check naming,
+spelling, and structure in `ontology.ttl`. A failure is a prompt to investigate:
+the generator may be wrong, or the validator may need updating.
+
+**Content Workflow, for whether the graph is still useful.** Run real
+`graph.json` outputs through it when you need to understand the effect of a
+change. A graph can be valid JSON and still be much less useful to explore. Check
+that `graphNode.json` still builds, and that aliases and source files still link
+back to the right GOV.UK content.
 
 ### 6. Stay open to newer, more capable models
 
-*A better model can lift every step at once, so re-check the model choice as the
-field moves.*
+*A better model can improve every step, but it still needs to earn its place.*
 
-The generator's models are configurable: one model generates, another matches, and
-recommendation 5 already records which. Because that same pair feeds every step,
-one upgrade, evaluated once, can raise the whole pipeline for the cost of a single
-re-evaluation. At the time of writing, Claude Sonnet 5 had just been released,
-while the generator still runs on Sonnet 4.6. When a stronger model ships, run it
-against the same ground truth and the same checks (recommendations 2 and 5) before
-adopting it. Treat a model upgrade like any other change: evidence first, then make
-it the default.
+The generator's models are configurable. One model creates the ontology content
+and another matches similar terms. Because the same model choices feed every
+stage, one well-tested upgrade can improve the whole process.
+
+At the time of writing, the generator uses Claude Sonnet 4.6 and Claude Sonnet 5
+has just been released. Treat a model upgrade like any other generator change:
+run it against the same reference examples and the same checks in recommendations
+2 and 5 before making it the default. Evidence first, then switch.
