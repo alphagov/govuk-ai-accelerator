@@ -13,7 +13,7 @@ from scripts.ingestion.commands.utils import (
 )
 
 _EXTENSION_BY_FORMAT = {"text": ".txt", "html": ".html", "markdown": ".md"}
-_CONTENT_CANDIDATE_IDS = ("guide-contents", "content")
+_CONTENT_CANDIDATE_IDS = ("guide-contents", "content", "main-content")
 
 
 def _html_to_output(html_bytes: bytes, output_format: str) -> str | None:

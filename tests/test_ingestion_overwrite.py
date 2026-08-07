@@ -60,6 +60,12 @@ HTML_WITH_CONTENT_ONLY = (
     b'</main></body></html>'
 )
 
+HTML_WITH_MAIN_CONTENT_ONLY = (
+    b'<html><body><main id="main-content">'
+    b'<h1>Software Developer</h1><p>Role levels</p>'
+    b'</main></body></html>'
+)
+
 HTML_WITH_NEITHER = (
     b'<html><body><h1>Orphan</h1><p>No known id on wrappers.</p></body></html>'
 )
@@ -139,6 +145,23 @@ def test_download_falls_back_to_content_id_when_guide_contents_missing(monkeypat
     assert fs.exists(md_path)
     with fs.open(md_path, "r", encoding="utf-8") as f:
         assert "Visa info." in f.read()
+
+def test_download_falls_back_to_main_content_id_when_guide_contents_and_content_missing(monkeypatch):
+    config = _make_config(
+        monkeypatch,
+        links=["https://ddat-capability-framework.service.gov.uk/role/software-developer"],
+    )
+    with patch(
+        "scripts.ingestion.commands.download_content.requests.get",
+        return_value=_ok_response(HTML_WITH_MAIN_CONTENT_ONLY),
+    ):
+        download_content(config)
+
+    fs = fsspec.filesystem("memory")
+    md_path = "/test-domain/input/role-software-developer.md"
+    assert fs.exists(md_path)
+    with fs.open(md_path, "r", encoding="utf-8") as f:
+        assert "Role levels" in f.read()
 
 
 def test_download_skips_page_with_no_extractable_content(monkeypatch):
