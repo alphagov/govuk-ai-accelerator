@@ -177,7 +177,7 @@ s3://<bucket_name>/<domain_name>/
 When a background ingestion job is running, it executes the following steps:
 1. **Load Configuration (`load_config`):** Config parameters are merged with default settings derived from the domain name. S3 paths are mapped for `output_dir`, `html_dir`, and `log_path`.
 2. **Download Content (`download_content`):** 
-   - Core content is parsed and extracted using `BeautifulSoup` targeting elements matching IDs `#guide-contents` or `#content`.
+   - Core content is parsed and extracted using `BeautifulSoup` targeting elements matching IDs `#guide-contents`, `#content` or `#main-content`.
    - Noise elements (`script`, `style`, `nav`, `aside`, etc.) are decomposed.
    - HTML is converted to Markdown via `markdownify` and saved to S3.
    - A mapping of outputs to source URLs is written to S3 at `s3://<bucket>/<domain>/input/sources.json`.
