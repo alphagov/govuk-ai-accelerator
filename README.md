@@ -37,8 +37,6 @@ pip install uv
 ```bash
 uv init --python 3.13
 uv python pin 3.13
-uv add -r requirements.txt
-uv add "git+https://x-access-token:<GITHUB_TOKEN>@github.com/alphagov/govuk-ai-accelerator-tw-accelerator.git"
 ```
 
 The default dependency set now includes `faiss-cpu`, so semantic deduplication can use FAISS when the configured threshold is reached. If you already have an existing virtualenv, run `uv sync` after pulling these changes.
