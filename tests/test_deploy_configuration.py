@@ -34,11 +34,11 @@ def test_dockerfile_exposes_ontology_harness_build_args_as_runtime_env():
 
     assert "ARG ONTOLOGY_HARNESS_ENABLED=false" in dockerfile
     assert 'ARG ONTOLOGY_HARNESS_DEPLOYMENT_ID=""' in dockerfile
-    assert "ARG GENERATOR_GIT_REF=main" in dockerfile
     assert "ENV ONTOLOGY_HARNESS_ENABLED=${ONTOLOGY_HARNESS_ENABLED}" in dockerfile
     assert "ENV ONTOLOGY_HARNESS_DEPLOYMENT_ID=${ONTOLOGY_HARNESS_DEPLOYMENT_ID}" in dockerfile
-    assert (
-        'uv pip install --system "git+https://github.com/alphagov/'
-        'govuk-ai-accelerator-tw-accelerator@${GENERATOR_GIT_REF}"'
-        in dockerfile
-    )
+
+
+def test_dockerfile_installs_built_whl_file():
+    dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+
+    assert ('COPY  lib/taxonomy_ontology_accelerator-*-py3-none-any.whl ./lib/' in dockerfile)
