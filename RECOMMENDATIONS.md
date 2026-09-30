@@ -20,13 +20,13 @@ protect, where to start, and what to check before changing the generator.
 
 Five repositories touch this work. Each has a specific job.
 
-| Area | Repository | What it does |
-| --- | --- | --- |
-| Workflow | [`alphagov/govuk-ai-accelerator`](https://github.com/alphagov/govuk-ai-accelerator) | The web app. It ingests pages, runs jobs, tracks them, and lets users browse and compare outputs. |
-| Generator | [`alphagov/govuk-ai-accelerator-tw-accelerator`](https://github.com/alphagov/govuk-ai-accelerator-tw-accelerator) | The engine. It turns page content into the ontology. |
+| Area               | Repository                                                                                                                                          | What it does                                                                                                            |
+|--------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| Workflow           | [`alphagov/govuk-ai-accelerator`](https://github.com/alphagov/govuk-ai-accelerator)                                                                 | The web app. It ingests pages, runs jobs, tracks them, and lets users browse and compare outputs.                       |
+| Generator          | [`alphagov/govuk-ai-accelerator-tw-accelerator`](https://github.com/alphagov/govuk-ai-accelerator-tw-accelerator)                                   | The engine. It turns page content into the ontology.                                                                    |
 | Ontology Validator | [`alphagov/govuk-ai-accelerator-generator-e2e-testing-framework`](https://github.com/alphagov/govuk-ai-accelerator-generator-e2e-testing-framework) | Checks the final ontology file for naming, spelling, and expected structure. The team also calls this the test harness. |
-| Data Science Repo | [`alphagov/govuk-ai-accelerator-tooling`](https://github.com/alphagov/govuk-ai-accelerator-tooling) | Experiments, reference examples, and tools to compare outputs. |
-| Content Workflow | [`alphagov/govuk-ai-graph-tools`](https://github.com/alphagov/govuk-ai-graph-tools) | Turns the graph into views and spots duplicates and outliers. |
+| Data Science Repo  | [`alphagov/govuk-ai-accelerator-tooling`](https://github.com/alphagov/govuk-ai-accelerator-tooling)                                                 | Experiments, reference examples, and tools to compare outputs.                                                          |
+| Content Workflow   | [`alphagov/govuk-ai-graph-tools`](https://github.com/alphagov/govuk-ai-graph-tools)                                                                 | Turns the graph into views and spots duplicates and outliers.                                                           |
 
 For the full technical picture, see
 [`docs/architecture/cross-repo-integration.md`](docs/architecture/cross-repo-integration.md).
@@ -92,15 +92,15 @@ broader classes by **hierarchy**, then linked to related terms by the
 These files are used outside the Generator. If their names, structure, or meaning
 change without warning, another repo can break.
 
-| File | Made by | Used by | Why it matters |
-| --- | --- | --- | --- |
-| `schema.json` | Generator | Workflow, reviewers, analysis tools | Lists the types of things and relationships in the graph. |
-| `graph.json` | Generator | Workflow, Content Workflow | The main graph used by the app and other tools. |
-| `ontology.ttl` | Generator | Ontology Validator, Workflow harness, reviewers | The final ontology file used for automated checks. |
-| `owl_ontology_metrics.csv` | Generator and Workflow harness | Workflow history and deployment review | Shows whether a run has got better or worse. |
-| `regression_report.json` | Workflow harness | Deployment and review | Compares a new run with the accepted baseline. |
-| `terms.raw.jsonl` | Built term-extraction stage | Generator continuation, reviewers, Data Science Repo | The terms found in the first stage, ready for review. |
-| `graphNode.json` | Content Workflow | Content Workflow frontend | A view built from the graph. |
+| File                       | Made by                        | Used by                                              | Why it matters                                            |
+|----------------------------|--------------------------------|------------------------------------------------------|-----------------------------------------------------------|
+| `schema.json`              | Generator                      | Workflow, reviewers, analysis tools                  | Lists the types of things and relationships in the graph. |
+| `graph.json`               | Generator                      | Workflow, Content Workflow                           | The main graph used by the app and other tools.           |
+| `ontology.ttl`             | Generator                      | Ontology Validator, Workflow harness, reviewers      | The final ontology file used for automated checks.        |
+| `owl_ontology_metrics.csv` | Generator and Workflow harness | Workflow history and deployment review               | Shows whether a run has got better or worse.              |
+| `regression_report.json`   | Workflow harness               | Deployment and review                                | Compares a new run with the accepted baseline.            |
+| `terms.raw.jsonl`          | Built term-extraction stage    | Generator continuation, reviewers, Data Science Repo | The terms found in the first stage, ready for review.     |
+| `graphNode.json`           | Content Workflow               | Content Workflow frontend                            | A view built from the graph.                              |
 
 ## Recommendations
 

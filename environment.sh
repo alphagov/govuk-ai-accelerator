@@ -1,1 +1,0 @@
-export DATABASE_URL=postgresql://govuk_ai_accelerator_user@localhost:5432/govuk_ai_accelerator

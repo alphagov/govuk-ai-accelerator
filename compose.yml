@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgres:15
+    container_name: govuk-postgres-ai-accelerator
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: govuk_ai_accelerator_user
+      POSTGRES_DB: govuk_ai_accelerator
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "127.0.0.1:9432:5432"
+    volumes:
+      - govuk_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U govuk_ai_accelerator_user -d govuk_ai_accelerator"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      target: development
+      args:
+        GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+    container_name: ontology-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://govuk_ai_accelerator_user@db:5432/govuk_ai_accelerator
+      AWS_REGION: ${AWS_REGION:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+
+volumes:
+  govuk_pg_data:
