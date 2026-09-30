@@ -1,4 +1,4 @@
-FROM python:3.13-slim-bookworm AS base
+FROM python:3.13-slim-bookworm AS development
 
 ARG ONTOLOGY_HARNESS_ENABLED=false
 ARG ONTOLOGY_HARNESS_DEPLOYMENT_ID=""
@@ -36,5 +36,7 @@ COPY . .
 RUN uv sync --frozen
 
 EXPOSE 8080
+CMD ["uv", "run", "uvicorn", "govuk_ai_accelerator_app:create_asgi_app", "--factory", "--reload", "--host", "0.0.0.0", "--port", "3000"]
 
-CMD ["waitress-serve", "--host=0.0.0.0", "--port=3000", "--call", "govuk_ai_accelerator_app:create_app"]
+FROM development AS production
+CMD ["uv", "run", "waitress-serve", "--host=0.0.0.0", "--port=3000", "--call", "govuk_ai_accelerator_app:create_app"]
