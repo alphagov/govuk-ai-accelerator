@@ -13,7 +13,7 @@ dependencies = [
     "flask-migrate>=4.1.0",
     "flask-sqlalchemy==3.1.1",
     "humanize==4.15.0",
-    "psycopg2-binary==2.9.10",
+    "psycopg[binary]==3.2.7",
     "markdownify>=0.14.1",
     "pytest==8.3.4",
     "python-dotenv>=1.2.2",
@@ -27,4 +27,4 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-taxonomy-ontology-accelerator = { path = "../govuk-ai-accelerator-tw-accelerator/dist/taxonomy_ontology_accelerator-2.0.27-py3-none-any.whl" }
+taxonomy-ontology-accelerator = { path = "lib/taxonomy_ontology_accelerator-2.0.12-py3-none-any.whl" }
