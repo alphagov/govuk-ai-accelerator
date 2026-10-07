@@ -5,7 +5,7 @@ Running the app natively makes it far easier to attach debuggers etc to the Pyth
 
 ## Prerequisites
 
-- **Python 3.13** - managed via `uv`
+- **Python 3.14** - managed via `uv`
 - **uv** — Python package manager
 - **Docker** — for running Postgres or the app in a container
 - **AWS credentials** - available in the environment (for S3/Bedrock access)
@@ -23,7 +23,7 @@ pip install uv
 ## Install dependencies
 
 ```bash
-uv python pin 3.13
+uv python pin 3.14
 uv sync --frozen
 ```
 

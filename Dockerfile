@@ -1,4 +1,4 @@
-FROM python:3.13-slim-bookworm AS development
+FROM python:3.14-slim-bookworm AS development
 
 ARG ONTOLOGY_HARNESS_ENABLED=false
 ARG ONTOLOGY_HARNESS_DEPLOYMENT_ID=""
