@@ -28,3 +28,30 @@ dependencies = [
 
 [tool.uv.sources]
 taxonomy-ontology-accelerator = { path = "lib/taxonomy_ontology_accelerator-2.0.12-py3-none-any.whl" }
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.6.2",
+    "ruff>=0.16.10",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # Pyflakes
+    "I",  # isort (import sorting)
+    "B",  # flake8-bugbear
+]
+ignore = []
+exclude = [
+    "tests/**/*.py",       # Ignore all files in the tests directory. TODO: consider removing this once tests are fixed.
+    "migrations/**/*.py",  # Ignore all files in the migrations directory. TODO: consider removing this once migrations are fixed.
+]
+
+[tool.ruff.format]
+quote-style = "double"
