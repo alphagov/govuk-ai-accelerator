@@ -1,7 +1,9 @@
 import os
+
 import fsspec
 
-from scripts.ingestion.commands.utils import get_logger, IngestionConfig
+from scripts.ingestion.commands.utils import IngestionConfig, get_logger
+
 
 def clean_content(config: IngestionConfig):
     logger = get_logger()

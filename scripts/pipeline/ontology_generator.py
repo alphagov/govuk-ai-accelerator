@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-
 import asyncio
 import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
-from uuid import uuid4
 
-from fsspec import AbstractFileSystem
 import fsspec
+from fsspec import AbstractFileSystem
 from sqlalchemy import update
 from sqlalchemy.exc import OperationalError
 
 from scripts.pipeline.logging_config import log_step, logger
-from scripts.pipeline.utils import load_config_for_domain, PipelineConfig
+from scripts.pipeline.utils import PipelineConfig, load_config_for_domain
 
 if TYPE_CHECKING:
     from taxonomy_ontology_accelerator.ontology_engine.pipeline_builder import OntologyPipelineBuilder

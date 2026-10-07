@@ -1,15 +1,21 @@
-import os
-import fsspec
-import shutil
 import io
-from datetime import datetime, timezone
-from scripts.ingestion.commands.utils import load_config, get_logger
-from scripts.ingestion.commands import download_content, clean_content
+
+import fsspec
+
+from scripts.ingestion.commands import clean_content, download_content
+from scripts.ingestion.commands.utils import get_logger, load_config
 from scripts.pipeline.logging_config import logger
 
-def run_ingestion_background_task(config_path: str = None, config_content: str = None, links_list: list[str] = None, job_id: str = None, domain: str = None):
 
-    from govuk_ai_accelerator_app import db, ProcessingJob, create_flask_app
+def run_ingestion_background_task(
+        config_path: str = None,
+        config_content: str = None,
+        links_list: list[str] = None,
+        job_id: str = None,
+        domain: str = None
+):
+
+    from govuk_ai_accelerator_app import ProcessingJob, create_flask_app, db
 
     app = create_flask_app()
 
@@ -28,7 +34,12 @@ def run_ingestion_background_task(config_path: str = None, config_content: str =
 
         config_obj = None
         try:
-            config_obj = load_config(config_path=config_path, config_content=config_content, links_list=links_list, domain=domain)
+            config_obj = load_config(
+                config_path=config_path,
+                config_content=config_content,
+                links_list=links_list,
+                domain=domain
+            )
 
             log_buffer = io.StringIO()
             run_log = get_logger(stream=log_buffer)

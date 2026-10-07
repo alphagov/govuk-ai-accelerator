@@ -1,7 +1,7 @@
-"""Pipeline module initialization."""
-
+from scripts.pipeline.constants import *  # noqa
 from scripts.pipeline.logging_config import logger
-from scripts.pipeline.constants import * 
+
+"""Pipeline module initialization."""
 
 __all__ = [
     'logger',

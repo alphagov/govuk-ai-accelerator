@@ -4,7 +4,7 @@ import boto3
 import botocore
 from flask import render_template, request
 
-from src.web_browser.s3 import parse_responses, list_objects
+from src.web_browser.s3 import list_objects, parse_responses
 
 
 def index() -> str:
