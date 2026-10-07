@@ -243,7 +243,7 @@ Primary artifacts:
 
 | Area | Main dependencies |
 | --- | --- |
-| Workflow | Python 3.13, `uv`, Flask, Waitress, PostgreSQL, SQLAlchemy, AWS credentials, S3, `fsspec`. |
+| Workflow | Python 3.14, `uv`, Flask, Waitress, PostgreSQL, SQLAlchemy, AWS credentials, S3, `fsspec`. |
 | Generator | `taxonomy-ontology-accelerator`, LLM provider configuration, AWS Bedrock where configured, S3 or local filesystem storage. |
 | Workflow harness | Same Generator dependencies plus baseline manifest and S3 access to baseline/candidate `ontology.ttl` files. |
 | Ontology Validator | Python, `uv`, `rdflib`, OWL-RL inference, rule modules, optional golden `.ttl`. |
