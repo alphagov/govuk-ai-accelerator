@@ -31,6 +31,7 @@ taxonomy-ontology-accelerator = { path = "lib/taxonomy_ontology_accelerator-2.0.
 
 [dependency-groups]
 dev = [
+    "commitizen>=4.13.9",
     "pre-commit>=4.6.2",
     "ruff>=0.16.10",
 ]
@@ -55,3 +56,18 @@ exclude = [
 
 [tool.ruff.format]
 quote-style = "double"
+
+[tool.commitizen]
+name = "cz_customize"
+tag_format = "v$version"
+version_scheme = "semver"
+version_provider = "pep621"
+update_changelog_on_bump = true
+major_version_zero = true
+template = ".changelog.j2"
+
+[tool.commitizen.customize]
+commit_parser = "^(?P<change_type>feat|fix|refactor|docs|tests|chore|build)(\\((?P<scope>[^\\)]+)\\))?:\\s(?P<message>.*)$"
+changelog_pattern = "^(feat|fix|refactor|docs|tests|chore|build)"
+change_type_map = { "feat" = "Features", "fix" = "Bug Fixes", "refactor" = "Refactoring", "docs" = "Documentation", "tests" = "Tests", "chore" = "Chores", "build" = "Builds" }
+change_type_order = ["BREAKING CHANGE", "Features", "Bug Fixes", "Documentation", "Refactoring", "Tests", "Chores", "Builds"]

@@ -248,11 +248,11 @@ wheels = [
 
 [[package]]
 name = "argcomplete"
-version = "3.7.2"
+version = "3.6.3"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/87/6f/5a73f04007ca950701765949209f068da628bd11f9c2da287278ce91e0ee/argcomplete-3.7.2.tar.gz", hash = "sha256:aad8b69a0b9969edb62db0d1752354c0d50717b10e0cbb00e2a958381b9fc6b9", size = 74473, upload-time = "2026-08-06T04:53:21.662Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/38/61/0b9ae6399dd4a58d8c1b1dc5a27d6f2808023d0b5dd3104bb99f45a33ff6/argcomplete-3.6.3.tar.gz", hash = "sha256:62e8ed4fd6a45864acc8235409461b72c9a28ee785a2011cc5eb78318786c89c", size = 73754, upload-time = "2025-10-20T03:33:34.741Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/46/bd/551ee6af426af84ca33e02622be722925c196608e9127d731ef17c47f06e/argcomplete-3.7.2-py3-none-any.whl", hash = "sha256:6029205678bdd9c1c728a155f5f9ecf5812393f969eef58807641a2bc2aa5b19", size = 43294, upload-time = "2026-08-06T04:53:20.246Z" },
+    { url = "https://files.pythonhosted.org/packages/74/f5/9373290775639cb67a2fce7f629a1c240dce9f12fe927bc32b2736e16dfc/argcomplete-3.6.3-py3-none-any.whl", hash = "sha256:f5007b3a600ccac5d25bbce33089211dfd49eab4a7718da3f10e3082525a92ce", size = 43846, upload-time = "2025-10-20T03:33:33.021Z" },
 ]
 
 [[package]]
@@ -622,6 +622,29 @@ wheels = [
 ]
 
 [[package]]
+name = "commitizen"
+version = "4.13.9"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "argcomplete" },
+    { name = "charset-normalizer" },
+    { name = "colorama" },
+    { name = "decli" },
+    { name = "deprecated" },
+    { name = "jinja2" },
+    { name = "packaging" },
+    { name = "prompt-toolkit" },
+    { name = "pyyaml" },
+    { name = "questionary" },
+    { name = "termcolor" },
+    { name = "tomlkit" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a6/44/10f95e8178ab5a584298726a4a94ceb83a7f77e00741fec4680df05fedd5/commitizen-4.13.9.tar.gz", hash = "sha256:2b4567ed50555e10920e5bd804a6a4e2c42ec70bb74f14a83f2680fe9eaf9727", size = 64145, upload-time = "2026-02-25T02:40:05.326Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/28/22/9b14ee0f17f0aad219a2fb37a293a57b8324d9d195c6ef6807bcd0bf2055/commitizen-4.13.9-py3-none-any.whl", hash = "sha256:d2af3d6a83cacec9d5200e17768942c5de6266f93d932c955986c60c4285f2db", size = 85373, upload-time = "2026-02-25T02:40:03.83Z" },
+]
+
+[[package]]
 name = "cryptography"
 version = "50.0.2"
 source = { registry = "https://pypi.org/simple" }
@@ -709,6 +732,27 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/76/69/4f7962497d9a6e63337803feba4c7da24cdd80fc361ba2ae0436a150ea9f/dead-2.1.0.tar.gz", hash = "sha256:e2b53c1ade71fc4aadafa74237b034b622d0bd3d81811d336d64e67083439d76", size = 6516, upload-time = "2025-02-08T19:58:48.26Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/71/a2/a7b4945efa8df89f0a580b7a9dd2f06dd2ac45e6b55abbaf696577f432f9/dead-2.1.0-py2.py3-none-any.whl", hash = "sha256:cde897c473a384673b4541f8d5bab4947d6240e1c195737467fe6c646585cd44", size = 6758, upload-time = "2025-02-08T19:58:46.693Z" },
+]
+
+[[package]]
+name = "decli"
+version = "0.6.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/0c/59/d4ffff1dee2c8f6f2dd8f87010962e60f7b7847504d765c91ede5a466730/decli-0.6.3.tar.gz", hash = "sha256:87f9d39361adf7f16b9ca6e3b614badf7519da13092f2db3c80ca223c53c7656", size = 7564, upload-time = "2025-06-01T15:23:41.25Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d8/fa/ec878c28bc7f65b77e7e17af3522c9948a9711b9fa7fc4c5e3140a7e3578/decli-0.6.3-py3-none-any.whl", hash = "sha256:5152347c7bb8e3114ad65db719e5709b28d7f7f45bdb709f70167925e55640f3", size = 7989, upload-time = "2025-06-01T15:23:40.228Z" },
+]
+
+[[package]]
+name = "deprecated"
+version = "1.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "wrapt" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/49/85/12f0a49a7c4ffb70572b6c2ef13c90c88fd190debda93b23f026b25f9634/deprecated-1.3.1.tar.gz", hash = "sha256:b1b50e0ff0c1fddaa5708a2c6b0a6588bb09b892825ab2b214ac9ea9d92a5223", size = 2932523, upload-time = "2025-10-30T08:19:02.757Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/84/d0/205d54408c08b13550c733c4b85429e7ead111c7f0014309637425520a9a/deprecated-1.3.1-py2.py3-none-any.whl", hash = "sha256:597bfef186b6f60181535a29fbe44865ce137a5079f295b479886c82729d5f3f", size = 11298, upload-time = "2025-10-30T08:19:00.758Z" },
 ]
 
 [[package]]
@@ -1192,6 +1236,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "commitizen" },
     { name = "pre-commit" },
     { name = "ruff" },
 ]
@@ -1221,6 +1266,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "commitizen", specifier = ">=4.13.9" },
     { name = "pre-commit", specifier = ">=4.6.2" },
     { name = "ruff", specifier = ">=0.16.10" },
 ]
@@ -3497,6 +3543,15 @@ wheels = [
 ]
 
 [[package]]
+name = "termcolor"
+version = "3.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/46/79/cf31d7a93a8fdc6aa0fbb665be84426a8c5a557d9240b6239e9e11e35fc5/termcolor-3.3.0.tar.gz", hash = "sha256:348871ca648ec6a9a983a13ab626c0acce02f515b9e1983332b17af7979521c5", size = 14434, upload-time = "2025-12-29T12:55:21.882Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/33/d1/8bb87d21e9aeb323cc03034f5eaf2c8f69841e40e4853c2627edf8111ed3/termcolor-3.3.0-py3-none-any.whl", hash = "sha256:cf642efadaf0a8ebbbf4bc7a31cec2f9b5f21a9f726f4ccbb08192c9c26f43a5", size = 7734, upload-time = "2025-12-29T12:55:20.718Z" },
+]
+
+[[package]]
 name = "tiktoken"
 version = "0.14.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3561,6 +3616,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/f3/1f/c79a01f671a49728ebb0b61f7ff9ea45663b66cab40bc0858e9859b25c16/tokenizers-0.23.2-cp310-abi3-win32.whl", hash = "sha256:debf978920d93ba9c219bd67cc4bbfaf912c9039e41e7a28b91ec15e3728c95a", size = 2592809, upload-time = "2026-09-03T08:55:48.02Z" },
     { url = "https://files.pythonhosted.org/packages/db/f7/0a69ac6b82dbccf3f71add938a161c497952749294b8dd6dfe03a819dc40/tokenizers-0.23.2-cp310-abi3-win_amd64.whl", hash = "sha256:2e96f5699d5249c9c64aa8412e044f727aae3a4098cf830f9901ec1afc361cde", size = 2863236, upload-time = "2026-09-03T08:55:46.193Z" },
     { url = "https://files.pythonhosted.org/packages/d7/b0/dee84cb44175be1b4c35bd2f770727494e78f0bb38e571a623ade94dbebb/tokenizers-0.23.2-cp310-abi3-win_arm64.whl", hash = "sha256:e49c394456dd9985787fec76132438ba3fb8911f857b1bf3d40119f9292d41aa", size = 2729352, upload-time = "2026-09-03T08:55:44.345Z" },
+]
+
+[[package]]
+name = "tomlkit"
+version = "0.15.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/94/96/e07752635b98536177fa1f37671c8f3cdde2e724c6bcf6034b2cfb571565/tomlkit-0.15.1.tar.gz", hash = "sha256:e25bbf38843005246210a12982776f27f99cb9be67160e14434d0c0d21ee1e97", size = 180129, upload-time = "2026-07-17T01:48:04.562Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/13/bc/8c13eb66537dce1d2bd3a57132902f38d0e7f5bb46fa9f4daed9fe9d76ee/tomlkit-0.15.1-py3-none-any.whl", hash = "sha256:177a05aece5a8ca5266fd3c448abb47b8d352f09d477d3ca8332db4d89b24304", size = 49449, upload-time = "2026-07-17T01:48:05.728Z" },
 ]
 
 [[package]]
