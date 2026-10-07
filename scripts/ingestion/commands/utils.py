@@ -1,12 +1,10 @@
 import configparser
 import logging
-import fsspec
 import os
-import io
-from datetime import datetime, timezone
-from typing import Any, cast, Optional, TextIO
-from urllib.parse import urlparse
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from typing import Any, Optional, TextIO
+from urllib.parse import urlparse
 
 DEFAULT_S3_BUCKET = "govuk-ai-accelerator-data-integration"
 

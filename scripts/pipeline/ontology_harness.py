@@ -16,16 +16,15 @@ from sqlalchemy.exc import IntegrityError
 from scripts.ingestion.commands.utils import DEFAULT_S3_BUCKET
 from scripts.pipeline.logging_config import logger
 from scripts.pipeline.ontology_generator import (
-    JobStoppedError,
-    JobSupersededError,
     STOPPED_JOB_MESSAGE,
     STOPPED_JOB_STATUS,
+    JobStoppedError,
+    JobSupersededError,
     _finalize_job_status,
     _persist_config_yaml,
     _update_job_status,
     run_ontology_pipeline,
 )
-
 
 HARNESS_PIPELINE = "ontology-harness"
 DEFAULT_HARNESS_DOMAIN = "ontology-harness-baseline"
