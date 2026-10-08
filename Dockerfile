@@ -1,12 +1,15 @@
-FROM python:3.13-slim-bookworm AS development
+FROM python:3.13-slim-bookworm AS base
 
 ARG ONTOLOGY_HARNESS_ENABLED=false
 ARG ONTOLOGY_HARNESS_DEPLOYMENT_ID=""
+ARG GENERATOR_GIT_REF=main
+ARG GITHUB_TOKENENV
 
 ENV GOVUK_APP_NAME=GOVUK-AI-ACCELERATOR
 ENV UV_CACHE_DIR=/tmp/.uv_cache
 ENV ONTOLOGY_HARNESS_ENABLED=${ONTOLOGY_HARNESS_ENABLED}
 ENV ONTOLOGY_HARNESS_DEPLOYMENT_ID=${ONTOLOGY_HARNESS_DEPLOYMENT_ID}
+ENV UV_CACHE_DIR=/root/.cache/uv
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -20,22 +23,27 @@ RUN apt-get update \
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir uv
-RUN mkdir lib
-
 # Copy the uv project metadata, not the legacy requirements file
 COPY pyproject.toml uv.lock ./
-# Copy in the pre-built wheel for the taxonomy ontology accelerator library
-COPY  lib/taxonomy_ontology_accelerator-*-py3-none-any.whl ./lib/
 
-# Install dependencies without installing the project itself yet
-RUN uv sync --frozen --no-install-project
+RUN --mount=type=secret,id=GITHUB_TOKEN,env=GITHUB_TOKEN \
+    pip install --no-cache-dir uv && \
+    mkdir lib && \
+    git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/" && \
+    git clone "https://x-access-token:${GITHUB_TOKEN}@github.com/alphagov/govuk-ai-accelerator-tw-accelerator.git" /tmp && \
+    cd /tmp && \
+    git checkout ${GENERATOR_GIT_REF} && \
+    uv sync && \
+    uv build --wheel --out-dir /app/lib && \
+    uv sync --frozen --no-install-project
 
 # Install the app itself
 COPY . .
 RUN uv sync --frozen
 
 EXPOSE 8080
+
+FROM base AS development
 CMD ["uv", "run", "uvicorn", "govuk_ai_accelerator_app:create_asgi_app", "--factory", "--reload", "--host", "0.0.0.0", "--port", "3000"]
 
 FROM development AS production
