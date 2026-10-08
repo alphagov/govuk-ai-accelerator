@@ -39,12 +39,12 @@ class TestConfigYamlPersistence:
 
     @patch("scripts.pipeline.ontology_generator._mark_job_progress")
     @patch("scripts.pipeline.ontology_generator._update_job_status")
-    @patch("scripts.pipeline.ontology_generator.asyncio.run")
+    @patch("scripts.pipeline.ontology_generator.run_ontology_pipeline", new_callable=AsyncMock)
     @patch("scripts.pipeline.ontology_generator.fsspec")
     def test_config_persisted_at_run_root(
-        self, mock_fsspec, mock_asyncio_run, mock_update, mock_progress
+        self, mock_fsspec, mock_run_pipeline, mock_update, mock_progress
     ):
-        mock_asyncio_run.return_value = "s3://bucket/test-visa-1/run-20260417-1/output"
+        mock_run_pipeline.return_value = "s3://bucket/test-visa-1/run-20260417-1/output"
         mock_fs = MagicMock()
         mock_fsspec.core.url_to_fs.return_value = (mock_fs, "bucket/test-visa-1/run-20260417-1/config.yaml")
 
