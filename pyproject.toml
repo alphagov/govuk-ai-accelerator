@@ -28,3 +28,11 @@ dependencies = [
 
 [tool.uv.sources]
 taxonomy-ontology-accelerator = { path = "lib/taxonomy_ontology_accelerator-2.0.12-py3-none-any.whl" }
+
+[dependency-groups]
+dev = [
+    "pytest-asyncio>=1.3.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
