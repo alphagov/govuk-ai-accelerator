@@ -13,8 +13,11 @@ You can develop against this stack without needing to install Python or Postgres
 
 From the project root:
 
+Generate a github [personal access token](https://github.com/settings/tokens/new) with `repo` scope and set it in the environment:
+
 ```bash
-docker compose up --build -d
+export GITHUB_TOKEN=your_personal_access_token
+docker build -t accel --secret id=GITHUB_TOKEN,env=GITHUB_TOKEN .
 ```
 
 This will:

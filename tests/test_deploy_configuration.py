@@ -41,4 +41,4 @@ def test_dockerfile_exposes_ontology_harness_build_args_as_runtime_env():
 def test_dockerfile_installs_built_whl_file():
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
 
-    assert ('COPY  lib/taxonomy_ontology_accelerator-*-py3-none-any.whl ./lib/' in dockerfile)
+    assert ('uv build --wheel --out-dir /app/lib' in dockerfile)
