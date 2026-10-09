@@ -383,11 +383,9 @@ def start_task_manager(app):
                     slots.release()
                     raise
 
-                def _release_slot(_future):
-                    handle_finished_job_future(app, worker_id, claimed_job, _future)
-                    logger.debug(
-                        f"[job={claimed_job['job_id']}] releasing worker slot on worker={worker_id}"
-                    )
+                def _release_slot(_future, _claimed_job=claimed_job):
+                    handle_finished_job_future(app, worker_id, _claimed_job, _future)
+                    logger.debug(f"[job={_claimed_job['job_id']}] releasing worker slot on worker={worker_id}")
                     slots.release()
 
                 future.add_done_callback(_release_slot)

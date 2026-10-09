@@ -1,39 +1,38 @@
 """GOV.UK AI Accelerator Flask Application."""
 
-import os
 import io
 import json
+import os
 import re
 import zipfile
+from datetime import datetime, timezone
+from pathlib import Path
+from urllib.parse import quote, unquote, urlparse
+from uuid import uuid4
+
+import boto3
 import uvicorn
 import yaml
-import boto3
-from pathlib import Path
-from uuid import uuid4
-from datetime import datetime, timezone
-from urllib.parse import quote, unquote, urlparse
-from flask import Flask, request, jsonify, render_template, Blueprint, Response, redirect
-from flask_sqlalchemy import SQLAlchemy
+from a2wsgi import ASGIMiddleware, WSGIMiddleware
+from flask import Blueprint, Flask, Response, current_app, jsonify, redirect, render_template, request
 from flask_migrate import Migrate, upgrade
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func, or_
-from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.orm import Mapped, mapped_column
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse
-from scripts.pipeline.ontology_harness import schedule_ontology_harness
-from scripts.pipeline.task_manager import start_task_manager
-from scripts.pipeline.logging_config import configure_logging
-from scripts.pipeline.utils import error_response, is_yaml_file, executor
-from scripts.pipeline.constants import APP_HOST, APP_PORT, BLUEPRINTS
+from starlette.routing import Mount, Route
+
 from scripts.ingestion.commands.utils import DEFAULT_S3_BUCKET
 from scripts.ingestion.ingestion_pipeline import run_ingestion_background_task
+from scripts.pipeline.constants import APP_HOST, APP_PORT, BLUEPRINTS
+from scripts.pipeline.logging_config import configure_logging
+from scripts.pipeline.ontology_harness import schedule_ontology_harness
+from scripts.pipeline.task_manager import start_task_manager
+from scripts.pipeline.utils import error_response, executor, is_yaml_file
 from src.aws_helper import create_bucket_folder
-from flask import current_app
-
-from starlette.routing import Mount, Route
-from a2wsgi import ASGIMiddleware, WSGIMiddleware
-
 from src.web_browser.routing import get_domain_list
 
 try:
@@ -572,7 +571,12 @@ def _output_artifact_group(file_name: str) -> str:
         return "ontology_files"
     if (
         file_name == "stdout.log"
-        or file_name in {"regression_report.json", "owl_ontology_metrics.csv", "bedrock_costs.csv", "export_status.json"}
+        or file_name in {
+            "regression_report.json",
+            "owl_ontology_metrics.csv",
+            "bedrock_costs.csv",
+            "export_status.json"
+        }
         or "_report." in file_name
         or "_summary." in file_name
         or "_metrics." in file_name
@@ -1227,7 +1231,12 @@ def create_blueprints():
         job = db.session.get(ProcessingJob, job_id)
         if job is None:
             return error_response("Ingestion job not found", 404)
-        return jsonify({"job_id": job.id, "status": job.status, "error": job.error_message, "created_at": _serialize_job_datetime(job.created_at)})
+        return jsonify({
+            "job_id": job.id,
+            "status": job.status,
+            "error": job.error_message,
+            "created_at": _serialize_job_datetime(job.created_at)
+        })
 
     @ontology_bp.route('/status/<job_id>', methods=['GET'])
     def job_status(job_id):
@@ -1235,7 +1244,14 @@ def create_blueprints():
         job = db.session.get(ProcessingJob, job_id)
         if job is None:
             return error_response("Job not found", 404)
-        return jsonify({"job_id": job.id, "pipeline": job.pipeline, "domain": job.domain, "status": job.status, "job_runs": job.job_runs, "error": job.error_message})
+        return jsonify({
+            "job_id": job.id,
+            "pipeline": job.pipeline,
+            "domain": job.domain,
+            "status": job.status,
+            "job_runs": job.job_runs,
+            "error": job.error_message
+        })
 
     @ontology_bp.route('/jobs', methods=['GET'])
     def list_jobs():
@@ -1586,7 +1602,8 @@ def create_blueprints():
             active_page='jobs',
             review_job_type='ontology',
             review_page_title='Review Ontologies',
-            review_page_description='View your available ontologies below. Click any row to see more information about it.',
+            review_page_description='View your available ontologies below. '
+                                    'Click any row to see more information about it.',
             include_materialize=False,
         )
 
@@ -1639,13 +1656,13 @@ def create_blueprints():
             # Check if this prefix/path has children (e.g. folder delete)
             paginator = s3_client.get_paginator('list_objects_v2')
             pages = paginator.paginate(Bucket=bucket_name, Prefix=path)
-            
+
             delete_keys = []
             for page in pages:
                 if 'Contents' in page:
                     for obj in page['Contents']:
                         delete_keys.append({'Key': obj['Key']})
-            
+
             if delete_keys:
                 for i in range(0, len(delete_keys), 1000):
                     chunk = delete_keys[i:i + 1000]
