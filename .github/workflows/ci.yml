@@ -24,10 +24,26 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.14"
+
+      - name: Build dependency wheel from repository
+        env:
+          GOVUK_CI_GITHUB_API_TOKEN: ${{ secrets.GOVUK_CI_GITHUB_API_TOKEN }}
+          GENERATOR_GIT_REF: main
+        run: |
+          mkdir -p lib
+          git config --global url."https://x-access-token:${GOVUK_CI_GITHUB_API_TOKEN}@github.com/".insteadOf "https://github.com/"
+          git clone "https://x-access-token:${GOVUK_CI_GITHUB_API_TOKEN}@github.com/alphagov/govuk-ai-accelerator-tw-accelerator.git" /tmp/generator
+          cd /tmp/generator
+          git checkout ${GENERATOR_GIT_REF}
+          uv sync
+          uv build --wheel --out-dir $GITHUB_WORKSPACE/lib
+
+      - name: Update lock file for built tw dep
+        run: uv sync --upgrade-package taxonomy-ontology-accelerator
 
       - name: Install dependencies
-        run: uv sync --frozen
+        run: uv sync --frozen --no-install-project
 
       - name: Test with pytest
         run: uv run pytest

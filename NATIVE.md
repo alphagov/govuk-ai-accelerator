@@ -9,6 +9,7 @@ Running the app natively makes it far easier to attach debuggers etc to the Pyth
 - **uv** — Python package manager
 - **Docker** — for running Postgres or the app in a container
 - **AWS credentials** - available in the environment (for S3/Bedrock access)
+- **TW Accelerator repo access** - We depend on the [tw-accelerator repo](https://github.com/alphagov/govuk-ai-accelerator-tw-accelerator) for shared code
 
 Install `uv` if not already installed:
 
@@ -19,6 +20,24 @@ pip install uv
 ```
 
 ---
+
+## Clone this repo
+
+```bash
+mkdir -p ${HOME}/govuk
+git clone git@github.com:alphagov/govuk-ai-accelerator.git ${HOME}/govuk/govuk-ai-accelerator
+```
+
+## Build upstream dependencies
+
+```bash
+mkdir -p ${HOME}/govuk
+[[ -d ${HOME}/govuk/govuk-ai-accelerator-tw-accelerator ]] || git clone git@github.com:alphagov/govuk-ai-accelerator-tw-accelerator.git ${HOME}/govuk/govuk-ai-accelerator-tw-accelerator
+cd ${HOME}/govuk/govuk-ai-accelerator-tw-accelerator
+uv sync
+uv build
+cp dist/*.whl ${HOME}/govuk/govuk-ai-accelerator/lib
+```
 
 ## Install dependencies
 
