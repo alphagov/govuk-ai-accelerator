@@ -50,10 +50,12 @@ class HarnessSettings:
 
     @property
     def job_id(self) -> str:
+        """Key the Workflow job by harness domain and deployed library version."""
         return f"{self.domain}:{self.deployment_id}"
 
 
 def _is_harness_enabled() -> bool:
+    """Check whether this Workflow should schedule a harness run for the library."""
     return os.getenv("ONTOLOGY_HARNESS_ENABLED", "").strip().lower() in {
         "1",
         "true",
@@ -63,6 +65,7 @@ def _is_harness_enabled() -> bool:
 
 
 def _build_harness_settings() -> HarnessSettings | None:
+    """Resolve Workflow environment settings for running the library against a baseline."""
     domain = os.getenv("ONTOLOGY_HARNESS_DOMAIN", DEFAULT_HARNESS_DOMAIN)
     deployment_id = os.getenv("ONTOLOGY_HARNESS_DEPLOYMENT_ID", "").strip()
     if not deployment_id:
@@ -88,6 +91,7 @@ def _build_harness_settings() -> HarnessSettings | None:
 
 
 def _load_harness_config(settings: HarnessSettings) -> dict[str, Any]:
+    """Load the Generator-library config that the Workflow will pass into its pipeline."""
     fs, path = fsspec.core.url_to_fs(settings.config_uri)
     with fs.open(path, "r") as config_file:
         config = yaml.safe_load(config_file) or {}
@@ -97,6 +101,7 @@ def _load_harness_config(settings: HarnessSettings) -> dict[str, Any]:
 
 
 def _prepare_harness_config(config: dict[str, Any], settings: HarnessSettings) -> dict[str, Any]:
+    """Set the library's domain, input/output paths, and Workflow baseline metadata."""
     prepared = json.loads(json.dumps(config))
     prepared["domain_name"] = settings.domain
 
@@ -124,6 +129,7 @@ def _prepare_harness_config(config: dict[str, Any], settings: HarnessSettings) -
 
 
 def schedule_ontology_harness(app) -> str | None:
+    """Queue one Workflow job to run the Generator library for this deployment."""
     if not _is_harness_enabled():
         logger.info("[ontology-harness] disabled")
         return None
@@ -167,6 +173,7 @@ def schedule_ontology_harness(app) -> str | None:
 
 
 def _read_text(uri: str) -> str:
+    """Read library-produced or baseline artifacts from local or S3 storage."""
     fs, path = fsspec.core.url_to_fs(uri)
     with fs.open(path, "r") as file_obj:
         content = file_obj.read()
@@ -176,6 +183,7 @@ def _read_text(uri: str) -> str:
 
 
 def _write_json(uri: str, payload: dict[str, Any]) -> None:
+    """Persist the Workflow's regression report alongside the library's run artifacts."""
     fs, path = fsspec.core.url_to_fs(uri)
     parent = fs._parent(path)
     if parent:
@@ -186,6 +194,7 @@ def _write_json(uri: str, payload: dict[str, Any]) -> None:
 
 
 def _write_text(uri: str, content: str) -> None:
+    """Write text to the shared storage used for Generator outputs and harness artifacts."""
     fs, path = fsspec.core.url_to_fs(uri)
     parent = fs._parent(path)
     if parent:
@@ -195,6 +204,7 @@ def _write_text(uri: str, content: str) -> None:
 
 
 def _load_baseline_manifest(uri: str) -> dict[str, Any]:
+    """Resolve the accepted Generator run that the harness compares with a candidate."""
     manifest = json.loads(_read_text(uri))
     baseline_run_id = manifest.get("baseline_run_id")
     baseline_output_uri = manifest.get("baseline_output_uri")
@@ -204,6 +214,7 @@ def _load_baseline_manifest(uri: str) -> dict[str, Any]:
 
 
 def _build_ontology_metrics_from_turtle(turtle_content: str | bytes) -> dict[str, float]:
+    """Delegate Turtle metric extraction to the taxonomy ontology library's evaluator."""
     from taxonomy_ontology_accelerator.ontology_engine.evaluation.regression import (
         build_ontology_metrics_from_turtle,
     )
@@ -216,6 +227,7 @@ def _compare_ontology_metrics(
     candidate_metrics: dict[str, Any],
     **kwargs,
 ) -> dict[str, Any]:
+    """Delegate comparison to the library evaluator, adding Workflow run and deployment context."""
     from taxonomy_ontology_accelerator.ontology_engine.evaluation.regression import (
         RegressionReportContext,
         compare_ontology_metrics,
@@ -237,6 +249,7 @@ def _compare_ontology_metrics(
 
 
 def _derive_job_runs(output_dir: str | None, job_id: str | None) -> str | None:
+    """Map the Generator output path back to its run identifier for Workflow job tracking."""
     if not output_dir:
         return job_id
 
@@ -250,6 +263,7 @@ def _derive_job_runs(output_dir: str | None, job_id: str | None) -> str | None:
 
 
 def _regression_error_message(report: dict[str, Any]) -> str | None:
+    """Translate the library's comparison result into the Workflow job's failure message."""
     if report.get("passed"):
         return None
 
@@ -260,10 +274,12 @@ def _regression_error_message(report: dict[str, Any]) -> str | None:
 
 
 def _output_file_uri(output_dir: str, filename: str) -> str:
+    """Build a shared-storage URI for an artifact in a Generator run directory."""
     return f"{output_dir.rstrip('/')}/{filename}"
 
 
 def _ontology_metrics_csv_uri(candidate_output_uri: str) -> str:
+    """Locate the Generator's metrics CSV so the Workflow can append harness results."""
     candidate_output_uri = str(candidate_output_uri).rstrip("/")
     if candidate_output_uri.endswith("/output"):
         run_uri = candidate_output_uri.removesuffix("/output")
@@ -277,6 +293,7 @@ def _write_harness_summary_to_metrics_csv(
     report: dict[str, Any],
     report_uri: str,
 ) -> None:
+    """Add the Workflow's baseline-comparison result to the Generator's run metrics row."""
     metrics_csv_uri = _ontology_metrics_csv_uri(candidate_output_uri)
     candidate_run_id = str(report.get("candidate", {}).get("run_id") or "")
     if not candidate_run_id:
@@ -337,6 +354,13 @@ def run_ontology_harness_background_task(
     attempt_count: int | None = None,
     worker_id: str | None = None,
 ) -> bool:
+    """Run the Generator, then evaluate its Turtle output against the accepted baseline.
+
+    The Workflow reuses its normal ontology pipeline wrapper to invoke
+    ``taxonomy-ontology-accelerator`` and then calls that library's regression
+    evaluator on the baseline and candidate Turtle files. It stores the report
+    and CSV summary in the run artifacts and finalizes the Workflow job status.
+    """
     try:
         output_dir = asyncio.run(
             run_ontology_pipeline(

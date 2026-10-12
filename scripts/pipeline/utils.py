@@ -17,7 +17,11 @@ executor = ThreadPoolExecutor(max_workers=EXECUTOR_MAX_WORKERS)
 
 
 def config_builder(path: Optional[Path] = None, config: Optional[dict] = None) -> OntologyConfig:
-    """Build OntologyConfig from either a file path or a configuration dictionary."""
+    """Create the Generator library's OntologyConfig from Workflow configuration.
+
+    Dictionary values are passed through to the library's config model; the
+    path-based branch delegates domain-config merging to its loader.
+    """
     from taxonomy_ontology_accelerator.ontology_engine.config.config import (
         OntologyConfig,
         OntologyConfigLoader,
@@ -34,12 +38,9 @@ def config_builder(path: Optional[Path] = None, config: Optional[dict] = None) -
     raise ValueError("Either path or config must be provided")
 
 
-
-
-
 @dataclass
 class PipelineConfig:
-    """Configuration object for the ontology pipeline run."""
+    """Workflow-side view of the paths and metadata used for a Generator run."""
 
     domain_name: Optional[str] = None
     version_number: Optional[str] = None
@@ -49,21 +50,23 @@ class PipelineConfig:
     prompt_path: Optional[str] = None
 
     def __init__(self, **kwargs):
-        """Initialize pipeline config from dictionary."""
+        """Extract Workflow run settings from the config shared with the Generator."""
         self.config = kwargs
     
         self.domain_name = self.config.get('domain_name', None)
         path = self.config.get('path', {})
-
 
         self.input_path = path.get('input_path', None)
         self.output_dir = path.get('output_dir', None)
         self.prompt_path = path.get('prompt_path', None)
 
 
-
 def load_config_for_domain(config: dict | Path) -> tuple[OntologyConfig, Optional[PipelineConfig]]:
-    """Load ontology and pipeline configuration for a given domain."""
+    """Split shared run config into the Generator model and Workflow settings.
+
+    The returned ``OntologyConfig`` is created by ``taxonomy-ontology-accelerator``;
+    ``PipelineConfig`` retains Workflow-facing domain and path values.
+    """
     if isinstance(config, Path):
         raise NotImplementedError('Path-based configuration loading not yet implemented')
     
@@ -75,10 +78,8 @@ def load_config_for_domain(config: dict | Path) -> tuple[OntologyConfig, Optiona
     raise TypeError(f"Config must be dict or Path, got {type(config)}")
 
 
-
-
 def error_response(message: str, status_code: int = 400):
-    """Format an error response for the API.
+    """Format a Flask API error response for Workflow routes.
 
     The caller must be executing inside a Flask request or application
     context. Tests should push a context when invoking this helper.
@@ -89,12 +90,10 @@ def error_response(message: str, status_code: int = 400):
 
 
 def is_yaml_file(filename: str) -> bool:
-    """Check if the provided filename is a valid YAML file.
+    """Check whether a filename has an extension accepted for Workflow config files.
 
     Returns ``False`` for ``None`` or empty strings.
     """
     if not filename:
         return False
     return filename.lower().endswith(('.yaml', '.yml'))
-
-

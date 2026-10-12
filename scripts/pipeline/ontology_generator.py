@@ -25,20 +25,26 @@ STOPPED_JOB_MESSAGE = "Manually stopped from Jobs UI"
 
 
 class JobStoppedError(RuntimeError):
+    """Signal that the Workflow stopped a queued ontology-generation job."""
+
     pass
 
 
 class JobSupersededError(RuntimeError):
+    """Signal that a newer worker attempt now owns the Workflow job."""
+
     pass
 
 
 def _with_job_output_path(config_data: dict | None, job_id: str | None) -> dict | None:
+    """Copy shared job config before the Generator pipeline consumes it."""
     if config_data is None:
         return None
     return json.loads(json.dumps(config_data))
 
 
 def _mark_job_progress(job_id: str | None, stage: str) -> None:
+    """Record Generator pipeline progress in the Workflow's ProcessingJob row."""
     if not job_id:
         return
 
@@ -59,6 +65,7 @@ def _mark_job_progress(job_id: str | None, stage: str) -> None:
 
 
 def _clear_toa_runtime_caches(job_id: str | None = None) -> None:
+    """Clear process-local caches owned by the taxonomy ontology library between jobs."""
     from taxonomy_ontology_accelerator.ontology_engine.storage.cache import clear_caches
 
     clear_caches()
@@ -66,6 +73,7 @@ def _clear_toa_runtime_caches(job_id: str | None = None) -> None:
 
 
 def _raise_if_job_stopped(job_id: str | None) -> None:
+    """Stop invoking the Generator when the Workflow marks its job as stopped."""
     if not job_id:
         return
 
@@ -90,6 +98,7 @@ def _raise_if_superseded(
     attempt_count: int | None,
     worker_id: str | None = None,
 ) -> None:
+    """Prevent an obsolete Generator worker attempt from continuing or updating job state."""
     if not job_id or attempt_count is None:
         return
 
@@ -120,6 +129,13 @@ async def run_ontology_pipeline(
     attempt_count: int | None = None,
     worker_id: str | None = None,
 ) -> str:
+    """Run the taxonomy ontology library's builder for a Workflow ontology job.
+
+    Workflow config is converted into the library's ``OntologyConfig`` and
+    ``OntologyPipelineBuilder``; this wrapper sequences setup, extraction,
+    processing, graph export, and artifact persistence while updating and
+    checking Workflow job ownership between stages.
+    """
     from taxonomy_ontology_accelerator.ontology_engine.pipeline_builder import (
         OntologyPipelineBuilder,
     )
@@ -192,6 +208,7 @@ def _setup_pipeline(
     pipeline: OntologyPipelineBuilder,
     config: PipelineConfig,
 ) -> OntologyPipelineBuilder:
+    """Apply Workflow paths and prompt settings to the library's pipeline builder."""
     pipeline = pipeline.setup_pipeline(
         input_path=config.input_path,
         output_dir=config.output_dir,
@@ -203,10 +220,12 @@ def _setup_pipeline(
 
 
 async def _extract_ontology(pipeline: OntologyPipelineBuilder) -> OntologyPipelineBuilder:
+    """Use the library's asynchronous extraction stage to populate ontology data."""
     return await pipeline.extract_async()
 
 
 async def _process_ontology(pipeline: OntologyPipelineBuilder) -> OntologyPipelineBuilder:
+    """Run library deduplication, relationship construction, and schema update stages."""
     pipeline = await pipeline.deduplicate()
     pipeline = await pipeline.build_relations()
     pipeline = await pipeline.update_schema()
@@ -214,6 +233,7 @@ async def _process_ontology(pipeline: OntologyPipelineBuilder) -> OntologyPipeli
 
 
 async def _create_ontology_graph(pipeline: OntologyPipelineBuilder) -> OntologyPipelineBuilder:
+    """Merge incremental data when needed, then validate, save, and export the ontology."""
     if pipeline.state.incremental:
         pipeline = await pipeline.merge()
     return pipeline.validate().save().export()
@@ -224,12 +244,14 @@ async def _save_pipeline_output(
     config: PipelineConfig,
     fs: AbstractFileSystem,
 ) -> None:
+    """Finalize and build library outputs, then persist Workflow run metadata."""
     await pipeline.finalize()
     pipeline.build()
     await _save_version_info(config, pipeline.state.output_dir, fs)
 
 
 def _resolve_run_root(output_dir: str | Path | None, fallback_output_dir: str | None) -> str | Path:
+    """Normalize the Generator output path to its containing run directory."""
     if output_dir is not None:
         if isinstance(output_dir, Path):
             return output_dir.parent if output_dir.name == "output" else output_dir
@@ -248,6 +270,7 @@ async def _save_version_info(
     output_dir: str | Path | None,
     fs: AbstractFileSystem,
 ) -> None:
+    """Resolve the run root used for library/Workflow version metadata."""
     run_root = _resolve_run_root(output_dir, config.output_dir)
     _ = (run_root, fs)
 
@@ -259,6 +282,7 @@ def _update_job_status(
     job_runs: str | None = None,
     clear_lease: bool = False,
 ) -> None:
+    """Update Workflow job state unless a manual stop must remain authoritative."""
     try:
         from govuk_ai_accelerator_app import ProcessingJob, create_flask_app, db
 
@@ -296,6 +320,7 @@ def _finalize_job_status_if_owner(
     error_message: str | None = None,
     job_runs: str | None = None,
 ) -> bool:
+    """Finalize job state only if this worker still owns the current attempt."""
     try:
         from govuk_ai_accelerator_app import ProcessingJob, create_flask_app, db
 
@@ -351,6 +376,7 @@ def _finalize_job_status(
     error_message: str | None = None,
     job_runs: str | None = None,
 ) -> None:
+    """Choose the Workflow job-finalization path based on whether attempt ownership is tracked."""
     if not job_id:
         return
     if attempt_count is None:
@@ -369,6 +395,7 @@ def _finalize_job_status(
 
 
 def _persist_config_yaml(config: dict, output_dir: str) -> None:
+    """Save the Workflow's effective run config beside the Generator artifacts."""
     run_root = _resolve_run_root(output_dir, None)
     config_url = f"{run_root}/config.yaml"
     try:
@@ -391,6 +418,12 @@ def run_ontology_background_task(
     attempt_count: int | None = None,
     worker_id: str | None = None,
 ) -> bool:
+    """Run a Generator pipeline in a worker thread and finalize its Workflow job.
+
+    This adapter bridges the job manager's synchronous task interface to the
+    asynchronous library pipeline, persists the effective config with outputs,
+    and maps success, stop, supersession, or failure to Workflow job state.
+    """
     try:
         job_config = _with_job_output_path(config, job_id)
         _mark_job_progress(job_id, "execution-started")
