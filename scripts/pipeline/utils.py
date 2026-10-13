@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from pathlib import Path
-import yaml
-from typing import TYPE_CHECKING, Optional
-from flask import jsonify
-from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
+from pathlib import Path
+from typing import TYPE_CHECKING, Optional
 
-from scripts.pipeline.logging_config import logger
+from flask import jsonify
+
 from scripts.pipeline.constants import EXECUTOR_MAX_WORKERS
 
 if TYPE_CHECKING:
@@ -27,10 +26,10 @@ def config_builder(path: Optional[Path] = None, config: Optional[dict] = None) -
         base = OntologyConfig()
         config = OntologyConfigLoader()._load_and_merge_domain_config('travel', path, base)
         return config
-    
+
     if config is not None:
         return OntologyConfig(**config)
-    
+
     raise ValueError("Either path or config must be provided")
 
 
@@ -51,7 +50,7 @@ class PipelineConfig:
     def __init__(self, **kwargs):
         """Initialize pipeline config from dictionary."""
         self.config = kwargs
-    
+
         self.domain_name = self.config.get('domain_name', None)
         path = self.config.get('path', {})
 
@@ -66,12 +65,12 @@ def load_config_for_domain(config: dict | Path) -> tuple[OntologyConfig, Optiona
     """Load ontology and pipeline configuration for a given domain."""
     if isinstance(config, Path):
         raise NotImplementedError('Path-based configuration loading not yet implemented')
-    
+
     if isinstance(config, dict):
         pipeline_config = PipelineConfig(**config)
         ontology_config = config_builder(config=pipeline_config.config)
         return ontology_config, pipeline_config
-    
+
     raise TypeError(f"Config must be dict or Path, got {type(config)}")
 
 

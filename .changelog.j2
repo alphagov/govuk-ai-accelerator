@@ -1,0 +1,16 @@
+{% for entry in tree %}
+## {{ entry.version }}{{ " (" ~ entry.date ~ ")" if entry.date else "" }}
+{% if entry.changes or not loop.last %}
+
+{% endif %}
+{% for title, commits in entry.changes.items() %}
+{% if title %}
+### {{ title }}
+{% endif %}
+
+{% for commit in commits %}
+- {% if commit.scope %}**{{ commit.scope }}**: {% endif %}{{ commit.message }} - (by {{ commit.author }}) [[{{ commit.sha1[:7] }}](https://github.com/alphagov/govuk-ai-accelerator/commit/{{ commit.sha1 }})]
+{% endfor %}
+
+{% endfor %}
+{% endfor %}
