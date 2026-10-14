@@ -184,10 +184,10 @@ def test_pipeline_clears_toa_runtime_caches_before_setup(monkeypatch):
 
 
 def test_harness_failure_log_includes_job_and_domain(monkeypatch, caplog):
-    def _boom(*args, **kwargs):
+    async def _boom(*args, **kwargs):
         raise RuntimeError("kaboom")
 
-    monkeypatch.setattr(oh.asyncio, "run", _boom)
+    monkeypatch.setattr(oh, "run_ontology_pipeline", _boom)
     monkeypatch.setattr(oh, "_finalize_job_status", lambda *a, **k: None)
 
     with caplog.at_level(logging.ERROR, logger="govuk-ai-accelerator"):
@@ -204,6 +204,7 @@ def test_harness_failure_log_includes_job_and_domain(monkeypatch, caplog):
 
     errors = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
     assert any("job=JID-7" in m and "domain=visa" in m for m in errors)
+
 
 
 def test_ingestion_logs_lifecycle_through_shared_logger(tmp_path, monkeypatch, caplog, capsys):
